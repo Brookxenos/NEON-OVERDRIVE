@@ -745,9 +745,10 @@ export class ObstacleManager {
     relativeSpeed: number,
     worldSpeed: number,
     safetyBufferSec: number,
+    spawnZ: number,
   ): boolean {
     const [newStart, newEnd] = this.getArrivalInterval(
-      SPAWN_Z,
+      spawnZ,
       halfZ,
       relativeSpeed,
       worldSpeed,
@@ -759,7 +760,7 @@ export class ObstacleManager {
 
     let sameLaneConflict = false;
     this.pool.forEachActive((obs) => {
-      if (obs.lane === lane && Math.abs(obs.group.position.z - SPAWN_Z) < 18) {
+      if (obs.lane === lane && Math.abs(obs.group.position.z - spawnZ) < 18) {
         sameLaneConflict = true;
       }
       if (obs.group.position.z > 2) return;
@@ -798,6 +799,7 @@ export class ObstacleManager {
     halfZ: number,
     relativeSpeed: number,
     safetyBufferSec: number,
+    spawnZ: number,
   ): boolean {
     return (
       this.canSpawnSafelyAtSpeed(
@@ -806,6 +808,7 @@ export class ObstacleManager {
         relativeSpeed,
         this.lastWorldSpeed,
         safetyBufferSec,
+        spawnZ,
       ) &&
       this.canSpawnSafelyAtSpeed(
         lane,
@@ -813,6 +816,7 @@ export class ObstacleManager {
         relativeSpeed,
         this.lastWorldSpeed + 50,
         safetyBufferSec,
+        spawnZ,
       )
     );
   }
@@ -838,6 +842,7 @@ export class ObstacleManager {
     lanes: LaneIndex[],
     worldSpeed = 64,
     difficultyLevel = 1,
+    spawnZ = SPAWN_Z,
   ): LaneIndex[] {
     this.lastWorldSpeed = Math.max(40, worldSpeed);
     const levelOffset = Math.max(0, difficultyLevel - 1);
@@ -852,10 +857,10 @@ export class ObstacleManager {
         preferred === 'traffic' ? -(1.5 + Math.random() * maxTrafficDelta) : 0;
       const candidateHalfZ = ObstacleManager.getObstacleHalfZ(preferred);
 
-      if (!this.isSpawnPassable(lane, candidateHalfZ, relSpeed, safetyBufferSec)) {
+      if (!this.isSpawnPassable(lane, candidateHalfZ, relSpeed, safetyBufferSec, spawnZ)) {
         if (
           preferred === 'traffic' &&
-          this.isSpawnPassable(lane, candidateHalfZ, 0, safetyBufferSec)
+          this.isSpawnPassable(lane, candidateHalfZ, 0, safetyBufferSec, spawnZ)
         ) {
           relSpeed = 0;
         } else {
@@ -870,7 +875,7 @@ export class ObstacleManager {
       obs.lane = lane;
       obs.nearMissed = false;
       obs.relativeSpeed = obs.kind === 'traffic' ? relSpeed : 0;
-      obs.group.position.set(LaneSystem.getLaneX(lane), 0, SPAWN_Z);
+      obs.group.position.set(LaneSystem.getLaneX(lane), 0, spawnZ);
       obs.group.visible = true;
       spawnedLanes.push(lane);
     }
@@ -882,11 +887,12 @@ export class ObstacleManager {
     lane: LaneIndex,
     worldSpeed: number,
     difficultyLevel = 1,
+    spawnZ = SPAWN_Z,
   ): boolean {
     const safeSpeed = Math.max(40, worldSpeed);
     const safetyBufferSec = Math.max(0.24, 0.36 - Math.max(0, difficultyLevel - 1) * 0.012);
     const [newStart, newEnd] = this.getArrivalInterval(
-      SPAWN_Z,
+      spawnZ,
       1.6,
       0,
       safeSpeed,

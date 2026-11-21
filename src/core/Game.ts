@@ -20,6 +20,7 @@ import {
   BRAKE_PENALTY,
   COLORS,
   PAD_BOOST_BONUS,
+  SPAWN_Z,
   SPEED_TO_KMH,
   THROTTLE_BONUS,
 } from '../utils/Constants';
@@ -181,6 +182,7 @@ export class Game {
     this.audioManager.unlock();
     this.audioManager.playUiClick(true);
     this.resetRun();
+    this.seedOpeningHighway();
     this.state.setStatus('playing');
     this.state.pushBanner('SYSTEMS ONLINE · GO', 'cyan');
   }
@@ -384,10 +386,20 @@ export class Game {
     this.renderer.resize(width, height);
   };
 
-  private spawnNextWave(difficultyLevel: number): number {
+  private seedOpeningHighway(): void {
+    // Eliminate empty opening straightaway by populating starter rewards and first waves on screen
+    this.collectibleManager.spawnRewardInLane(1, -46);
+    const openingZPositions = [-108, -184, -262];
+    for (const zPos of openingZPositions) {
+      this.spawnNextWave(1, zPos);
+    }
+    this.spawnDistanceRemaining = 14;
+  }
+
+  private spawnNextWave(difficultyLevel: number, spawnZ = SPAWN_Z): number {
     const lanes = LaneSystem.getAllLanes();
     const clearLanes = lanes.filter((l) =>
-      this.obstacleManager.isLaneClearForSafeCorridor(l, this.currentSpeed, difficultyLevel),
+      this.obstacleManager.isLaneClearForSafeCorridor(l, this.currentSpeed, difficultyLevel, spawnZ),
     );
     const corridorPool = clearLanes.length > 0 ? clearLanes : lanes;
 
@@ -428,6 +440,7 @@ export class Game {
       blockedCandidates.slice(0, blockCount),
       this.currentSpeed,
       difficultyLevel,
+      spawnZ,
     );
 
     const openLanes = lanes.filter((l) => !spawnedBlocked.includes(l));
@@ -435,7 +448,7 @@ export class Game {
       openLanes.includes(safeLane) && Math.random() < 0.75
         ? safeLane
         : openLanes[Math.floor(Math.random() * openLanes.length)];
-    this.collectibleManager.spawnRewardInLane(rewardLane);
+    this.collectibleManager.spawnRewardInLane(rewardLane, spawnZ);
     return laneShiftSteps;
   }
 

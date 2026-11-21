@@ -150,14 +150,14 @@ export class CollectibleManager {
     this.padPool = new ObjectPool(padItems);
   }
 
-  public spawnRewardInLane(lane: LaneIndex): void {
+  public spawnRewardInLane(lane: LaneIndex, spawnZ = SPAWN_Z): void {
     const roll = Math.random();
     if (roll < 0.16) {
       const pad = this.padPool.acquire();
       if (pad) {
         pad.active = true;
         pad.lane = lane;
-        pad.mesh.position.set(LaneSystem.getLaneX(lane), 0.04, SPAWN_Z);
+        pad.mesh.position.set(LaneSystem.getLaneX(lane), 0.04, spawnZ);
         pad.mesh.visible = true;
       }
       return;
@@ -185,7 +185,7 @@ export class CollectibleManager {
         if (!item) break;
         item.active = true;
         item.lane = lane;
-        item.group.position.set(LaneSystem.getLaneX(lane), 1.0, SPAWN_Z - i * 5.0);
+        item.group.position.set(LaneSystem.getLaneX(lane), 1.0, spawnZ - i * 5.0);
         item.group.visible = true;
       }
     }
