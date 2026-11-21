@@ -40,7 +40,11 @@ type FormationId =
   | 'apex_sweep'
   | 'twin_convoy_cut'
   | 'emp_laser_combo'
-  | 'fortress_corridor';
+  | 'fortress_corridor'
+  | 'gauntlet_crossfire'
+  | 'phantom_zig_zag'
+  | 'overdrive_blitz'
+  | 'apex_hellstorm';
 
 const OPENING_FORMATION_LABELS: Record<OpeningFormationId, string> = {
   gate_gauntlet: 'GATE GAUNTLET',
@@ -367,6 +371,10 @@ export class TacticalWaveDirector {
       available.push('hazard_chicane', 'double_squeeze', 'emp_laser_combo', 'twin_convoy_cut');
     }
     if (difficultyLevel >= 3 && allowTwoLaneJump) available.push('apex_sweep');
+    if (difficultyLevel >= 5) available.push('gauntlet_crossfire');
+    if (difficultyLevel >= 8 && allowTwoLaneJump) available.push('phantom_zig_zag');
+    if (difficultyLevel >= 12) available.push('overdrive_blitz');
+    if (difficultyLevel >= 18) available.push('apex_hellstorm');
 
     const nonRepeating = available.filter((id) => id !== this.lastFormation);
     const pool = nonRepeating.length > 0 ? nonRepeating : available;
@@ -426,7 +434,7 @@ export class TacticalWaveDirector {
       }
 
       case 'traffic_convoy': {
-        const convoySpeed = -Math.min(8.5, 3.2 + (difficultyLevel - 1) * 0.6);
+        const convoySpeed = -Math.min(15.5, 3.2 + (difficultyLevel - 1) * 0.42);
         const lanesOrder: LaneIndex[] = [flank, 1, oppFlank];
         lanesOrder.forEach((lane, idx) => {
           const isLast = idx === lanesOrder.length - 1;
@@ -534,7 +542,7 @@ export class TacticalWaveDirector {
       }
 
       case 'twin_convoy_cut': {
-        const convoySpeed = -Math.min(8.8, 3.6 + (difficultyLevel - 1) * 0.65);
+        const convoySpeed = -Math.min(16.5, 3.6 + (difficultyLevel - 1) * 0.45);
         const lanesOrder: LaneIndex[] = [flank, 1, oppFlank, 1];
         lanesOrder.forEach((lane, idx) => {
           const isLast = idx === lanesOrder.length - 1;
@@ -574,6 +582,99 @@ export class TacticalWaveDirector {
             blockCount: 2,
             obstacleKind: idx % 2 === 0 ? 'roadblock' : 'barrier',
             spacingScale: isLast ? 1.0 : 0.86,
+            preferRewardInSafeLane: true,
+          });
+        });
+        break;
+      }
+
+      case 'gauntlet_crossfire': {
+        const fastConvoy = -Math.min(17.5, 4.2 + (difficultyLevel - 1) * 0.45);
+        const lanesOrder: LaneIndex[] = [flank, 1, oppFlank, 1, flank];
+        lanesOrder.forEach((lane, idx) => {
+          const isLast = idx === lanesOrder.length - 1;
+          const useTraffic = idx % 2 === 0;
+          this.queue.push({
+            safeLane: lane,
+            blockCount: 2,
+            obstacleKind: useTraffic ? 'traffic' : 'laser_gate',
+            relativeSpeedOverride: useTraffic ? fastConvoy : undefined,
+            spacingScale: isLast ? 0.98 : 0.84,
+            preferRewardInSafeLane: true,
+          });
+        });
+        break;
+      }
+
+      case 'phantom_zig_zag': {
+        const lanesOrder: LaneIndex[] = [flank, oppFlank, 1, flank, oppFlank];
+        const kinds: ObstacleType[] = [
+          'laser_gate',
+          'roadblock',
+          'hazard_zone',
+          'laser_gate',
+          'roadblock',
+        ];
+        lanesOrder.forEach((lane, idx) => {
+          const isLast = idx === lanesOrder.length - 1;
+          this.queue.push({
+            safeLane: lane,
+            blockCount: 2,
+            obstacleKind: kinds[idx],
+            spacingScale: isLast ? 1.0 : 0.9,
+            preferRewardInSafeLane: true,
+          });
+        });
+        break;
+      }
+
+      case 'overdrive_blitz': {
+        const convoySpeed = -Math.min(18, 5.0 + (difficultyLevel - 1) * 0.45);
+        const lanesOrder: LaneIndex[] = [1, flank, 1, oppFlank, 1, flank];
+        const kinds: ObstacleType[] = [
+          'hazard_zone',
+          'traffic',
+          'laser_gate',
+          'traffic',
+          'roadblock',
+          'hazard_zone',
+        ];
+        lanesOrder.forEach((lane, idx) => {
+          const isLast = idx === lanesOrder.length - 1;
+          const kind = kinds[idx];
+          this.queue.push({
+            safeLane: lane,
+            blockCount: 2,
+            obstacleKind: kind,
+            relativeSpeedOverride: kind === 'traffic' ? convoySpeed : undefined,
+            spacingScale: isLast ? 0.98 : 0.82,
+            preferRewardInSafeLane: true,
+          });
+        });
+        break;
+      }
+
+      case 'apex_hellstorm': {
+        const baseDelta = Math.min(18, 5.5 + (difficultyLevel - 1) * 0.42);
+        const lanesOrder: LaneIndex[] = [flank, 1, oppFlank, flank, 1, oppFlank];
+        const kinds: ObstacleType[] = [
+          'traffic',
+          'roadblock',
+          'traffic',
+          'laser_gate',
+          'hazard_zone',
+          'traffic',
+        ];
+        lanesOrder.forEach((lane, idx) => {
+          const isLast = idx === lanesOrder.length - 1;
+          const kind = kinds[idx];
+          this.queue.push({
+            safeLane: lane,
+            blockCount: 2,
+            obstacleKind: kind,
+            relativeSpeedOverride:
+              kind === 'traffic' ? -(baseDelta * (idx % 2 === 0 ? 1.0 : 0.65)) : undefined,
+            spacingScale: isLast ? 1.0 : 0.84,
             preferRewardInSafeLane: true,
           });
         });

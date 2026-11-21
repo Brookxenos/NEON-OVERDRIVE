@@ -844,11 +844,11 @@ export class ObstacleManager {
   }
 
   private static pickObstacleType(difficultyLevel: number): ObstacleType {
-    const levelBoost = Math.min(1, Math.max(0, difficultyLevel - 1) / 9);
-    const trafficWeight = 0.16 + levelBoost * 0.2;
-    const hazardWeight = 0.12 + levelBoost * 0.14;
+    const levelBoost = Math.min(1, Math.max(0, difficultyLevel - 1) / 24);
+    const trafficWeight = 0.16 + levelBoost * 0.24;
+    const hazardWeight = 0.12 + levelBoost * 0.16;
     const gateWeight = 0.22 + levelBoost * 0.04;
-    const barrierWeight = 0.25 - levelBoost * 0.19;
+    const barrierWeight = 0.25 - levelBoost * 0.21;
     const roll = Math.random();
 
     if (roll < trafficWeight) return 'traffic';
@@ -870,8 +870,8 @@ export class ObstacleManager {
   ): LaneIndex[] {
     this.lastWorldSpeed = Math.max(40, worldSpeed);
     const levelOffset = Math.max(0, difficultyLevel - 1);
-    const safetyBufferSec = Math.max(0.13, 0.22 - levelOffset * 0.01);
-    const maxTrafficDelta = Math.min(8.8, 3.0 + levelOffset * 0.65);
+    const safetyBufferSec = Math.max(0.115, 0.22 - levelOffset * 0.004);
+    const maxTrafficDelta = Math.min(18, 3.0 + levelOffset * 0.45);
     const spawnedLanes: LaneIndex[] = [];
 
     for (let i = 0; i < lanes.length; i++) {
@@ -917,7 +917,7 @@ export class ObstacleManager {
     spawnZ = SPAWN_Z,
   ): boolean {
     const safeSpeed = Math.max(40, worldSpeed);
-    const safetyBufferSec = Math.max(0.13, 0.22 - Math.max(0, difficultyLevel - 1) * 0.01);
+    const safetyBufferSec = Math.max(0.115, 0.22 - Math.max(0, difficultyLevel - 1) * 0.004);
     const [newStart, newEnd] = this.getArrivalInterval(
       spawnZ,
       1.6,

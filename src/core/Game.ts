@@ -492,7 +492,13 @@ export class Game {
 
     if (difficultyLevel > this.lastAnnouncedLevel) {
       this.lastAnnouncedLevel = difficultyLevel;
-      if (difficultyLevel <= 10) {
+      if (
+        difficultyLevel <= 10 ||
+        difficultyLevel === 12 ||
+        difficultyLevel === 15 ||
+        difficultyLevel === 18 ||
+        (difficultyLevel >= 20 && difficultyLevel % 5 === 0)
+      ) {
         const tierMsg =
           difficultyLevel === 2
             ? 'TIER 2 · TRAFFIC INTENSIFIES'
@@ -500,12 +506,16 @@ export class Game {
               ? 'TIER 3 · TIGHT CORRIDORS'
               : difficultyLevel === 4
                 ? 'TIER 4 · SLALOM LOCKDOWN'
-                : difficultyLevel === 10
-                  ? 'TIER 10 · MAXIMUM OVERDRIVE'
-                  : `TIER ${difficultyLevel} · VELOCITY SURGE`;
+                : difficultyLevel === 5
+                  ? 'TIER 5 · GAUNTLET CROSSFIRE'
+                  : difficultyLevel === 8
+                    ? 'TIER 8 · PHANTOM ZIG-ZAG'
+                    : difficultyLevel === 12
+                      ? 'TIER 12 · OVERDRIVE BLITZ'
+                      : difficultyLevel === 18
+                        ? 'TIER 18 · APEX HELLSTORM'
+                        : `TIER ${difficultyLevel} · VELOCITY SURGE`;
         this.state.pushBanner(tierMsg, difficultyLevel >= 4 ? 'magenta' : 'amber');
-      } else if (difficultyLevel % 25 === 0) {
-        this.state.pushBanner(`TIER ${difficultyLevel} · ENDURANCE MILESTONE`, 'magenta');
       }
     }
 
@@ -519,7 +529,8 @@ export class Game {
     const isAnyBoost = this.boostSystem.isAnyBoostActive();
 
     let targetSpeed =
-      this.difficultyManager.getBaseSpeed(distance) + this.carController.getCarSpec().speedBonus;
+      this.difficultyManager.getBaseSpeed(distance, this.runElapsedSeconds) +
+      this.carController.getCarSpec().speedBonus;
     if (this.carController.isThrottling()) targetSpeed += THROTTLE_BONUS;
     if (this.carController.isBraking() && !isAnyBoost) targetSpeed -= BRAKE_PENALTY;
     if (isManualBoost) targetSpeed += BOOST_SPEED_BONUS;
@@ -543,7 +554,7 @@ export class Game {
       const waveTiming = this.spawnNextWave(difficultyLevel);
       const projectedPeakSpeed = Math.max(
         this.currentSpeed,
-        this.difficultyManager.getBaseSpeed(distance) +
+        this.difficultyManager.getBaseSpeed(distance, this.runElapsedSeconds) +
           this.carController.getCarSpec().speedBonus +
           (isAnyBoost ? PAD_BOOST_BONUS : THROTTLE_BONUS),
       );
@@ -552,7 +563,15 @@ export class Game {
         projectedPeakSpeed,
         waveTiming.laneShiftSteps,
       );
-      this.spawnDistanceRemaining = Math.max(28, baseSpacing * waveTiming.spacingScale);
+      const tierCompression = this.difficultyManager.getFormationCompression(difficultyLevel);
+      const minHumanReactSec = waveTiming.laneShiftSteps >= 2 ? 0.46 : 0.3;
+      const minSafeSpacing =
+        projectedPeakSpeed * minHumanReactSec + (waveTiming.laneShiftSteps >= 2 ? 6 : 5);
+      this.spawnDistanceRemaining = Math.max(
+        24,
+        minSafeSpacing,
+        baseSpacing * waveTiming.spacingScale * tierCompression,
+      );
     }
 
     this.obstacleManager.update(dt, this.currentSpeed);

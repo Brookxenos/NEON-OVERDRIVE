@@ -103,7 +103,8 @@ export class CarPhysics {
     } else {
       const targetX = LaneSystem.getLaneX(this.targetLane);
       const prevX = this.x;
-      this.x = damp(this.x, targetX, 15.5, dt);
+      const steerDamping = 15.5 + clamp((worldSpeed - 60) / 120, 0, 1) * 2.5;
+      this.x = damp(this.x, targetX, steerDamping, dt);
       lateralVelocity = (this.x - prevX) / Math.max(dt, 0.001);
       const targetRoll = clamp(-lateralVelocity * 0.011, -0.16, 0.16);
       this.roll = damp(this.roll, targetRoll, 13, dt);
