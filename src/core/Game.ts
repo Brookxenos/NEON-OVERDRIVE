@@ -62,7 +62,8 @@ export class Game {
   private readonly loop: GameLoop;
 
   private currentSpeed = BASE_START_SPEED;
-  private spawnDistanceRemaining = 26;
+  private spawnDistanceRemaining = 42;
+  private lastSafeLane: LaneIndex = 1;
   private hudSyncTimer = 0;
   private announcedGoalId: CarId | null = null;
   private garagePreviewOpen = false;
@@ -335,7 +336,8 @@ export class Game {
 
   private resetRun(): void {
     this.currentSpeed = BASE_START_SPEED + this.carController.getCarSpec().speedBonus;
-    this.spawnDistanceRemaining = 26;
+    this.spawnDistanceRemaining = 42;
+    this.lastSafeLane = 1;
     this.hudSyncTimer = 0;
     const nextGoal = getNextLockedCar(this.saveData.unlockedCars);
     this.announcedGoalId =
@@ -378,9 +380,24 @@ export class Game {
     this.renderer.resize(width, height);
   };
 
-  private spawnNextWave(difficultyLevel: number): void {
+  private spawnNextWave(difficultyLevel: number): number {
     const lanes = LaneSystem.getAllLanes();
-    const safeLane = lanes[Math.floor(Math.random() * lanes.length)];
+    const clearLanes = lanes.filter((l) =>
+      this.obstacleManager.isLaneClearForSafeCorridor(l, this.currentSpeed),
+    );
+    const corridorPool = clearLanes.length > 0 ? clearLanes : lanes;
+
+    const allowTwoLaneJump =
+      difficultyLevel < 6 && !this.boostSystem.isAnyBoostActive() && Math.random() < 0.22;
+    const reachablePool = allowTwoLaneJump
+      ? corridorPool
+      : corridorPool.filter((l) => Math.abs(l - this.lastSafeLane) <= 1);
+    const safeCandidates = reachablePool.length > 0 ? reachablePool : corridorPool;
+
+    const safeLane = safeCandidates[Math.floor(Math.random() * safeCandidates.length)];
+    const laneShiftSteps = Math.abs(safeLane - this.lastSafeLane);
+    this.lastSafeLane = safeLane;
+
     const blockedCandidates = lanes.filter((l) => l !== safeLane);
 
     if (Math.random() > 0.5 && blockedCandidates.length === 2) {
@@ -391,12 +408,18 @@ export class Game {
 
     const blockCount =
       Math.random() < this.difficultyManager.getDoubleBlockChance(difficultyLevel) ? 2 : 1;
-    const chosenBlocked = blockedCandidates.slice(0, blockCount);
-    this.obstacleManager.spawnInLanes(chosenBlocked);
+    const spawnedBlocked = this.obstacleManager.spawnInLanes(
+      blockedCandidates.slice(0, blockCount),
+      this.currentSpeed,
+    );
 
-    const openLanes = lanes.filter((l) => !chosenBlocked.includes(l));
-    const rewardLane: LaneIndex = openLanes[Math.floor(Math.random() * openLanes.length)];
+    const openLanes = lanes.filter((l) => !spawnedBlocked.includes(l));
+    const rewardLane: LaneIndex =
+      openLanes.includes(safeLane) && Math.random() < 0.75
+        ? safeLane
+        : openLanes[Math.floor(Math.random() * openLanes.length)];
     this.collectibleManager.spawnRewardInLane(rewardLane);
+    return laneShiftSteps;
   }
 
   private updateFrame = (dt: number): void => {
@@ -482,8 +505,18 @@ export class Game {
 
     this.spawnDistanceRemaining -= this.currentSpeed * dt;
     if (this.spawnDistanceRemaining <= 0) {
-      this.spawnNextWave(difficultyLevel);
-      this.spawnDistanceRemaining = this.difficultyManager.getNextWaveSpacing(difficultyLevel);
+      const laneShiftSteps = this.spawnNextWave(difficultyLevel);
+      const projectedPeakSpeed = Math.max(
+        this.currentSpeed,
+        this.difficultyManager.getBaseSpeed(distance) +
+          this.carController.getCarSpec().speedBonus +
+          (isAnyBoost ? PAD_BOOST_BONUS : THROTTLE_BONUS),
+      );
+      this.spawnDistanceRemaining = this.difficultyManager.getNextWaveSpacing(
+        difficultyLevel,
+        projectedPeakSpeed,
+        laneShiftSteps,
+      );
     }
 
     this.obstacleManager.update(dt, this.currentSpeed);

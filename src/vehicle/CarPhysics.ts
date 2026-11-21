@@ -103,10 +103,10 @@ export class CarPhysics {
     } else {
       const targetX = LaneSystem.getLaneX(this.targetLane);
       const prevX = this.x;
-      this.x = damp(this.x, targetX, 13.5, dt);
+      this.x = damp(this.x, targetX, 15.5, dt);
       lateralVelocity = (this.x - prevX) / Math.max(dt, 0.001);
-      const targetRoll = clamp(-lateralVelocity * 0.012, -0.16, 0.16);
-      this.roll = damp(this.roll, targetRoll, 12, dt);
+      const targetRoll = clamp(-lateralVelocity * 0.011, -0.16, 0.16);
+      this.roll = damp(this.roll, targetRoll, 13, dt);
       this.phase += dt * (isBoosting ? 9.5 : 5.5);
     }
 

@@ -19,8 +19,8 @@ export interface CollisionReport {
 }
 
 export class CollisionSystem {
-  private readonly playerHalfW = 0.85;
-  private readonly playerHalfZ = 1.65;
+  private readonly playerHalfW = 0.78;
+  private readonly playerHalfZ = 1.55;
 
   public evaluate(
     playerX: number,

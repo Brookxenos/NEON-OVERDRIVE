@@ -502,8 +502,8 @@ export class ObstacleManager {
           obsGroup.add(rail);
         }
 
-        halfW = 1.25;
-        halfZ = 0.52;
+        halfW = 1.12;
+        halfZ = 0.48;
       } else if (kind === 'traffic') {
         const carMat = trafficCarMats[i % trafficCarMats.length];
         const carBody = new THREE.Group();
@@ -600,9 +600,9 @@ export class ObstacleManager {
 
         hoverTarget = carBody;
         baseY = 0.22;
-        halfW = 1.02;
-        halfZ = 2.02;
-        relativeSpeed = -8;
+        halfW = 0.96;
+        halfZ = 1.92;
+        relativeSpeed = -3;
       } else if (kind === 'roadblock') {
         const floorMarker = new THREE.Mesh(floorStripGeo, laneFloorWarningMat);
         floorMarker.position.set(0, 0.03, 0.72);
@@ -622,8 +622,8 @@ export class ObstacleManager {
           obsGroup.add(beacon);
         }
 
-        halfW = 1.32;
-        halfZ = 0.64;
+        halfW = 1.14;
+        halfZ = 0.58;
       } else if (kind === 'laser_gate') {
         const floorMarker = new THREE.Mesh(floorStripGeo, laneFloorWarningMat);
         floorMarker.position.set(0, 0.03, 0.45);
@@ -650,8 +650,8 @@ export class ObstacleManager {
           obsGroup.add(beam);
         }
 
-        halfW = 1.3;
-        halfZ = 0.45;
+        halfW = 1.12;
+        halfZ = 0.44;
       } else {
         const floorMarker = new THREE.Mesh(floorStripGeo, laneFloorWarningMat);
         floorMarker.position.set(0, 0.03, 1.65);
@@ -687,8 +687,8 @@ export class ObstacleManager {
           }
         }
 
-        halfW = 1.25;
-        halfZ = 1.82;
+        halfW = 1.1;
+        halfZ = 1.62;
       }
 
       this.group.add(obsGroup);
@@ -711,7 +711,98 @@ export class ObstacleManager {
     this.pool = new ObjectPool(instances);
   }
 
-  public spawnInLanes(lanes: LaneIndex[]): void {
+  private static getObstacleHalfZ(kind: ObstacleType): number {
+    switch (kind) {
+      case 'traffic':
+        return 1.92;
+      case 'hazard_zone':
+        return 1.62;
+      case 'roadblock':
+        return 0.58;
+      case 'barrier':
+        return 0.48;
+      case 'laser_gate':
+        return 0.44;
+    }
+  }
+
+  private getArrivalInterval(
+    z: number,
+    halfZ: number,
+    relativeSpeed: number,
+    worldSpeed: number,
+    safetyBufferSec: number,
+  ): [number, number] {
+    const effectiveSpeed = Math.max(18, worldSpeed + relativeSpeed);
+    const arrivalTime = Math.max(0, -z) / effectiveSpeed;
+    const halfDuration = (halfZ + 1.55) / effectiveSpeed + safetyBufferSec;
+    return [arrivalTime - halfDuration, arrivalTime + halfDuration];
+  }
+
+  private canSpawnSafelyAtSpeed(
+    lane: LaneIndex,
+    halfZ: number,
+    relativeSpeed: number,
+    worldSpeed: number,
+  ): boolean {
+    const [newStart, newEnd] = this.getArrivalInterval(
+      SPAWN_Z,
+      halfZ,
+      relativeSpeed,
+      worldSpeed,
+      0.38,
+    );
+    const newCenter = (newStart + newEnd) * 0.5;
+    const laneIntervals: Array<[number, number]>[] = [[], [], []];
+    laneIntervals[lane].push([newStart, newEnd]);
+
+    let sameLaneConflict = false;
+    this.pool.forEachActive((obs) => {
+      if (obs.lane === lane && Math.abs(obs.group.position.z - SPAWN_Z) < 20) {
+        sameLaneConflict = true;
+      }
+      if (obs.group.position.z > 2) return;
+      const [obsStart, obsEnd] = this.getArrivalInterval(
+        obs.group.position.z,
+        obs.halfZ,
+        obs.relativeSpeed,
+        worldSpeed,
+        0.38,
+      );
+      if (obs.lane === lane && obsEnd >= newStart && obsStart <= newEnd) {
+        sameLaneConflict = true;
+      }
+      laneIntervals[obs.lane].push([obsStart, obsEnd]);
+    });
+
+    if (sameLaneConflict) return false;
+
+    const sampleTimes = [newStart + 0.08, newCenter, newEnd - 0.08];
+    for (const sampleTime of sampleTimes) {
+      let openCount = 0;
+      for (let l = 0; l < 3; l++) {
+        const blockedAtSample = laneIntervals[l].some(
+          ([start, end]) => sampleTime >= start && sampleTime <= end,
+        );
+        if (!blockedAtSample) openCount += 1;
+      }
+      if (openCount === 0) return false;
+    }
+
+    return true;
+  }
+
+  private isSpawnPassable(lane: LaneIndex, halfZ: number, relativeSpeed: number): boolean {
+    return (
+      this.canSpawnSafelyAtSpeed(lane, halfZ, relativeSpeed, this.lastWorldSpeed) &&
+      this.canSpawnSafelyAtSpeed(lane, halfZ, relativeSpeed, this.lastWorldSpeed + 50)
+    );
+  }
+
+  private lastWorldSpeed = 64;
+
+  public spawnInLanes(lanes: LaneIndex[], worldSpeed = 64): LaneIndex[] {
+    this.lastWorldSpeed = Math.max(40, worldSpeed);
     const obstacleTypes: ObstacleType[] = [
       'barrier',
       'traffic',
@@ -719,22 +810,55 @@ export class ObstacleManager {
       'laser_gate',
       'hazard_zone',
     ];
+    const spawnedLanes: LaneIndex[] = [];
 
     for (let i = 0; i < lanes.length; i++) {
       const lane = lanes[i];
       const preferred = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
+      let relSpeed = preferred === 'traffic' ? -(1.8 + Math.random() * 2.2) : 0;
+      const candidateHalfZ = ObstacleManager.getObstacleHalfZ(preferred);
+
+      if (!this.isSpawnPassable(lane, candidateHalfZ, relSpeed)) {
+        if (preferred === 'traffic' && this.isSpawnPassable(lane, candidateHalfZ, 0)) {
+          relSpeed = 0;
+        } else {
+          continue;
+        }
+      }
+
       const obs = this.pool.acquire((item) => item.kind === preferred);
       if (!obs) continue;
 
       obs.active = true;
       obs.lane = lane;
       obs.nearMissed = false;
-      if (obs.kind === 'traffic') {
-        obs.relativeSpeed = -(4 + Math.random() * 11);
-      }
-      obs.group.position.set(LaneSystem.getLaneX(lane), 0, SPAWN_Z - i * 2.5);
+      obs.relativeSpeed = obs.kind === 'traffic' ? relSpeed : 0;
+      obs.group.position.set(LaneSystem.getLaneX(lane), 0, SPAWN_Z);
       obs.group.visible = true;
+      spawnedLanes.push(lane);
     }
+
+    return spawnedLanes;
+  }
+
+  public isLaneClearForSafeCorridor(lane: LaneIndex, worldSpeed: number): boolean {
+    const safeSpeed = Math.max(40, worldSpeed);
+    const [newStart, newEnd] = this.getArrivalInterval(SPAWN_Z, 1.6, 0, safeSpeed, 0.34);
+    let clear = true;
+    this.pool.forEachActive((obs) => {
+      if (obs.lane !== lane || obs.group.position.z > 2) return;
+      const [obsStart, obsEnd] = this.getArrivalInterval(
+        obs.group.position.z,
+        obs.halfZ,
+        obs.relativeSpeed,
+        safeSpeed,
+        0.34,
+      );
+      if (obsEnd >= newStart && obsStart <= newEnd) {
+        clear = false;
+      }
+    });
+    return clear;
   }
 
   public update(dt: number, worldSpeed: number): void {
