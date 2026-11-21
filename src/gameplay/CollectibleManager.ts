@@ -152,7 +152,7 @@ export class CollectibleManager {
 
   public spawnRewardInLane(lane: LaneIndex, spawnZ = SPAWN_Z): void {
     const roll = Math.random();
-    if (roll < 0.16) {
+    if (roll < 0.055) {
       const pad = this.padPool.acquire();
       if (pad) {
         pad.active = true;
@@ -163,10 +163,10 @@ export class CollectibleManager {
       return;
     }
 
-    if (roll < 0.9) {
+    if (roll < 0.88) {
       const kindRoll = Math.random();
       const kind: CollectibleType =
-        kindRoll < 0.16
+        kindRoll < 0.08
           ? 'boost_cell'
           : kindRoll < 0.62
             ? 'score_crystal'

@@ -858,17 +858,17 @@ export class ObstacleManager {
     return 'roadblock';
   }
 
-  private lastWorldSpeed = 64;
+  private lastWorldSpeed = 36;
 
   public spawnInLanes(
     lanes: LaneIndex[],
-    worldSpeed = 64,
+    worldSpeed = 36,
     difficultyLevel = 1,
     spawnZ = SPAWN_Z,
     preferredKind?: ObstacleType,
     relativeSpeedOverride?: number,
   ): LaneIndex[] {
-    this.lastWorldSpeed = Math.max(40, worldSpeed);
+    this.lastWorldSpeed = Math.max(28, worldSpeed);
     const levelOffset = Math.max(0, difficultyLevel - 1);
     const safetyBufferSec = Math.max(0.115, 0.22 - levelOffset * 0.004);
     const maxTrafficDelta = Math.min(18, 3.0 + levelOffset * 0.45);
@@ -916,7 +916,7 @@ export class ObstacleManager {
     difficultyLevel = 1,
     spawnZ = SPAWN_Z,
   ): boolean {
-    const safeSpeed = Math.max(40, worldSpeed);
+    const safeSpeed = Math.max(28, worldSpeed);
     const safetyBufferSec = Math.max(0.115, 0.22 - Math.max(0, difficultyLevel - 1) * 0.004);
     const [newStart, newEnd] = this.getArrivalInterval(
       spawnZ,

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-const SPEED_LINE_COUNT = 24;
+const SPEED_LINE_COUNT = 8;
 
 export class SpeedEffects {
   public readonly group = new THREE.Group();
@@ -13,11 +13,11 @@ export class SpeedEffects {
   private readonly dummy = new THREE.Object3D();
 
   constructor() {
-    this.speedLineGeo = new THREE.BoxGeometry(0.04, 0.04, 1);
+    this.speedLineGeo = new THREE.BoxGeometry(0.035, 0.035, 1);
     this.speedLineMat = new THREE.MeshBasicMaterial({
       color: 0xfef3c7,
       transparent: true,
-      opacity: 0.22,
+      opacity: 0,
     });
     this.speedLinesMesh = new THREE.InstancedMesh(
       this.speedLineGeo,
@@ -30,20 +30,19 @@ export class SpeedEffects {
     for (let i = 0; i < SPEED_LINE_COUNT; i++) {
       const side = i % 2 === 0 ? -1 : 1;
       this.speedLinePositions.push({
-        x: side * (7.6 + Math.random() * 6.4),
-        y: 0.8 + Math.random() * 5.2,
+        x: side * (8.4 + Math.random() * 6.0),
+        y: 0.9 + Math.random() * 4.8,
         z: -Math.random() * 140,
-        len: 2.8 + Math.random() * 4.5,
+        len: 2.2 + Math.random() * 3.5,
       });
     }
     this.group.add(this.speedLinesMesh);
   }
 
   public update(dt: number, worldSpeed: number, isBoosting: boolean): void {
-    const streakSpeed = worldSpeed * (isBoosting ? 1.65 : 1.05);
-    this.speedLineMat.opacity = isBoosting
-      ? 0.34
-      : Math.min(0.2, Math.max(0.05, (worldSpeed - 45) / 240));
+    const streakSpeed = worldSpeed * (isBoosting ? 1.55 : 1.0);
+    const speedRatio = Math.max(0, (worldSpeed - 68) / 140);
+    this.speedLineMat.opacity = isBoosting ? 0.24 : Math.min(0.14, speedRatio * 0.14);
     this.speedLineMat.color.setHex(isBoosting ? 0x67e8f9 : 0xfde68a);
 
     for (let i = 0; i < SPEED_LINE_COUNT; i++) {

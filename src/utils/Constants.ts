@@ -15,12 +15,12 @@ export const PLAYER_Z = 0;
 export const PLAYER_HOVER_Y = 0;
 export const CAR_CHASSIS_CLEARANCE = 0.24;
 
-export const BASE_START_SPEED = 60;
+export const BASE_START_SPEED = 36;
 export const BASE_MAX_SPEED = 190;
-export const THROTTLE_BONUS = 14;
-export const BRAKE_PENALTY = 15;
-export const BOOST_SPEED_BONUS = 42;
-export const PAD_BOOST_BONUS = 50;
+export const THROTTLE_BONUS = 10;
+export const BRAKE_PENALTY = 12;
+export const BOOST_SPEED_BONUS = 32;
+export const PAD_BOOST_BONUS = 36;
 
 export const SPEED_TO_KMH = 3.6;
 
@@ -28,7 +28,7 @@ export const BOOST_MAX = 100;
 export const BOOST_DRAIN_PER_SEC = 28;
 export const BOOST_PASSIVE_REGEN_PER_SEC = 4.5;
 export const BOOST_MIN_ACTIVATION = 15;
-export const PAD_BOOST_DURATION = 1.6;
+export const PAD_BOOST_DURATION = 1.35;
 
 export const SCORE_PER_METER = 2.4;
 export const ENERGY_ORB_SCORE = 120;

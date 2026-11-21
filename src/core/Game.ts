@@ -488,7 +488,12 @@ export class Game {
     // Active racing simulation
     this.runElapsedSeconds += dt;
     const distance = this.scoreManager.getDistance();
-    const difficultyLevel = this.difficultyManager.getLevel(distance, this.runElapsedSeconds);
+    const currentScore = this.scoreManager.getScore();
+    const difficultyLevel = this.difficultyManager.getLevel(
+      distance,
+      this.runElapsedSeconds,
+      currentScore,
+    );
 
     if (difficultyLevel > this.lastAnnouncedLevel) {
       this.lastAnnouncedLevel = difficultyLevel;
@@ -533,14 +538,14 @@ export class Game {
     const isAnyBoost = this.boostSystem.isAnyBoostActive();
 
     let targetSpeed =
-      this.difficultyManager.getBaseSpeed(distance, this.runElapsedSeconds) +
+      this.difficultyManager.getBaseSpeed(distance, this.runElapsedSeconds, currentScore) +
       this.carController.getCarSpec().speedBonus;
     if (this.carController.isThrottling()) targetSpeed += THROTTLE_BONUS;
     if (this.carController.isBraking() && !isAnyBoost) targetSpeed -= BRAKE_PENALTY;
     if (isManualBoost) targetSpeed += BOOST_SPEED_BONUS;
     if (isPadBoost) targetSpeed += PAD_BOOST_BONUS;
 
-    this.currentSpeed = damp(this.currentSpeed, targetSpeed, 5.2, dt);
+    this.currentSpeed = damp(this.currentSpeed, targetSpeed, 4.2, dt);
 
     this.scoreManager.updateRun(dt, this.currentSpeed, isAnyBoost);
     this.trackManager.update(dt, this.currentSpeed, isAnyBoost);
@@ -558,7 +563,7 @@ export class Game {
       const waveTiming = this.spawnNextWave(difficultyLevel);
       const projectedPeakSpeed = Math.max(
         this.currentSpeed,
-        this.difficultyManager.getBaseSpeed(distance, this.runElapsedSeconds) +
+        this.difficultyManager.getBaseSpeed(distance, this.runElapsedSeconds, currentScore) +
           this.carController.getCarSpec().speedBonus +
           (isAnyBoost ? PAD_BOOST_BONUS : THROTTLE_BONUS),
       );
@@ -715,7 +720,11 @@ export class Game {
       multiplier: this.scoreManager.getMultiplier(),
       orbsCollected: this.scoreManager.getOrbsCollected(),
       runCoins: this.scoreManager.getRunCoins(),
-      difficultyLevel: this.difficultyManager.getLevel(finalDistance, this.runElapsedSeconds),
+      difficultyLevel: this.difficultyManager.getLevel(
+        finalDistance,
+        this.runElapsedSeconds,
+        finalScore,
+      ),
       bestScore: this.saveData.bestScore,
       bestDistance: this.saveData.bestDistance,
       isNewRecord,

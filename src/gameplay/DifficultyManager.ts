@@ -2,24 +2,32 @@ import { BASE_MAX_SPEED, BASE_START_SPEED } from '../utils/Constants';
 import { randomRange } from '../utils/MathUtils';
 
 export class DifficultyManager {
-  public getLevel(distance: number, elapsedRunSeconds = 0): number {
-    const progress = Math.max(0, distance) + Math.max(0, elapsedRunSeconds) * 20;
+  public getLevel(distance: number, elapsedRunSeconds = 0, score = 0): number {
+    const progress =
+      Math.max(0, distance) * 0.75 +
+      Math.max(0, elapsedRunSeconds) * 14 +
+      Math.max(0, score) * 0.16;
     return 1 + Math.floor(Math.pow(progress / 420, 0.56));
   }
 
-  public getBaseSpeed(distance: number, elapsedRunSeconds = 0): number {
-    const d = Math.max(0, distance);
-    const t = Math.max(0, elapsedRunSeconds);
-    if (d <= 2500) {
-      return BASE_START_SPEED + d * 0.0224; // 60 -> 116 m/s (418 km/h)
+  public getBaseSpeed(distance: number, elapsedRunSeconds = 0, score = 0): number {
+    const effectiveScore = Math.max(
+      Math.max(0, score),
+      Math.max(0, distance) * 1.8 + Math.max(0, elapsedRunSeconds) * 28,
+    );
+
+    if (effectiveScore <= 20000) {
+      // Calm opening pace (36 m/s = 130 km/h) rising smoothly to 84 m/s (302 km/h)
+      return BASE_START_SPEED + (effectiveScore / 20000) * (84 - BASE_START_SPEED);
     }
-    if (d <= 25000) {
-      const midProgress = (d - 2500) / 22500;
-      return 116 + midProgress * 28; // 116 -> 144 m/s (518 km/h)
+    if (effectiveScore <= 150000) {
+      // Mid-run parallel score-to-speed climb: 84 -> 136 m/s (302 -> 490 km/h)
+      const midRatio = (effectiveScore - 20000) / 130000;
+      return 84 + midRatio * 52;
     }
-    const extraProgress = (d - 25000) / 145000 + Math.max(0, t - 180) / 1100;
-    const tailRange = BASE_MAX_SPEED - 144; // 144 -> 190 m/s (684 km/h) across long minutes
-    return 144 + tailRange * (1 - Math.exp(-extraProgress));
+    // Long-run parallel score climb: 136 -> 190 m/s (490 -> 684 km/h)
+    const tailRange = BASE_MAX_SPEED - 136;
+    return 136 + tailRange * (1 - Math.exp(-(effectiveScore - 150000) / 900000));
   }
 
   public getNextWaveSpacing(
