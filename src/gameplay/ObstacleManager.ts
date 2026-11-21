@@ -837,7 +837,7 @@ export class ObstacleManager {
         halfZ,
         relativeSpeed,
         this.lastWorldSpeed + 50,
-        safetyBufferSec,
+        safetyBufferSec * 0.7,
         spawnZ,
       )
     );
@@ -870,8 +870,8 @@ export class ObstacleManager {
   ): LaneIndex[] {
     this.lastWorldSpeed = Math.max(40, worldSpeed);
     const levelOffset = Math.max(0, difficultyLevel - 1);
-    const safetyBufferSec = Math.max(0.2, 0.32 - levelOffset * 0.014);
-    const maxTrafficDelta = Math.min(8.2, 2.6 + levelOffset * 0.62);
+    const safetyBufferSec = Math.max(0.13, 0.22 - levelOffset * 0.01);
+    const maxTrafficDelta = Math.min(8.8, 3.0 + levelOffset * 0.65);
     const spawnedLanes: LaneIndex[] = [];
 
     for (let i = 0; i < lanes.length; i++) {
@@ -879,7 +879,7 @@ export class ObstacleManager {
       const preferred = preferredKind ?? ObstacleManager.pickObstacleType(difficultyLevel);
       let relSpeed =
         preferred === 'traffic'
-          ? (relativeSpeedOverride ?? -(1.8 + Math.random() * maxTrafficDelta))
+          ? (relativeSpeedOverride ?? -(2.2 + Math.random() * maxTrafficDelta))
           : 0;
       const candidateHalfZ = ObstacleManager.getObstacleHalfZ(preferred);
 
@@ -917,7 +917,7 @@ export class ObstacleManager {
     spawnZ = SPAWN_Z,
   ): boolean {
     const safeSpeed = Math.max(40, worldSpeed);
-    const safetyBufferSec = Math.max(0.2, 0.31 - Math.max(0, difficultyLevel - 1) * 0.012);
+    const safetyBufferSec = Math.max(0.13, 0.22 - Math.max(0, difficultyLevel - 1) * 0.01);
     const [newStart, newEnd] = this.getArrivalInterval(
       spawnZ,
       1.6,

@@ -133,9 +133,8 @@ export class TacticalWaveDirector {
       'checkpoint_lockdown',
       'traffic_convoy',
     ];
-    if (difficultyLevel >= 2) available.push('hazard_chicane');
-    if (difficultyLevel >= 3) available.push('double_squeeze');
-    if (difficultyLevel >= 4 && allowTwoLaneJump) available.push('apex_sweep');
+    if (difficultyLevel >= 2) available.push('hazard_chicane', 'double_squeeze');
+    if (difficultyLevel >= 3 && allowTwoLaneJump) available.push('apex_sweep');
 
     const nonRepeating = available.filter((id) => id !== this.lastFormation);
     const pool = nonRepeating.length > 0 ? nonRepeating : available;
@@ -145,7 +144,6 @@ export class TacticalWaveDirector {
     const dir: -1 | 1 = Math.random() < 0.5 ? -1 : 1;
     const flank: LaneIndex = dir === -1 ? 0 : 2;
     const oppFlank: LaneIndex = dir === -1 ? 2 : 0;
-    const squeezeBlocks: 1 | 2 = difficultyLevel >= 2 ? 2 : 1;
 
     switch (chosen) {
       case 'center_funnel': {
@@ -155,15 +153,15 @@ export class TacticalWaveDirector {
             blockCount: 2,
             preferredBlocked: [0, 2],
             obstacleKind: 'barrier',
-            spacingScale: 0.9,
+            spacingScale: 0.88,
             preferRewardInSafeLane: true,
           },
           {
             safeLane: flank,
-            blockCount: squeezeBlocks,
-            preferredBlocked: squeezeBlocks === 2 ? [1, oppFlank] : [1],
+            blockCount: 2,
+            preferredBlocked: [1, oppFlank],
             obstacleKind: 'roadblock',
-            spacingScale: 0.9,
+            spacingScale: 0.88,
             preferRewardInSafeLane: true,
           },
           {
@@ -171,7 +169,7 @@ export class TacticalWaveDirector {
             blockCount: 2,
             preferredBlocked: [0, 2],
             obstacleKind: 'laser_gate',
-            spacingScale: 1.02,
+            spacingScale: 0.98,
             preferRewardInSafeLane: true,
           },
         );
@@ -180,16 +178,15 @@ export class TacticalWaveDirector {
 
       case 'slalom_weave': {
         const sequence: LaneIndex[] = [flank, 1, oppFlank, 1];
-        const kind: ObstacleType = difficultyLevel >= 3 ? 'laser_gate' : 'barrier';
+        const kind: ObstacleType = difficultyLevel >= 2 ? 'laser_gate' : 'barrier';
         sequence.forEach((lane, idx) => {
           const isLast = idx === sequence.length - 1;
-          const blockCount: 1 | 2 =
-            difficultyLevel >= 3 || idx % 2 === 1 || idx === 2 ? 2 : 1;
+          const blockCount: 1 | 2 = difficultyLevel >= 2 || idx >= 1 ? 2 : 1;
           this.queue.push({
             safeLane: lane,
             blockCount,
             obstacleKind: kind,
-            spacingScale: isLast ? 1.02 : 0.86,
+            spacingScale: isLast ? 0.98 : 0.84,
             preferRewardInSafeLane: true,
           });
         });
@@ -197,7 +194,7 @@ export class TacticalWaveDirector {
       }
 
       case 'traffic_convoy': {
-        const convoySpeed = -Math.min(7.5, 2.8 + (difficultyLevel - 1) * 0.52);
+        const convoySpeed = -Math.min(8.5, 3.2 + (difficultyLevel - 1) * 0.6);
         const lanesOrder: LaneIndex[] = [flank, 1, oppFlank];
         lanesOrder.forEach((lane, idx) => {
           const isLast = idx === lanesOrder.length - 1;
@@ -206,7 +203,7 @@ export class TacticalWaveDirector {
             blockCount: difficultyLevel >= 2 || idx >= 1 ? 2 : 1,
             obstacleKind: 'traffic',
             relativeSpeedOverride: convoySpeed,
-            spacingScale: isLast ? 1.04 : 0.92,
+            spacingScale: isLast ? 1.0 : 0.9,
             preferRewardInSafeLane: true,
           });
         });
@@ -217,10 +214,10 @@ export class TacticalWaveDirector {
         this.queue.push(
           {
             safeLane: 1,
-            blockCount: squeezeBlocks,
-            preferredBlocked: squeezeBlocks === 2 ? [0, 2] : [flank],
+            blockCount: 2,
+            preferredBlocked: [0, 2],
             obstacleKind: 'roadblock',
-            spacingScale: 0.9,
+            spacingScale: 0.88,
             preferRewardInSafeLane: true,
           },
           {
@@ -228,7 +225,7 @@ export class TacticalWaveDirector {
             blockCount: 2,
             preferredBlocked: [1, oppFlank],
             obstacleKind: 'laser_gate',
-            spacingScale: 0.88,
+            spacingScale: 0.86,
             preferRewardInSafeLane: true,
           },
           {
@@ -236,7 +233,7 @@ export class TacticalWaveDirector {
             blockCount: 2,
             preferredBlocked: [0, 2],
             obstacleKind: 'roadblock',
-            spacingScale: 1.02,
+            spacingScale: 0.98,
             preferRewardInSafeLane: true,
           },
         );
@@ -249,9 +246,9 @@ export class TacticalWaveDirector {
           const isLast = idx === lanesOrder.length - 1;
           this.queue.push({
             safeLane: lane,
-            blockCount: idx >= 1 || difficultyLevel >= 3 ? 2 : 1,
+            blockCount: 2,
             obstacleKind: 'hazard_zone',
-            spacingScale: isLast ? 1.04 : 0.9,
+            spacingScale: isLast ? 1.0 : 0.88,
             preferRewardInSafeLane: true,
           });
         });
@@ -267,7 +264,7 @@ export class TacticalWaveDirector {
             safeLane: lane,
             blockCount: 2,
             obstacleKind: kind,
-            spacingScale: isLast ? 1.04 : 0.85,
+            spacingScale: isLast ? 1.0 : 0.82,
             preferRewardInSafeLane: true,
           });
         });
@@ -281,7 +278,7 @@ export class TacticalWaveDirector {
             blockCount: 2,
             preferredBlocked: [1, oppFlank],
             obstacleKind: 'barrier',
-            spacingScale: 0.96,
+            spacingScale: 0.94,
             preferRewardInSafeLane: true,
           },
           {
@@ -289,7 +286,7 @@ export class TacticalWaveDirector {
             blockCount: 2,
             preferredBlocked: [flank, 1],
             obstacleKind: 'laser_gate',
-            spacingScale: 0.98,
+            spacingScale: 0.95,
             preferRewardInSafeLane: true,
           },
           {
@@ -297,7 +294,7 @@ export class TacticalWaveDirector {
             blockCount: 2,
             preferredBlocked: [0, 2],
             obstacleKind: 'roadblock',
-            spacingScale: 1.06,
+            spacingScale: 1.02,
             preferRewardInSafeLane: true,
           },
         );
