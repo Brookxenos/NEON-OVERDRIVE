@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { LaneIndex, LaneSystem } from '../track/LaneSystem';
-import { COLORS, DESPAWN_Z, SPAWN_Z } from '../utils/Constants';
+import { DESPAWN_Z, SPAWN_Z } from '../utils/Constants';
 import { ObjectPool, Poolable } from '../utils/ObjectPool';
 import { TextureBundle } from '../utils/TextureFactory';
 
@@ -231,109 +231,111 @@ export class ObstacleManager {
   private elapsed = 0;
 
   constructor(textures: TextureBundle) {
-    // Warm sunlit champagne-peach alloy & rose-bronze trim so obstacles pop cleanly against dark asphalt
+    // High-visibility cream-champagne frame & vivid warning emissives so every obstacle reads clearly from afar
     const chassisSteelMat = new THREE.MeshStandardMaterial({
-      color: 0xf3dfd1,
-      emissive: 0x451a10,
-      emissiveIntensity: 0.18,
-      metalness: 0.35,
+      color: 0xfff3e0,
+      emissive: 0x7c2d12,
+      emissiveIntensity: 0.36,
+      metalness: 0.25,
       roughness: 0.38,
-      envMapIntensity: 0.55,
+      envMapIntensity: 0.4,
     });
     const darkTrimMat = new THREE.MeshStandardMaterial({
-      color: 0x883a4e,
-      emissive: 0x3b1124,
-      emissiveIntensity: 0.14,
-      metalness: 0.25,
-      roughness: 0.52,
-      envMapIntensity: 0.35,
+      color: 0xa23c57,
+      emissive: 0x4c1228,
+      emissiveIntensity: 0.22,
+      metalness: 0.2,
+      roughness: 0.5,
+      envMapIntensity: 0.25,
     });
     const hazardStripeMat = new THREE.MeshStandardMaterial({
       map: textures.hazardStripes,
-      emissive: 0xf59e0b,
+      emissive: 0xfacc15,
       emissiveMap: textures.hazardStripes,
-      emissiveIntensity: 0.62,
-      roughness: 0.38,
+      emissiveIntensity: 0.95,
+      roughness: 0.34,
     });
     this.warningAmberMat = new THREE.MeshStandardMaterial({
-      color: 0xfde047,
-      emissive: 0xf59e0b,
-      emissiveIntensity: 1.5,
-      roughness: 0.18,
+      color: 0xfef08a,
+      emissive: 0xfacc15,
+      emissiveIntensity: 1.85,
+      roughness: 0.16,
     });
     this.dangerRedMat = new THREE.MeshStandardMaterial({
-      color: 0xfb7185,
-      emissive: COLORS.dangerRed,
-      emissiveIntensity: 1.65,
-      roughness: 0.18,
+      color: 0xff6b8b,
+      emissive: 0xf43f5e,
+      emissiveIntensity: 1.95,
+      roughness: 0.16,
     });
     const shieldGlassMat = new THREE.MeshBasicMaterial({
-      color: 0xfb7185,
+      color: 0xff477e,
       transparent: true,
-      opacity: 0.56,
+      opacity: 0.78,
       side: THREE.DoubleSide,
       depthWrite: false,
     });
     const laneFloorWarningMat = new THREE.MeshBasicMaterial({
-      color: 0xfdba74,
+      color: 0xfbbf24,
       transparent: true,
-      opacity: 0.44,
+      opacity: 0.72,
       polygonOffset: true,
       polygonOffsetFactor: -1,
       polygonOffsetUnits: -1,
       depthWrite: false,
     });
-    const trafficColors = [0xeb4a3e, 0xf97316, 0xf472b6, 0xfbbf24, 0xfef3c7];
+    const trafficColors = [0xff4d42, 0xff851b, 0xff69b4, 0xfacc15, 0xfef9c3];
     const trafficCarMats = trafficColors.map(
       (color) =>
         new THREE.MeshStandardMaterial({
           color,
           emissive: color,
-          emissiveIntensity: 0.16,
+          emissiveIntensity: 0.42,
           metalness: 0.08,
-          roughness: 0.56,
-          envMapIntensity: 0.08,
+          roughness: 0.48,
+          envMapIntensity: 0.1,
         }),
     );
     const rivalTireMat = new THREE.MeshStandardMaterial({
-      color: 0x3a2a38,
+      color: 0x453042,
       metalness: 0.06,
-      roughness: 0.85,
+      roughness: 0.8,
       envMapIntensity: 0.06,
     });
     const rivalRimMat = new THREE.MeshStandardMaterial({
-      color: 0xfed7aa,
-      metalness: 0.45,
-      roughness: 0.36,
+      color: 0xfef3c7,
+      emissive: 0x78350f,
+      emissiveIntensity: 0.25,
+      metalness: 0.4,
+      roughness: 0.34,
       envMapIntensity: 0.2,
     });
     const rivalCanopyMat = new THREE.MeshStandardMaterial({
-      color: 0x862e5c,
-      emissive: 0x4c1232,
-      emissiveIntensity: 0.24,
-      metalness: 0.12,
-      roughness: 0.34,
-      envMapIntensity: 0.14,
+      color: 0x67e8f9,
+      emissive: 0x0891b2,
+      emissiveIntensity: 0.48,
+      metalness: 0.15,
+      roughness: 0.26,
+      envMapIntensity: 0.2,
     });
 
     const trafficTrimMat = new THREE.MeshStandardMaterial({
-      color: 0x7a3448,
-      emissive: 0x3b1522,
-      emissiveIntensity: 0.14,
+      color: 0xb45368,
+      emissive: 0x4c1d2d,
+      emissiveIntensity: 0.24,
       metalness: 0.16,
-      roughness: 0.6,
+      roughness: 0.55,
       envMapIntensity: 0.08,
     });
     const trafficPlateMat = new THREE.MeshStandardMaterial({
-      color: 0xfef3c7,
-      emissive: 0x78350f,
-      emissiveIntensity: 0.18,
+      color: 0xfef9c3,
+      emissive: 0xb45309,
+      emissiveIntensity: 0.4,
       metalness: 0.06,
-      roughness: 0.62,
+      roughness: 0.55,
       envMapIntensity: 0.08,
     });
     const trafficHeadlampMat = new THREE.MeshBasicMaterial({
-      color: 0xfef3c7,
+      color: 0xfef9c3,
     });
 
     this.materials.push(
@@ -354,30 +356,31 @@ export class ObstacleManager {
     );
 
     // Shared smooth geometries across obstacle instances
-    const floorStripGeo = new THREE.PlaneGeometry(2.7, 0.28);
+    const floorStripGeo = new THREE.PlaneGeometry(2.8, 0.78);
     floorStripGeo.rotateX(-Math.PI / 2);
 
-    // 1. Barrier (Energy Shield Gate)
-    const barrierSillGeo = new THREE.CapsuleGeometry(0.16, 2.5, 6, 16);
+    // 1. Barrier (High-Contrast Energy Shield Gate)
+    const barrierSillGeo = new THREE.CapsuleGeometry(0.18, 2.55, 6, 16);
     barrierSillGeo.rotateZ(Math.PI / 2);
     const barrierPylonGeo = createSidePylonGeometry();
-    const barrierCapGeo = new THREE.CylinderGeometry(0.14, 0.18, 0.16, 16);
-    const barrierRailGeo = new THREE.CapsuleGeometry(0.08, 2.3, 6, 14);
+    const barrierCapGeo = new THREE.CylinderGeometry(0.19, 0.23, 0.22, 16);
+    const barrierRailGeo = new THREE.CapsuleGeometry(0.13, 2.34, 6, 14);
     barrierRailGeo.rotateZ(Math.PI / 2);
-    const barrierShieldGeo = new THREE.PlaneGeometry(2.36, 0.96);
+    const barrierShieldGeo = new THREE.PlaneGeometry(2.42, 1.08);
+    const barrierHeaderGeo = new THREE.BoxGeometry(2.74, 0.22, 0.28);
 
     // 2. Traffic (Sculpted Automotive Traffic Car)
     const rivalHullGeo = createTrafficBodyGeometry();
     const rivalCanopyGeo = createTrafficCabinGeometry();
-    const rivalRoofGeo = new THREE.BoxGeometry(1.12, 0.04, 0.78);
+    const rivalRoofGeo = new THREE.BoxGeometry(1.16, 0.05, 0.82);
     const rivalGrilleGeo = new THREE.BoxGeometry(1.02, 0.18, 0.08);
     const rivalSplitterGeo = new THREE.BoxGeometry(1.66, 0.05, 0.22);
     const rivalHeadlampGeo = new THREE.BoxGeometry(0.28, 0.09, 0.08);
     const rivalMirrorGeo = new THREE.BoxGeometry(0.17, 0.075, 0.11);
-    const rivalSpoilerBladeGeo = new THREE.BoxGeometry(1.64, 0.045, 0.2);
-    const rivalTailHousingGeo = new THREE.BoxGeometry(1.56, 0.16, 0.07);
-    const rivalTailClusterGeo = new THREE.BoxGeometry(0.42, 0.09, 0.05);
-    const rivalPlateGeo = new THREE.BoxGeometry(0.36, 0.11, 0.03);
+    const rivalSpoilerBladeGeo = new THREE.BoxGeometry(1.68, 0.06, 0.22);
+    const rivalTailHousingGeo = new THREE.BoxGeometry(1.6, 0.19, 0.08);
+    const rivalTailClusterGeo = new THREE.BoxGeometry(1.5, 0.13, 0.06);
+    const rivalPlateGeo = new THREE.BoxGeometry(0.38, 0.12, 0.03);
     const rivalDiffuserGeo = new THREE.BoxGeometry(1.28, 0.11, 0.12);
     const rivalExhaustGeo = new THREE.CylinderGeometry(0.065, 0.075, 0.22, 12);
     rivalExhaustGeo.rotateX(Math.PI / 2);
@@ -387,28 +390,31 @@ export class ObstacleManager {
     const rivalWheelSpokeGeo = new THREE.BoxGeometry(0.23, 0.36, 0.045);
     const rivalWheelArchGeo = new THREE.CylinderGeometry(0.41, 0.41, 0.18, 16, 1, true, 0, Math.PI);
     rivalWheelArchGeo.rotateZ(Math.PI / 2);
-    const rivalShadowGeo = new THREE.PlaneGeometry(2.35, 4.35);
+    const rivalShadowGeo = new THREE.PlaneGeometry(2.55, 4.65);
     rivalShadowGeo.rotateX(-Math.PI / 2);
 
-    // 3. Roadblock (Sloped Highway Barricade)
-    const jerseyGeo = createJerseyBarrierGeometry(2.75);
-    const roadblockStripeGeo = new THREE.BoxGeometry(2.65, 0.34, 0.92);
-    const beaconDomeGeo = new THREE.SphereGeometry(0.17, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.65);
+    // 3. Roadblock (High-Visibility Striped Highway Barricade)
+    const jerseyGeo = createJerseyBarrierGeometry(2.78);
+    const roadblockStripeGeo = new THREE.BoxGeometry(2.74, 0.42, 1.12);
+    const roadblockTopRailGeo = new THREE.BoxGeometry(2.68, 0.2, 0.26);
+    const beaconDomeGeo = new THREE.SphereGeometry(0.23, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.7);
 
-    // 4. Laser Gate (Rounded Safety Arch)
-    const laserPostGeo = new THREE.CapsuleGeometry(0.14, 2.05, 8, 16);
-    const laserCollarGeo = new THREE.CylinderGeometry(0.22, 0.24, 0.24, 16);
-    const laserArchGeo = new THREE.TorusGeometry(1.36, 0.11, 10, 24, Math.PI);
-    const laserBeamGeo = new THREE.CylinderGeometry(0.075, 0.075, 2.66, 16);
+    // 4. Laser Gate (Thick High-Contrast Safety Arch)
+    const laserPostGeo = new THREE.CapsuleGeometry(0.2, 2.08, 8, 16);
+    const laserCollarGeo = new THREE.CylinderGeometry(0.28, 0.3, 0.28, 16);
+    const laserArchGeo = new THREE.TorusGeometry(1.36, 0.17, 10, 24, Math.PI);
+    const laserBeamGeo = new THREE.CylinderGeometry(0.125, 0.125, 2.66, 16);
     laserBeamGeo.rotateZ(Math.PI / 2);
 
-    // 5. Hazard Zone (Raised EMP Pylon Cluster)
-    const hazardRingGeo = new THREE.CylinderGeometry(1.28, 1.42, 0.22, 24);
-    const hazardTopBandGeo = new THREE.TorusGeometry(1.24, 0.065, 10, 28);
+    // 5. Hazard Zone (Tall EMP Pylon Cage with Overhead X-Beams)
+    const hazardRingGeo = new THREE.CylinderGeometry(1.32, 1.46, 0.34, 24);
+    const hazardTopBandGeo = new THREE.TorusGeometry(1.28, 0.09, 10, 28);
     hazardTopBandGeo.rotateX(Math.PI / 2);
-    const hazardArcGeo = new THREE.TorusGeometry(1.05, 0.075, 10, 24, Math.PI);
-    const hazardPylonGeo = new THREE.CylinderGeometry(0.11, 0.17, 0.95, 14);
-    const hazardTipGeo = new THREE.SphereGeometry(0.15, 14, 10);
+    const hazardArcGeo = new THREE.TorusGeometry(1.12, 0.11, 10, 24, Math.PI);
+    const hazardPylonGeo = new THREE.CylinderGeometry(0.16, 0.22, 1.45, 14);
+    const hazardTipGeo = new THREE.SphereGeometry(0.22, 14, 10);
+    const hazardCrossBarGeo = new THREE.CylinderGeometry(0.085, 0.085, 3.25, 12);
+    hazardCrossBarGeo.rotateX(Math.PI / 2);
 
     this.geometries.push(
       floorStripGeo,
@@ -417,6 +423,7 @@ export class ObstacleManager {
       barrierCapGeo,
       barrierRailGeo,
       barrierShieldGeo,
+      barrierHeaderGeo,
       rivalHullGeo,
       rivalCanopyGeo,
       rivalRoofGeo,
@@ -437,6 +444,7 @@ export class ObstacleManager {
       rivalShadowGeo,
       jerseyGeo,
       roadblockStripeGeo,
+      roadblockTopRailGeo,
       beaconDomeGeo,
       laserPostGeo,
       laserCollarGeo,
@@ -447,6 +455,7 @@ export class ObstacleManager {
       hazardArcGeo,
       hazardPylonGeo,
       hazardTipGeo,
+      hazardCrossBarGeo,
     );
 
     const kinds: ObstacleType[] = [
@@ -473,11 +482,11 @@ export class ObstacleManager {
 
       if (kind === 'barrier') {
         const floorMarker = new THREE.Mesh(floorStripGeo, laneFloorWarningMat);
-        floorMarker.position.set(0, 0.03, 0.55);
+        floorMarker.position.set(0, 0.03, 0.75);
         obsGroup.add(floorMarker);
 
         const sill = new THREE.Mesh(barrierSillGeo, hazardStripeMat);
-        sill.position.y = 0.16;
+        sill.position.y = 0.18;
         sill.castShadow = true;
         obsGroup.add(sill);
 
@@ -488,15 +497,19 @@ export class ObstacleManager {
           obsGroup.add(pylon);
 
           const cap = new THREE.Mesh(barrierCapGeo, this.warningAmberMat);
-          cap.position.set(px, 1.58, 0);
+          cap.position.set(px, 1.64, 0);
           obsGroup.add(cap);
         }
 
+        const headerBar = new THREE.Mesh(barrierHeaderGeo, hazardStripeMat);
+        headerBar.position.set(0, 1.54, 0);
+        obsGroup.add(headerBar);
+
         const shield = new THREE.Mesh(barrierShieldGeo, shieldGlassMat);
-        shield.position.set(0, 0.92, 0);
+        shield.position.set(0, 0.94, 0);
         obsGroup.add(shield);
 
-        for (const ry of [0.54, 1.32]) {
+        for (const ry of [0.54, 1.18]) {
           const rail = new THREE.Mesh(barrierRailGeo, this.dangerRedMat);
           rail.position.set(0, ry, 0);
           obsGroup.add(rail);
@@ -517,7 +530,7 @@ export class ObstacleManager {
         carBody.add(canopy);
 
         const roof = new THREE.Mesh(rivalRoofGeo, carMat);
-        roof.position.set(0, 0.985, 0.12);
+        roof.position.set(0, 0.99, 0.12);
         carBody.add(roof);
 
         const grille = new THREE.Mesh(rivalGrilleGeo, trafficTrimMat);
@@ -538,22 +551,20 @@ export class ObstacleManager {
           carBody.add(mirror);
         }
 
-        const spoiler = new THREE.Mesh(rivalSpoilerBladeGeo, trafficTrimMat);
-        spoiler.position.set(0, 0.66, 1.84);
+        const spoiler = new THREE.Mesh(rivalSpoilerBladeGeo, this.warningAmberMat);
+        spoiler.position.set(0, 0.68, 1.84);
         carBody.add(spoiler);
 
         const tailHousing = new THREE.Mesh(rivalTailHousingGeo, trafficTrimMat);
-        tailHousing.position.set(0, 0.37, 2.02);
+        tailHousing.position.set(0, 0.39, 2.02);
         carBody.add(tailHousing);
 
-        for (const sx of [-0.54, 0.54]) {
-          const tailCluster = new THREE.Mesh(rivalTailClusterGeo, this.dangerRedMat);
-          tailCluster.position.set(sx, 0.37, 2.045);
-          carBody.add(tailCluster);
-        }
+        const tailBar = new THREE.Mesh(rivalTailClusterGeo, this.dangerRedMat);
+        tailBar.position.set(0, 0.39, 2.055);
+        carBody.add(tailBar);
 
         const plate = new THREE.Mesh(rivalPlateGeo, trafficPlateMat);
-        plate.position.set(0, 0.26, 2.04);
+        plate.position.set(0, 0.25, 2.045);
         carBody.add(plate);
 
         const diffuser = new THREE.Mesh(rivalDiffuserGeo, trafficTrimMat);
@@ -605,7 +616,7 @@ export class ObstacleManager {
         relativeSpeed = -3;
       } else if (kind === 'roadblock') {
         const floorMarker = new THREE.Mesh(floorStripGeo, laneFloorWarningMat);
-        floorMarker.position.set(0, 0.03, 0.72);
+        floorMarker.position.set(0, 0.03, 0.85);
         obsGroup.add(floorMarker);
 
         const jersey = new THREE.Mesh(jerseyGeo, chassisSteelMat);
@@ -613,12 +624,16 @@ export class ObstacleManager {
         obsGroup.add(jersey);
 
         const stripeBand = new THREE.Mesh(roadblockStripeGeo, hazardStripeMat);
-        stripeBand.position.set(0, 0.38, 0);
+        stripeBand.position.set(0, 0.36, 0);
         obsGroup.add(stripeBand);
 
-        for (const bx of [-0.95, 0.95]) {
+        const topWarnRail = new THREE.Mesh(roadblockTopRailGeo, this.dangerRedMat);
+        topWarnRail.position.set(0, 1.18, 0);
+        obsGroup.add(topWarnRail);
+
+        for (const bx of [-0.98, 0.98]) {
           const beacon = new THREE.Mesh(beaconDomeGeo, this.warningAmberMat);
-          beacon.position.set(bx, 1.14, 0);
+          beacon.position.set(bx, 1.32, 0);
           obsGroup.add(beacon);
         }
 
@@ -626,7 +641,7 @@ export class ObstacleManager {
         halfZ = 0.58;
       } else if (kind === 'laser_gate') {
         const floorMarker = new THREE.Mesh(floorStripGeo, laneFloorWarningMat);
-        floorMarker.position.set(0, 0.03, 0.45);
+        floorMarker.position.set(0, 0.03, 0.65);
         obsGroup.add(floorMarker);
 
         for (const px of [-1.36, 1.36]) {
@@ -636,7 +651,7 @@ export class ObstacleManager {
           obsGroup.add(post);
 
           const baseCollar = new THREE.Mesh(laserCollarGeo, hazardStripeMat);
-          baseCollar.position.set(px, 0.14, 0);
+          baseCollar.position.set(px, 0.16, 0);
           obsGroup.add(baseCollar);
         }
 
@@ -644,7 +659,7 @@ export class ObstacleManager {
         topArch.position.set(0, 2.05, 0);
         obsGroup.add(topArch);
 
-        for (const by of [0.62, 1.25, 1.88]) {
+        for (const by of [0.58, 1.24, 1.9]) {
           const beam = new THREE.Mesh(laserBeamGeo, this.dangerRedMat);
           beam.position.set(0, by, 0);
           obsGroup.add(beam);
@@ -654,22 +669,22 @@ export class ObstacleManager {
         halfZ = 0.44;
       } else {
         const floorMarker = new THREE.Mesh(floorStripGeo, laneFloorWarningMat);
-        floorMarker.position.set(0, 0.03, 1.65);
+        floorMarker.position.set(0, 0.03, 1.78);
         obsGroup.add(floorMarker);
 
         const basePlatform = new THREE.Mesh(hazardRingGeo, hazardStripeMat);
-        basePlatform.position.y = 0.12;
+        basePlatform.position.y = 0.17;
         basePlatform.scale.set(1, 1, 1.28);
         obsGroup.add(basePlatform);
 
         const topBand = new THREE.Mesh(hazardTopBandGeo, this.warningAmberMat);
-        topBand.position.y = 0.26;
+        topBand.position.y = 0.38;
         topBand.scale.set(1, 1.28, 1);
         obsGroup.add(topBand);
 
         for (const angle of [0, Math.PI / 2]) {
           const arc = new THREE.Mesh(hazardArcGeo, this.dangerRedMat);
-          arc.position.y = 0.24;
+          arc.position.y = 0.34;
           arc.rotation.y = angle;
           obsGroup.add(arc);
         }
@@ -677,14 +692,21 @@ export class ObstacleManager {
         for (const px of [-1.1, 1.1]) {
           for (const pz of [-1.35, 1.35]) {
             const pylon = new THREE.Mesh(hazardPylonGeo, chassisSteelMat);
-            pylon.position.set(px, 0.52, pz);
+            pylon.position.set(px, 0.76, pz);
             pylon.castShadow = true;
             obsGroup.add(pylon);
 
             const tip = new THREE.Mesh(hazardTipGeo, this.warningAmberMat);
-            tip.position.set(px, 1.04, pz);
+            tip.position.set(px, 1.56, pz);
             obsGroup.add(tip);
           }
+        }
+
+        for (const rotY of [0.68, -0.68]) {
+          const crossBar = new THREE.Mesh(hazardCrossBarGeo, this.dangerRedMat);
+          crossBar.position.set(0, 1.42, 0);
+          crossBar.rotation.y = rotY;
+          obsGroup.add(crossBar);
         }
 
         halfW = 1.1;
@@ -923,8 +945,8 @@ export class ObstacleManager {
   public update(dt: number, worldSpeed: number): void {
     this.elapsed += dt;
     const pulse = Math.sin(this.elapsed * 5.2);
-    this.warningAmberMat.emissiveIntensity = 1.28 + pulse * 0.22;
-    this.dangerRedMat.emissiveIntensity = 1.48 - pulse * 0.2;
+    this.warningAmberMat.emissiveIntensity = 1.65 + pulse * 0.25;
+    this.dangerRedMat.emissiveIntensity = 1.78 - pulse * 0.22;
 
     this.pool.forEachActive((obs) => {
       const effectiveSpeed = Math.max(12, worldSpeed + obs.relativeSpeed);

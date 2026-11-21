@@ -20,7 +20,7 @@ export class SceneManager {
   ) {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(COLORS.bgVoid);
-    this.scene.fog = new THREE.FogExp2(COLORS.fogNight, 0.0026);
+    this.scene.fog = new THREE.FogExp2(COLORS.fogNight, 0.0018);
 
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
     this.scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;

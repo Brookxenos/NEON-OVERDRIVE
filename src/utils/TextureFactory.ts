@@ -198,24 +198,24 @@ function createHazardStripesTexture(maxAnisotropy: number): THREE.CanvasTexture 
   canvas.height = 256;
   const ctx = canvas.getContext('2d')!;
 
-  ctx.fillStyle = '#9f1239';
+  ctx.fillStyle = '#ef4444';
   ctx.fillRect(0, 0, 256, 256);
 
-  ctx.fillStyle = '#fbbf24';
+  ctx.fillStyle = '#fde047';
   for (let i = -256; i < 512; i += 48) {
     ctx.beginPath();
     ctx.moveTo(i, 0);
-    ctx.lineTo(i + 24, 0);
-    ctx.lineTo(i + 280, 256);
+    ctx.lineTo(i + 26, 0);
+    ctx.lineTo(i + 282, 256);
     ctx.lineTo(i + 256, 256);
     ctx.closePath();
     ctx.fill();
   }
 
-  // Crisp top/bottom sunlit apricot warning edge lines
-  ctx.fillStyle = '#fef3c7';
-  ctx.fillRect(0, 0, 256, 12);
-  ctx.fillRect(0, 244, 256, 12);
+  // Crisp top/bottom high-visibility cream warning edge lines
+  ctx.fillStyle = '#fef9c3';
+  ctx.fillRect(0, 0, 256, 16);
+  ctx.fillRect(0, 240, 256, 16);
 
   return configureTexture(new THREE.CanvasTexture(canvas), maxAnisotropy, true, 2, 1);
 }
