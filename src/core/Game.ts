@@ -69,6 +69,8 @@ export class Game {
   private runElapsedSeconds = 0;
   private lastAnnouncedLevel = 1;
   private hudSyncTimer = 0;
+  private saveFlushTimer = 0;
+  private saveDirty = false;
   private announcedGoalId: CarId | null = null;
   private garagePreviewOpen = false;
   private previewedCarId: CarId;
@@ -170,6 +172,7 @@ export class Game {
     });
 
     window.addEventListener('resize', this.handleResize);
+    window.addEventListener('beforeunload', this.flushPendingSave);
 
     this.loop = new GameLoop(
       this.renderer.isSoftwareGl,
@@ -190,6 +193,7 @@ export class Game {
 
   public pause(): void {
     if (this.state.getStatus() !== 'playing') return;
+    this.flushPendingSave();
     this.audioManager.playUiClick(false);
     this.keyboardController.reset();
     this.touchController.reset();
@@ -205,6 +209,7 @@ export class Game {
   }
 
   public returnToMenu(): void {
+    this.flushPendingSave();
     this.audioManager.playUiClick(false);
     this.resetRun();
     this.state.setStatus('menu');
@@ -346,6 +351,7 @@ export class Game {
     this.lastAnnouncedLevel = 1;
     this.waveDirector.reset();
     this.hudSyncTimer = 0;
+    this.saveFlushTimer = 0;
     const nextGoal = getNextLockedCar(this.saveData.unlockedCars);
     this.announcedGoalId =
       nextGoal && this.saveData.coins >= nextGoal.costCoins ? nextGoal.id : null;
@@ -486,15 +492,21 @@ export class Game {
 
     if (difficultyLevel > this.lastAnnouncedLevel) {
       this.lastAnnouncedLevel = difficultyLevel;
-      const tierMsg =
-        difficultyLevel === 2
-          ? 'TIER 2 · TRAFFIC INTENSIFIES'
-          : difficultyLevel === 3
-            ? 'TIER 3 · TIGHT CORRIDORS'
-            : difficultyLevel === 4
-              ? 'TIER 4 · SLALOM LOCKDOWN'
-              : `TIER ${difficultyLevel} · VELOCITY SURGE`;
-      this.state.pushBanner(tierMsg, difficultyLevel >= 4 ? 'magenta' : 'amber');
+      if (difficultyLevel <= 10) {
+        const tierMsg =
+          difficultyLevel === 2
+            ? 'TIER 2 · TRAFFIC INTENSIFIES'
+            : difficultyLevel === 3
+              ? 'TIER 3 · TIGHT CORRIDORS'
+              : difficultyLevel === 4
+                ? 'TIER 4 · SLALOM LOCKDOWN'
+                : difficultyLevel === 10
+                  ? 'TIER 10 · MAXIMUM OVERDRIVE'
+                  : `TIER ${difficultyLevel} · VELOCITY SURGE`;
+        this.state.pushBanner(tierMsg, difficultyLevel >= 4 ? 'magenta' : 'amber');
+      } else if (difficultyLevel % 25 === 0) {
+        this.state.pushBanner(`TIER ${difficultyLevel} · ENDURANCE MILESTONE`, 'magenta');
+      }
     }
 
     if (this.boostSystem.update(dt)) {
@@ -576,6 +588,13 @@ export class Game {
         this.hudSyncTimer = 0;
         this.syncHudState(difficultyLevel, isAnyBoost);
       }
+
+      if (this.saveDirty) {
+        this.saveFlushTimer += dt;
+        if (this.saveFlushTimer >= 4) {
+          this.flushPendingSave();
+        }
+      }
     }
 
     this.renderer.render(this.sceneManager.scene, this.sceneManager.cameraController.camera);
@@ -605,7 +624,7 @@ export class Game {
     }
 
     if (coinsChanged) {
-      this.saveManager.writeSaveData(this.saveData);
+      this.saveDirty = true;
       const nextGoal = getNextLockedCar(this.saveData.unlockedCars);
       if (
         nextGoal &&
@@ -659,6 +678,8 @@ export class Game {
     if (finalDistance > this.saveData.bestDistance) this.saveData.bestDistance = finalDistance;
     this.saveData.totalRuns += 1;
     this.saveData.totalOrbs += this.scoreManager.getOrbsCollected();
+    this.saveDirty = false;
+    this.saveFlushTimer = 0;
     this.saveManager.writeSaveData(this.saveData);
 
     this.syncProgressionState();
@@ -680,6 +701,13 @@ export class Game {
     });
     this.state.setStatus('gameover');
   }
+
+  private flushPendingSave = (): void => {
+    if (!this.saveDirty) return;
+    this.saveDirty = false;
+    this.saveFlushTimer = 0;
+    this.saveManager.writeSaveData(this.saveData);
+  };
 
   private syncHudState(difficultyLevel: number, isBoosting: boolean): void {
     const currentScore = this.scoreManager.getScore();
@@ -703,8 +731,10 @@ export class Game {
   }
 
   public dispose(): void {
+    this.flushPendingSave();
     this.loop.stop();
     window.removeEventListener('resize', this.handleResize);
+    window.removeEventListener('beforeunload', this.flushPendingSave);
     this.keyboardController.dispose();
     this.touchController.dispose();
     this.audioManager.dispose();

@@ -197,7 +197,7 @@ export class AudioManager {
 
     const bpm = status === 'playing' ? 124 + speedNorm * 24 + (isBoosting ? 12 : 0) : 102;
     const sixteenthDur = 60 / bpm / 4;
-    this.stepAccumulator += dt;
+    this.stepAccumulator = Math.min(this.stepAccumulator + dt, sixteenthDur * 2);
 
     if (this.stepAccumulator >= sixteenthDur) {
       this.stepAccumulator -= sixteenthDur;

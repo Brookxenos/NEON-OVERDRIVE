@@ -192,11 +192,13 @@ export class CollectibleManager {
   }
 
   public update(dt: number, worldSpeed: number): void {
-    this.elapsed += dt;
+    this.elapsed = (this.elapsed + dt) % (Math.PI * 200);
 
     this.collectiblePool.forEachActive((col) => {
       col.group.position.z += worldSpeed * dt;
-      col.group.rotation.y += dt * (col.kind === 'score_crystal' ? 3.8 : 3.0);
+      col.group.rotation.y =
+        (col.group.rotation.y + dt * (col.kind === 'score_crystal' ? 3.8 : 3.0)) %
+        (Math.PI * 2);
       col.group.position.y = 0.95 + Math.sin(this.elapsed * 4.5 + col.phase) * 0.14;
 
       if (col.group.position.z > DESPAWN_Z) {

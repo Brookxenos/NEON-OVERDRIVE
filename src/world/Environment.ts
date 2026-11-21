@@ -8,7 +8,7 @@ export class Environment {
   private readonly shimmerMat: THREE.MeshBasicMaterial;
   private readonly geometries: THREE.BufferGeometry[] = [];
   private readonly materials: THREE.Material[] = [];
-  private elapsed = 0;
+  private shimmerOffset = 0;
 
   constructor(textures: TextureBundle) {
     // Sunset Vice City sky dome
@@ -87,8 +87,8 @@ export class Environment {
   }
 
   public update(dt: number, worldSpeed: number, isBoosting: boolean): void {
-    this.elapsed += dt;
-    this.shimmerPlane.position.z = -190 + ((this.elapsed * worldSpeed * 0.4) % 21.8);
+    this.shimmerOffset = (this.shimmerOffset + dt * worldSpeed * 0.4) % 21.8;
+    this.shimmerPlane.position.z = -190 + this.shimmerOffset;
     this.shimmerMat.opacity = isBoosting ? 0.1 : 0.05;
   }
 

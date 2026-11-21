@@ -94,7 +94,7 @@ export class CarPhysics {
 
     let lateralVelocity = 0;
     if (isAttractMode) {
-      this.phase += dt * 2.1;
+      this.phase = (this.phase + dt * 2.1) % (Math.PI * 200);
       const driftX = Math.sin(this.phase * 0.52) * 1.35;
       const prevX = this.x;
       this.x = damp(this.x, driftX, 4, dt);
@@ -107,7 +107,7 @@ export class CarPhysics {
       lateralVelocity = (this.x - prevX) / Math.max(dt, 0.001);
       const targetRoll = clamp(-lateralVelocity * 0.011, -0.16, 0.16);
       this.roll = damp(this.roll, targetRoll, 13, dt);
-      this.phase += dt * (isBoosting ? 9.5 : 5.5);
+      this.phase = (this.phase + dt * (isBoosting ? 9.5 : 5.5)) % (Math.PI * 200);
     }
 
     // Squat rear on boost/throttle, dive nose on brake

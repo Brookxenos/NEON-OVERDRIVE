@@ -943,7 +943,7 @@ export class ObstacleManager {
   }
 
   public update(dt: number, worldSpeed: number): void {
-    this.elapsed += dt;
+    this.elapsed = (this.elapsed + dt) % (Math.PI * 200);
     const pulse = Math.sin(this.elapsed * 5.2);
     this.warningAmberMat.emissiveIntensity = 1.65 + pulse * 0.25;
     this.dangerRedMat.emissiveIntensity = 1.78 - pulse * 0.22;
@@ -960,7 +960,7 @@ export class ObstacleManager {
       if (obs.trafficWheels.length > 0) {
         const wheelSpinDelta = -(effectiveSpeed / 0.33) * dt * 0.65;
         for (const wheel of obs.trafficWheels) {
-          wheel.rotation.x += wheelSpinDelta;
+          wheel.rotation.x = (wheel.rotation.x + wheelSpinDelta) % (Math.PI * 2);
         }
       }
 

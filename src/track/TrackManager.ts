@@ -32,7 +32,7 @@ export class TrackManager {
   }
 
   public update(dt: number, worldSpeed: number, isBoosting: boolean): void {
-    this.elapsed += dt;
+    this.elapsed = (this.elapsed + dt) % (Math.PI * 200);
     const dz = worldSpeed * dt;
     const totalTrackLen = SEGMENT_COUNT * SEGMENT_LENGTH;
 
