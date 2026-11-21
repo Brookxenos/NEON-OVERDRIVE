@@ -36,6 +36,20 @@ export class GameHUD {
   private readonly touchBoostBtn: HTMLButtonElement;
 
   private lastBannerId = -1;
+  private lastScoreText = '';
+  private lastMultiplier = -1;
+  private lastOrbs = -1;
+  private lastRunCoins = -1;
+  private lastTier = -1;
+  private lastGoalText = '';
+  private lastGoalReady: boolean | null = null;
+  private lastSpeed = -1;
+  private lastDistText = '';
+  private lastIsBoosting: boolean | null = null;
+  private lastBoostPct = -1;
+  private lastMuted: boolean | null = null;
+  private lastBestText = '';
+  private lastShowTouchPad: boolean | null = null;
 
   constructor(actions: GameHUDActions) {
     this.element = document.createElement('section');
@@ -162,41 +176,92 @@ export class GameHUD {
   }
 
   public update(snapshot: GameSnapshot, muted: boolean, showTouchPad: boolean): void {
-    this.scoreEl.textContent = snapshot.score.toLocaleString();
-    this.multiplierEl.textContent = `${snapshot.multiplier}x Multiplier`;
-    this.multiplierEl.classList.toggle('is-active', snapshot.multiplier > 1);
-    this.orbsEl.textContent = String(snapshot.orbsCollected);
-    this.coinsEl.textContent = `+${snapshot.runCoins}`;
-    this.tierEl.textContent = String(snapshot.difficultyLevel);
-
-    if (snapshot.nextCarGoal) {
-      const ready = snapshot.totalCoins >= snapshot.nextCarGoal.cost;
-      this.goalHintEl.textContent = ready
-        ? `Goal Reached: ${snapshot.nextCarGoal.name} Ready!`
-        : `Next Car: ${snapshot.nextCarGoal.name} (${snapshot.totalCoins}/${snapshot.nextCarGoal.cost})`;
-      this.goalHintEl.classList.toggle('is-ready', ready);
-    } else {
-      this.goalHintEl.textContent = 'Garage: All Cars Unlocked';
-      this.goalHintEl.classList.remove('is-ready');
+    const scoreText = snapshot.score.toLocaleString();
+    if (scoreText !== this.lastScoreText) {
+      this.lastScoreText = scoreText;
+      this.scoreEl.textContent = scoreText;
     }
 
-    this.speedEl.textContent = String(snapshot.speedKmh);
-    this.distanceEl.textContent = `${snapshot.distance.toLocaleString()} m`;
+    if (snapshot.multiplier !== this.lastMultiplier) {
+      this.lastMultiplier = snapshot.multiplier;
+      this.multiplierEl.textContent = `${snapshot.multiplier}x Multiplier`;
+      this.multiplierEl.classList.toggle('is-active', snapshot.multiplier > 1);
+    }
+
+    if (snapshot.orbsCollected !== this.lastOrbs) {
+      this.lastOrbs = snapshot.orbsCollected;
+      this.orbsEl.textContent = String(snapshot.orbsCollected);
+    }
+
+    if (snapshot.runCoins !== this.lastRunCoins) {
+      this.lastRunCoins = snapshot.runCoins;
+      this.coinsEl.textContent = `+${snapshot.runCoins}`;
+    }
+
+    if (snapshot.difficultyLevel !== this.lastTier) {
+      this.lastTier = snapshot.difficultyLevel;
+      this.tierEl.textContent = String(snapshot.difficultyLevel);
+    }
+
+    let goalText = 'Garage: All Cars Unlocked';
+    let goalReady = false;
+    if (snapshot.nextCarGoal) {
+      goalReady = snapshot.totalCoins >= snapshot.nextCarGoal.cost;
+      goalText = goalReady
+        ? `Goal Reached: ${snapshot.nextCarGoal.name} Ready!`
+        : `Next Car: ${snapshot.nextCarGoal.name} (${snapshot.totalCoins}/${snapshot.nextCarGoal.cost})`;
+    }
+    if (goalText !== this.lastGoalText) {
+      this.lastGoalText = goalText;
+      this.goalHintEl.textContent = goalText;
+    }
+    if (goalReady !== this.lastGoalReady) {
+      this.lastGoalReady = goalReady;
+      this.goalHintEl.classList.toggle('is-ready', goalReady);
+    }
+
+    if (snapshot.speedKmh !== this.lastSpeed) {
+      this.lastSpeed = snapshot.speedKmh;
+      this.speedEl.textContent = String(snapshot.speedKmh);
+    }
+
+    const distText = `${snapshot.distance.toLocaleString()} m`;
+    if (distText !== this.lastDistText) {
+      this.lastDistText = distText;
+      this.distanceEl.textContent = distText;
+    }
 
     const pct = Math.max(0, Math.min(100, snapshot.boostMeter));
-    this.boostStatusEl.textContent = snapshot.isBoosting ? 'Overdrive Active' : 'Boost Energy';
-    this.boostPercentEl.textContent = `${pct}%`;
-    this.boostFillEl.style.width = `${pct}%`;
-    this.boostFillEl.classList.toggle('is-boosting', snapshot.isBoosting);
-    this.boostFillEl.classList.toggle('is-low', !snapshot.isBoosting && pct < 20);
+    if (snapshot.isBoosting !== this.lastIsBoosting || pct !== this.lastBoostPct) {
+      if (snapshot.isBoosting !== this.lastIsBoosting) {
+        this.lastIsBoosting = snapshot.isBoosting;
+        this.boostStatusEl.textContent = snapshot.isBoosting ? 'Overdrive Active' : 'Boost Energy';
+        this.boostFillEl.classList.toggle('is-boosting', snapshot.isBoosting);
+        this.touchBoostBtn.classList.toggle('is-active', snapshot.isBoosting);
+      }
+      this.lastBoostPct = pct;
+      this.boostPercentEl.textContent = `${pct}%`;
+      this.boostFillEl.style.width = `${pct}%`;
+      this.boostFillEl.classList.toggle('is-low', !snapshot.isBoosting && pct < 20);
+    }
 
-    this.muteBtn.innerHTML = muted ? ICON_VOLUME_OFF : ICON_VOLUME_ON;
-    this.muteBtn.setAttribute('aria-label', muted ? 'Unmute audio' : 'Mute audio');
+    if (muted !== this.lastMuted) {
+      this.lastMuted = muted;
+      this.muteBtn.innerHTML = muted ? ICON_VOLUME_OFF : ICON_VOLUME_ON;
+      this.muteBtn.setAttribute('aria-label', muted ? 'Unmute audio' : 'Mute audio');
+    }
 
-    this.bottomBestEl.textContent = snapshot.bestScore.toLocaleString();
-    this.touchBar.classList.toggle('hidden', !showTouchPad);
-    this.bottomHint.classList.toggle('hidden', showTouchPad);
-    this.touchBoostBtn.classList.toggle('is-active', snapshot.isBoosting);
+    const bestText = snapshot.bestScore.toLocaleString();
+    if (bestText !== this.lastBestText) {
+      this.lastBestText = bestText;
+      this.bottomBestEl.textContent = bestText;
+    }
+
+    if (showTouchPad !== this.lastShowTouchPad) {
+      this.lastShowTouchPad = showTouchPad;
+      this.touchBar.classList.toggle('hidden', !showTouchPad);
+      this.bottomHint.classList.toggle('hidden', showTouchPad);
+    }
 
     if (snapshot.eventBanner) {
       if (snapshot.eventBanner.id !== this.lastBannerId) {

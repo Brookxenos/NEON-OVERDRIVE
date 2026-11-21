@@ -510,11 +510,15 @@ export class Game {
                   ? 'TIER 5 · GAUNTLET CROSSFIRE'
                   : difficultyLevel === 8
                     ? 'TIER 8 · PHANTOM ZIG-ZAG'
-                    : difficultyLevel === 12
-                      ? 'TIER 12 · OVERDRIVE BLITZ'
-                      : difficultyLevel === 18
-                        ? 'TIER 18 · APEX HELLSTORM'
-                        : `TIER ${difficultyLevel} · VELOCITY SURGE`;
+                    : difficultyLevel === 10
+                      ? 'TIER 10 · VELOCITY CHOKE'
+                      : difficultyLevel === 12
+                        ? 'TIER 12 · OVERDRIVE BLITZ'
+                        : difficultyLevel === 15
+                          ? 'TIER 15 · RUSH HOUR CONVOY'
+                          : difficultyLevel === 18
+                            ? 'TIER 18 · APEX HELLSTORM'
+                            : `TIER ${difficultyLevel} · VELOCITY SURGE`;
         this.state.pushBanner(tierMsg, difficultyLevel >= 4 ? 'magenta' : 'amber');
       }
     }

@@ -4,12 +4,13 @@ export class Lighting {
   public readonly group = new THREE.Group();
 
   constructor(isSoftwareGl: boolean) {
-    const hemi = new THREE.HemisphereLight(0xfdba74, 0x3b2154, 0.78);
+    // Bright golden-peach sky light & soft periwinkle-lavender bounce (eliminates dark doom shadows)
+    const hemi = new THREE.HemisphereLight(0xffe1b8, 0x8578a8, 1.25);
     this.group.add(hemi);
 
-    // Low golden-hour sun angled from the front-right horizon
-    const sunsetKey = new THREE.DirectionalLight(0xffbe7b, 1.95);
-    sunsetKey.position.set(24, 12, -26);
+    // Warm golden-hour sun angled from front-right horizon (matching reference sunset art)
+    const sunsetKey = new THREE.DirectionalLight(0xffd49e, 2.35);
+    sunsetKey.position.set(28, 16, -24);
     sunsetKey.castShadow = !isSoftwareGl;
     sunsetKey.shadow.mapSize.set(1024, 1024);
     sunsetKey.shadow.camera.near = 2;
@@ -22,9 +23,9 @@ export class Lighting {
     sunsetKey.shadow.normalBias = 0.02;
     this.group.add(sunsetKey);
 
-    // Soft pastel lavender fill from front-left side so obstacles pop cleanly without rear glare
-    const twilightRim = new THREE.DirectionalLight(0xc084fc, 0.38);
-    twilightRim.position.set(-22, 14, -8);
-    this.group.add(twilightRim);
+    // Cool pastel lavender-blue sky fill on opposite side for realistic sunlit vs shaded building faces
+    const skyFill = new THREE.DirectionalLight(0xa5b4fc, 0.72);
+    skyFill.position.set(-24, 15, -10);
+    this.group.add(skyFill);
   }
 }

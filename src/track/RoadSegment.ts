@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { COLORS, LANE_WIDTH, ROAD_WIDTH, SEGMENT_LENGTH } from '../utils/Constants';
+import { LANE_WIDTH, ROAD_WIDTH, SEGMENT_LENGTH } from '../utils/Constants';
 import { TextureBundle } from '../utils/TextureFactory';
 
 export interface RoadSegmentMaterials {
@@ -70,50 +70,50 @@ export class RoadSegment {
       envMapIntensity: 0.18,
     });
     const curbMat = new THREE.MeshStandardMaterial({
-      color: 0x452d52,
-      metalness: 0.24,
-      roughness: 0.68,
-      envMapIntensity: 0.25,
-    });
-    const sidewalkMat = new THREE.MeshStandardMaterial({
-      color: 0x2f1d3d,
-      metalness: 0.16,
+      color: 0xb8a8ae,
+      metalness: 0.08,
       roughness: 0.78,
       envMapIntensity: 0.2,
     });
+    const sidewalkMat = new THREE.MeshStandardMaterial({
+      color: 0x9b8a94,
+      metalness: 0.05,
+      roughness: 0.85,
+      envMapIntensity: 0.16,
+    });
     const cyanStripMat = new THREE.MeshStandardMaterial({
-      color: COLORS.neonCyan,
-      emissive: 0x0e7490,
-      emissiveIntensity: 0.55,
-      roughness: 0.35,
+      color: 0xe6c3a5,
+      emissive: 0x9a6b48,
+      emissiveIntensity: 0.22,
+      roughness: 0.55,
     });
     const laneDashMat = new THREE.MeshStandardMaterial({
-      color: 0xfef3c7,
-      emissive: 0xfdba74,
-      emissiveIntensity: 0.42,
-      roughness: 0.38,
+      color: 0xf8fafc,
+      emissive: 0xe2e8f0,
+      emissiveIntensity: 0.24,
+      roughness: 0.45,
     });
     const studMat = new THREE.MeshBasicMaterial({ color: 0xfbbf24 });
     const gantrySteelMat = new THREE.MeshStandardMaterial({
-      color: 0x483157,
-      metalness: 0.45,
+      color: 0x747888,
+      metalness: 0.42,
       roughness: 0.48,
       envMapIntensity: 0.3,
     });
     const highwaySignMat = new THREE.MeshStandardMaterial({
-      color: 0x064e3b,
-      emissive: 0x065f46,
-      emissiveIntensity: 0.42,
+      color: 0x065f46,
+      emissive: 0x047857,
+      emissiveIntensity: 0.32,
       roughness: 0.45,
-      metalness: 0.2,
+      metalness: 0.18,
     });
     const theBrookFaceMat = new THREE.MeshStandardMaterial({
       map: textures.theBrookSign,
       emissiveMap: textures.theBrookSign,
       emissive: new THREE.Color(0xffffff),
-      emissiveIntensity: 0.58,
-      roughness: 0.36,
-      metalness: 0.12,
+      emissiveIntensity: 0.48,
+      roughness: 0.38,
+      metalness: 0.1,
       polygonOffset: true,
       polygonOffsetFactor: -1,
       polygonOffsetUnits: -1,
@@ -121,26 +121,26 @@ export class RoadSegment {
     const signalRedMat = new THREE.MeshStandardMaterial({
       color: 0xfb7185,
       emissive: 0xe11d48,
-      emissiveIntensity: 1.05,
+      emissiveIntensity: 1.0,
       roughness: 0.25,
     });
     const signalGreenMat = new THREE.MeshStandardMaterial({
       color: 0x34d399,
       emissive: 0x10b981,
-      emissiveIntensity: 1.05,
+      emissiveIntensity: 1.0,
       roughness: 0.25,
     });
     const amberLampMat = new THREE.MeshStandardMaterial({
-      color: 0xfde68a,
+      color: 0xfef3c7,
       emissive: 0xf59e0b,
-      emissiveIntensity: 1.05,
+      emissiveIntensity: 0.95,
       roughness: 0.25,
     });
     const coralTrimMat = new THREE.MeshStandardMaterial({
-      color: 0xf472b6,
-      emissive: 0xbe185d,
-      emissiveIntensity: 0.58,
-      roughness: 0.35,
+      color: 0xd9b5a0,
+      emissive: 0x8d6352,
+      emissiveIntensity: 0.2,
+      roughness: 0.55,
     });
 
     return {

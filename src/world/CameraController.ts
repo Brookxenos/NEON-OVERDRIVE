@@ -48,7 +48,7 @@ export class CameraController {
   }
 
   public updateAttract(dt: number, playerX: number): void {
-    this.attractAngle += dt * 0.28;
+    this.attractAngle = (this.attractAngle + dt * 0.28) % (Math.PI * 2);
     const camX = Math.sin(this.attractAngle) * 3.6;
     const camY = 1.62 + Math.cos(this.attractAngle * 0.8) * 0.24;
     const camZ = 5.4 + Math.cos(this.attractAngle) * 0.85;
@@ -58,7 +58,7 @@ export class CameraController {
     this.camera.position.z = damp(this.camera.position.z, camZ, 4.5, dt);
 
     const nextFov = damp(this.camera.fov, this.getResponsiveFov(58), 5, dt);
-    if (Math.abs(nextFov - this.camera.fov) > 0.005) {
+    if (Math.abs(nextFov - this.camera.fov) > 0.02) {
       this.camera.fov = nextFov;
       this.camera.updateProjectionMatrix();
     }
@@ -69,7 +69,7 @@ export class CameraController {
 
   public updateGarageShowcase(dt: number, playerX: number, isNarrowScreen: boolean): void {
     if (this.showcaseMode === 'auto') {
-      this.showcaseAngle += dt * 0.48;
+      this.showcaseAngle = (this.showcaseAngle + dt * 0.48) % (Math.PI * 2);
     }
 
     const radius = isNarrowScreen ? 5.8 : 4.9;
@@ -111,7 +111,7 @@ export class CameraController {
     }
 
     const nextFov = damp(this.camera.fov, targetFov, 7, dt);
-    if (Math.abs(nextFov - this.camera.fov) > 0.005) {
+    if (Math.abs(nextFov - this.camera.fov) > 0.02) {
       this.camera.fov = nextFov;
       this.camera.updateProjectionMatrix();
     }

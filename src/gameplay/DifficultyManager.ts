@@ -15,11 +15,11 @@ export class DifficultyManager {
     }
     if (d <= 25000) {
       const midProgress = (d - 2500) / 22500;
-      return 116 + midProgress * 24; // 116 -> 140 m/s (504 km/h)
+      return 116 + midProgress * 28; // 116 -> 144 m/s (518 km/h)
     }
-    const extraProgress = (d - 25000) / 240000 + Math.max(0, t - 200) / 1800;
-    const tailRange = BASE_MAX_SPEED - 140; // 140 -> 180 m/s (648 km/h) asymptotically
-    return 140 + tailRange * (1 - Math.exp(-extraProgress));
+    const extraProgress = (d - 25000) / 145000 + Math.max(0, t - 180) / 1100;
+    const tailRange = BASE_MAX_SPEED - 144; // 144 -> 190 m/s (684 km/h) across long minutes
+    return 144 + tailRange * (1 - Math.exp(-extraProgress));
   }
 
   public getNextWaveSpacing(
@@ -27,12 +27,12 @@ export class DifficultyManager {
     currentSpeed = BASE_START_SPEED,
     laneShiftSteps = 1,
   ): number {
-    // Continuous arcade cadence escalation with human reaction + steer safety floor
+    // Continuous multi-minute arcade cadence escalation with human reaction + steer safety floor
     const levelOffset = Math.max(0, difficultyLevel - 1);
-    const tierProgress = 1 - Math.exp(-levelOffset / 14);
-    const baseMinTime = 0.72 - tierProgress * 0.42; // 0.72s -> 0.30s
-    const baseMaxTime = 0.94 - tierProgress * 0.54; // 0.94s -> 0.40s
-    const shiftTimeBonus = laneShiftSteps >= 2 ? 0.17 : 0;
+    const tierProgress = 1 - Math.exp(-levelOffset / 12);
+    const baseMinTime = 0.72 - tierProgress * 0.445; // 0.72s -> 0.275s
+    const baseMaxTime = 0.94 - tierProgress * 0.56; // 0.94s -> 0.38s
+    const shiftTimeBonus = laneShiftSteps >= 2 ? 0.165 : 0;
     const minSpacing = Math.max(24, currentSpeed * (baseMinTime + shiftTimeBonus) + 5);
     const maxSpacing = Math.max(minSpacing + 6, currentSpeed * (baseMaxTime + shiftTimeBonus) + 8);
     return randomRange(minSpacing, maxSpacing);
@@ -40,7 +40,7 @@ export class DifficultyManager {
 
   public getFormationCompression(difficultyLevel: number): number {
     const extraLevels = Math.max(0, difficultyLevel - 3);
-    return Math.max(0.82, 1 - extraLevels * 0.004);
+    return Math.max(0.8, 1 - extraLevels * 0.0045);
   }
 
   public getDoubleBlockChance(difficultyLevel: number): number {

@@ -16,7 +16,7 @@ export const PLAYER_HOVER_Y = 0;
 export const CAR_CHASSIS_CLEARANCE = 0.24;
 
 export const BASE_START_SPEED = 60;
-export const BASE_MAX_SPEED = 180;
+export const BASE_MAX_SPEED = 190;
 export const THROTTLE_BONUS = 14;
 export const BRAKE_PENALTY = 15;
 export const BOOST_SPEED_BONUS = 42;
@@ -43,9 +43,9 @@ export const CELL_COIN_VALUE = 1;
 export const GOLD_COIN_VALUE = 3;
 
 export const COLORS = {
-  bgVoid: 0x26153c,
-  fogNight: 0x4a2454,
-  roadAsphalt: 0x151221,
+  bgVoid: 0xf2a582,
+  fogNight: 0xdf979c,
+  roadAsphalt: 0x2b2d36,
   neonCyan: 0x2dd4bf,
   electricBlue: 0x60a5fa,
   neonPurple: 0xa78bfa,

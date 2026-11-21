@@ -8,6 +8,7 @@ export class GameLoop {
 
   private frameId = 0;
   private running = false;
+  private smoothedDt = 1 / 60;
 
   constructor(
     isSoftwareGl: boolean,
@@ -28,6 +29,7 @@ export class GameLoop {
 
   public flushDelta(): void {
     this.clock.getDelta();
+    this.smoothedDt = 1 / 60;
   }
 
   public stop(): void {
@@ -38,7 +40,9 @@ export class GameLoop {
 
   private tick = (): void => {
     if (!this.running) return;
-    const dt = Math.min(this.clock.getDelta(), 0.05);
+    const rawDt = Math.min(this.clock.getDelta(), 0.05);
+    const dt = this.isSoftwareGl ? rawDt : this.smoothedDt * 0.25 + rawDt * 0.75;
+    this.smoothedDt = dt;
     this.onTick(dt);
 
     if (this.isSoftwareGl) {

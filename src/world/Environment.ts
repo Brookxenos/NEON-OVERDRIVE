@@ -11,8 +11,8 @@ export class Environment {
   private shimmerOffset = 0;
 
   constructor(textures: TextureBundle) {
-    // Sunset Vice City sky dome
-    const skyGeo = new THREE.SphereGeometry(440, 28, 18);
+    // Warm golden-pink coastal sky dome
+    const skyGeo = new THREE.SphereGeometry(460, 28, 18);
     const skyMat = new THREE.MeshBasicMaterial({
       map: textures.skyBackdrop,
       side: THREE.BackSide,
@@ -22,74 +22,91 @@ export class Environment {
     this.materials.push(skyMat);
     this.group.add(new THREE.Mesh(skyGeo, skyMat));
 
-    // Coastal ground & twilight bay horizon plane beneath the boulevard
-    const groundGeo = new THREE.PlaneGeometry(680, 560, 1, 1);
+    // Sun-warmed coastal ground terrain flanking the boulevard (no dark doom void)
+    const groundGeo = new THREE.PlaneGeometry(760, 620, 1, 1);
     groundGeo.rotateX(-Math.PI / 2);
     const groundMat = new THREE.MeshStandardMaterial({
-      color: 0x261538,
-      roughness: 0.72,
-      metalness: 0.14,
-      envMapIntensity: 0.25,
+      color: 0x76677f,
+      roughness: 0.88,
+      metalness: 0.04,
+      envMapIntensity: 0.15,
     });
     this.geometries.push(groundGeo);
     this.materials.push(groundMat);
 
     const ground = new THREE.Mesh(groundGeo, groundMat);
-    ground.position.set(0, -14, -200);
+    ground.position.set(0, -1.2, -210);
     this.group.add(ground);
 
-    // Subtle sunset water/boulevard grid shimmer strip
-    const shimmerGeo = new THREE.PlaneGeometry(420, 480, 18, 22);
+    // Subtle sunlit bay / roadside grass verge sheen moving smoothly with speed
+    const shimmerGeo = new THREE.PlaneGeometry(460, 500, 1, 1);
     shimmerGeo.rotateX(-Math.PI / 2);
     this.shimmerMat = new THREE.MeshBasicMaterial({
-      color: 0xf472b6,
-      wireframe: true,
+      color: 0xf7b99b,
       transparent: true,
-      opacity: 0.08,
+      opacity: 0.12,
     });
     this.geometries.push(shimmerGeo);
     this.materials.push(this.shimmerMat);
 
     this.shimmerPlane = new THREE.Mesh(shimmerGeo, this.shimmerMat);
-    this.shimmerPlane.position.set(0, -13.8, -190);
+    this.shimmerPlane.position.set(0, -1.15, -210);
     this.group.add(this.shimmerPlane);
 
-    this.buildDistantSkyline();
+    this.buildDistantSkyline(textures);
   }
 
-  private buildDistantSkyline(): void {
+  private buildDistantSkyline(textures: TextureBundle): void {
     const silhouetteGeo = new THREE.BoxGeometry(1, 1, 1);
-    const spireMat = new THREE.MeshBasicMaterial({ color: 0x4b326e });
-    const horizonRimMat = new THREE.MeshBasicMaterial({
-      color: 0xfdba74,
-      transparent: true,
-      opacity: 0.36,
+    const towerSunMat = new THREE.MeshStandardMaterial({
+      map: textures.buildingWindowsCyan,
+      color: 0xf3d4be,
+      roughness: 0.72,
+      metalness: 0.12,
+      envMapIntensity: 0.2,
+    });
+    const towerLavenderMat = new THREE.MeshStandardMaterial({
+      map: textures.buildingWindowsMagenta,
+      color: 0xdcc8e8,
+      roughness: 0.74,
+      metalness: 0.12,
+      envMapIntensity: 0.2,
+    });
+    const penthouseMat = new THREE.MeshStandardMaterial({
+      color: 0xfde2c4,
+      roughness: 0.65,
     });
 
     this.geometries.push(silhouetteGeo);
-    this.materials.push(spireMat, horizonRimMat);
+    this.materials.push(towerSunMat, towerLavenderMat, penthouseMat);
 
-    for (let i = -14; i <= 14; i++) {
+    for (let i = -15; i <= 15; i++) {
       if (Math.abs(i) < 2) continue;
-      const h = 30 + Math.abs(Math.sin(i * 1.47)) * 68;
-      const w = 14 + (Math.abs(i * 3) % 12);
+      const h = 24 + Math.abs(Math.sin(i * 1.47)) * 62;
+      const w = 13 + (Math.abs(i * 3) % 11);
+      const d = 14 + (Math.abs(i * 5) % 8);
+      const zPos = -360 - (Math.abs(i) % 3) * 28;
+      const xPos = i * 19;
 
-      const tower = new THREE.Mesh(silhouetteGeo, spireMat);
-      tower.scale.set(w, h, 14);
-      tower.position.set(i * 19, h * 0.5 - 22, -355 - (Math.abs(i) % 3) * 24);
+      const tower = new THREE.Mesh(
+        silhouetteGeo,
+        Math.abs(i) % 2 === 0 ? towerSunMat : towerLavenderMat,
+      );
+      tower.scale.set(w, h, d);
+      tower.position.set(xPos, h * 0.5 - 2, zPos);
       this.group.add(tower);
 
-      const crown = new THREE.Mesh(silhouetteGeo, horizonRimMat);
-      crown.scale.set(w * 0.85, 0.7, 14.2);
-      crown.position.set(tower.position.x, h - 22 - 1.2, tower.position.z);
+      const crown = new THREE.Mesh(silhouetteGeo, penthouseMat);
+      crown.scale.set(w * 0.68, 2.4, d * 0.68);
+      crown.position.set(xPos, h - 2 + 1.2, zPos);
       this.group.add(crown);
     }
   }
 
   public update(dt: number, worldSpeed: number, isBoosting: boolean): void {
     this.shimmerOffset = (this.shimmerOffset + dt * worldSpeed * 0.4) % 21.8;
-    this.shimmerPlane.position.z = -190 + this.shimmerOffset;
-    this.shimmerMat.opacity = isBoosting ? 0.1 : 0.05;
+    this.shimmerPlane.position.z = -210 + this.shimmerOffset;
+    this.shimmerMat.opacity = isBoosting ? 0.16 : 0.1;
   }
 
   public dispose(): void {
