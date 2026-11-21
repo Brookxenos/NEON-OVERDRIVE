@@ -183,9 +183,9 @@ export class Game {
     this.audioManager.unlock();
     this.audioManager.playUiClick(true);
     this.resetRun();
-    this.seedOpeningHighway();
+    const openingLabel = this.seedOpeningHighway();
     this.state.setStatus('playing');
-    this.state.pushBanner('SYSTEMS ONLINE · GO', 'cyan');
+    this.state.pushBanner(`FORMATION · ${openingLabel}`, 'cyan');
   }
 
   public pause(): void {
@@ -387,15 +387,16 @@ export class Game {
     this.renderer.resize(width, height);
   };
 
-  private seedOpeningHighway(): void {
-    // Eliminate empty opening straightaway by populating starter rewards and an organized opening sequence
-    this.collectibleManager.spawnRewardInLane(1, -42);
-    this.waveDirector.seedOpeningFormation();
-    const openingZPositions = [-98, -162, -226];
+  private seedOpeningHighway(): string {
+    // Populate starter rewards and a randomized 5-wave tactical opening formation on every start/restart
+    this.collectibleManager.spawnRewardInLane(1, -44);
+    const openingLabel = this.waveDirector.seedOpeningFormation();
+    const openingZPositions = [-96, -152, -208, -264, -320];
     for (const zPos of openingZPositions) {
       this.spawnNextWave(1, zPos);
     }
-    this.spawnDistanceRemaining = 10;
+    this.spawnDistanceRemaining = 26;
+    return openingLabel;
   }
 
   private spawnNextWave(
