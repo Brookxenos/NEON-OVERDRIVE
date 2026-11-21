@@ -389,13 +389,13 @@ export class Game {
 
   private seedOpeningHighway(): void {
     // Eliminate empty opening straightaway by populating starter rewards and an organized opening sequence
-    this.collectibleManager.spawnRewardInLane(1, -46);
+    this.collectibleManager.spawnRewardInLane(1, -42);
     this.waveDirector.seedOpeningFormation();
-    const openingZPositions = [-108, -184, -262];
+    const openingZPositions = [-98, -162, -226];
     for (const zPos of openingZPositions) {
       this.spawnNextWave(1, zPos);
     }
-    this.spawnDistanceRemaining = 14;
+    this.spawnDistanceRemaining = 10;
   }
 
   private spawnNextWave(
