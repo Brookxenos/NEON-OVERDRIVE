@@ -4,11 +4,11 @@ export class Lighting {
   public readonly group = new THREE.Group();
 
   constructor(isSoftwareGl: boolean) {
-    const hemi = new THREE.HemisphereLight(0xfda4af, 0x1e1b4b, 0.68);
+    const hemi = new THREE.HemisphereLight(0xfdba74, 0x3b2154, 0.78);
     this.group.add(hemi);
 
     // Low golden-hour sun angled from the front-right horizon
-    const sunsetKey = new THREE.DirectionalLight(0xffb56b, 1.85);
+    const sunsetKey = new THREE.DirectionalLight(0xffbe7b, 1.95);
     sunsetKey.position.set(24, 12, -26);
     sunsetKey.castShadow = !isSoftwareGl;
     sunsetKey.shadow.mapSize.set(1024, 1024);
@@ -22,8 +22,8 @@ export class Lighting {
     sunsetKey.shadow.normalBias = 0.02;
     this.group.add(sunsetKey);
 
-    // Soft cool twilight fill from front-left side so car backs never catch rear specular glare
-    const twilightRim = new THREE.DirectionalLight(0x818cf8, 0.34);
+    // Soft pastel lavender fill from front-left side so obstacles pop cleanly without rear glare
+    const twilightRim = new THREE.DirectionalLight(0xc084fc, 0.38);
     twilightRim.position.set(-22, 14, -8);
     this.group.add(twilightRim);
   }

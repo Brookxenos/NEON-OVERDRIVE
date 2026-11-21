@@ -231,94 +231,106 @@ export class ObstacleManager {
   private elapsed = 0;
 
   constructor(textures: TextureBundle) {
-    // Light metallic steel so obstacle silhouettes stand out clearly against dark asphalt
+    // Warm sunlit champagne-peach alloy & rose-bronze trim so obstacles pop cleanly against dark asphalt
     const chassisSteelMat = new THREE.MeshStandardMaterial({
-      color: 0x94a3b8,
-      metalness: 0.62,
-      roughness: 0.32,
-      envMapIntensity: 1.15,
+      color: 0xf3dfd1,
+      emissive: 0x451a10,
+      emissiveIntensity: 0.18,
+      metalness: 0.35,
+      roughness: 0.38,
+      envMapIntensity: 0.55,
     });
     const darkTrimMat = new THREE.MeshStandardMaterial({
-      color: 0x1e293b,
-      metalness: 0.55,
-      roughness: 0.42,
-      envMapIntensity: 0.75,
+      color: 0x883a4e,
+      emissive: 0x3b1124,
+      emissiveIntensity: 0.14,
+      metalness: 0.25,
+      roughness: 0.52,
+      envMapIntensity: 0.35,
     });
     const hazardStripeMat = new THREE.MeshStandardMaterial({
       map: textures.hazardStripes,
-      emissive: 0xd97706,
+      emissive: 0xf59e0b,
       emissiveMap: textures.hazardStripes,
-      emissiveIntensity: 0.48,
-      roughness: 0.42,
+      emissiveIntensity: 0.62,
+      roughness: 0.38,
     });
     this.warningAmberMat = new THREE.MeshStandardMaterial({
-      color: 0xfbbf24,
+      color: 0xfde047,
       emissive: 0xf59e0b,
-      emissiveIntensity: 1.35,
-      roughness: 0.2,
+      emissiveIntensity: 1.5,
+      roughness: 0.18,
     });
     this.dangerRedMat = new THREE.MeshStandardMaterial({
       color: 0xfb7185,
       emissive: COLORS.dangerRed,
-      emissiveIntensity: 1.55,
+      emissiveIntensity: 1.65,
       roughness: 0.18,
     });
     const shieldGlassMat = new THREE.MeshBasicMaterial({
-      color: 0xf43f5e,
+      color: 0xfb7185,
       transparent: true,
-      opacity: 0.46,
+      opacity: 0.56,
       side: THREE.DoubleSide,
       depthWrite: false,
     });
     const laneFloorWarningMat = new THREE.MeshBasicMaterial({
-      color: 0xf59e0b,
+      color: 0xfdba74,
       transparent: true,
-      opacity: 0.32,
+      opacity: 0.44,
       polygonOffset: true,
       polygonOffsetFactor: -1,
       polygonOffsetUnits: -1,
       depthWrite: false,
     });
-    const trafficColors = [0xb91c1c, 0x1d4ed8, 0xc2410c, 0x047857, 0x6d28d9];
+    const trafficColors = [0xeb4a3e, 0xf97316, 0xf472b6, 0xfbbf24, 0xfef3c7];
     const trafficCarMats = trafficColors.map(
       (color) =>
         new THREE.MeshStandardMaterial({
           color,
-          metalness: 0.1,
-          roughness: 0.66,
+          emissive: color,
+          emissiveIntensity: 0.16,
+          metalness: 0.08,
+          roughness: 0.56,
           envMapIntensity: 0.08,
         }),
     );
     const rivalTireMat = new THREE.MeshStandardMaterial({
-      color: 0x161922,
-      metalness: 0.04,
-      roughness: 0.9,
-      envMapIntensity: 0.04,
+      color: 0x3a2a38,
+      metalness: 0.06,
+      roughness: 0.85,
+      envMapIntensity: 0.06,
     });
     const rivalRimMat = new THREE.MeshStandardMaterial({
-      color: 0x94a3b8,
+      color: 0xfed7aa,
       metalness: 0.45,
-      roughness: 0.42,
-      envMapIntensity: 0.15,
+      roughness: 0.36,
+      envMapIntensity: 0.2,
     });
     const rivalCanopyMat = new THREE.MeshStandardMaterial({
-      color: 0x0f172a,
-      metalness: 0.1,
-      roughness: 0.36,
-      envMapIntensity: 0.12,
+      color: 0x862e5c,
+      emissive: 0x4c1232,
+      emissiveIntensity: 0.24,
+      metalness: 0.12,
+      roughness: 0.34,
+      envMapIntensity: 0.14,
     });
 
     const trafficTrimMat = new THREE.MeshStandardMaterial({
-      color: 0x161922,
-      metalness: 0.14,
-      roughness: 0.72,
-      envMapIntensity: 0.06,
+      color: 0x7a3448,
+      emissive: 0x3b1522,
+      emissiveIntensity: 0.14,
+      metalness: 0.16,
+      roughness: 0.6,
+      envMapIntensity: 0.08,
     });
     const trafficPlateMat = new THREE.MeshStandardMaterial({
-      color: 0xd1d5db,
-      metalness: 0.08,
-      roughness: 0.72,
-      envMapIntensity: 0.06,
+      color: 0xfef3c7,
+      emissive: 0x78350f,
+      emissiveIntensity: 0.18,
+      metalness: 0.06,
+      roughness: 0.62,
+      envMapIntensity: 0.08,
     });
     const trafficHeadlampMat = new THREE.MeshBasicMaterial({
       color: 0xfef3c7,

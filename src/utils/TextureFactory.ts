@@ -198,10 +198,10 @@ function createHazardStripesTexture(maxAnisotropy: number): THREE.CanvasTexture 
   canvas.height = 256;
   const ctx = canvas.getContext('2d')!;
 
-  ctx.fillStyle = '#18181b';
+  ctx.fillStyle = '#9f1239';
   ctx.fillRect(0, 0, 256, 256);
 
-  ctx.fillStyle = '#f59e0b';
+  ctx.fillStyle = '#fbbf24';
   for (let i = -256; i < 512; i += 48) {
     ctx.beginPath();
     ctx.moveTo(i, 0);
@@ -212,10 +212,10 @@ function createHazardStripesTexture(maxAnisotropy: number): THREE.CanvasTexture 
     ctx.fill();
   }
 
-  // Crisp top/bottom warning edge lines
-  ctx.fillStyle = '#fbbf24';
-  ctx.fillRect(0, 0, 256, 10);
-  ctx.fillRect(0, 246, 256, 10);
+  // Crisp top/bottom sunlit apricot warning edge lines
+  ctx.fillStyle = '#fef3c7';
+  ctx.fillRect(0, 0, 256, 12);
+  ctx.fillRect(0, 244, 256, 12);
 
   return configureTexture(new THREE.CanvasTexture(canvas), maxAnisotropy, true, 2, 1);
 }
@@ -336,16 +336,16 @@ function createSkyBackdropTexture(): THREE.CanvasTexture {
   canvas.height = 512;
   const ctx = canvas.getContext('2d')!;
 
-  // Vice City golden-hour sunset gradient (equator is y = 256)
+  // Pastel lavender-to-apricot Vice sunset gradient (equator is y = 256)
   const skyGrad = ctx.createLinearGradient(0, 0, 0, 512);
-  skyGrad.addColorStop(0, '#120a29');
-  skyGrad.addColorStop(0.22, '#2d1649');
-  skyGrad.addColorStop(0.37, '#6f295c');
-  skyGrad.addColorStop(0.46, '#c75264');
-  skyGrad.addColorStop(0.52, '#f59e56');
-  skyGrad.addColorStop(0.57, '#fcd38d');
-  skyGrad.addColorStop(0.65, '#4c2653');
-  skyGrad.addColorStop(1, '#160c24');
+  skyGrad.addColorStop(0, '#36265e');
+  skyGrad.addColorStop(0.22, '#624894');
+  skyGrad.addColorStop(0.37, '#b56394');
+  skyGrad.addColorStop(0.46, '#eb7b78');
+  skyGrad.addColorStop(0.52, '#faaa68');
+  skyGrad.addColorStop(0.57, '#fde49e');
+  skyGrad.addColorStop(0.65, '#6a386c');
+  skyGrad.addColorStop(1, '#241438');
   ctx.fillStyle = skyGrad;
   ctx.fillRect(0, 0, 1024, 512);
 
@@ -469,17 +469,17 @@ export class TextureFactory {
     const hazardStripes = createHazardStripesTexture(maxAnisotropy);
     const buildingWindowsCyan = createBuildingWindowTexture(
       maxAnisotropy,
-      '#fbbf24',
-      '#22d3ee',
-      '#6b3e54',
-      '#281834',
+      '#fde68a',
+      '#2dd4bf',
+      '#844e69',
+      '#39224a',
     );
     const buildingWindowsMagenta = createBuildingWindowTexture(
       maxAnisotropy,
-      '#fb923c',
+      '#fdba74',
       '#f472b6',
-      '#463b6b',
-      '#1d1938',
+      '#5c4c86',
+      '#2a224d',
     );
     const headlightBeam = createHeadlightBeamTexture();
     const contactShadow = createRadialTexture('rgba(0, 0, 0, 0.9)', 'rgba(24, 24, 48, 0.22)');

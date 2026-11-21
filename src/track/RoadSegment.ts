@@ -70,14 +70,14 @@ export class RoadSegment {
       envMapIntensity: 0.18,
     });
     const curbMat = new THREE.MeshStandardMaterial({
-      color: 0x262138,
-      metalness: 0.32,
+      color: 0x452d52,
+      metalness: 0.24,
       roughness: 0.68,
       envMapIntensity: 0.25,
     });
     const sidewalkMat = new THREE.MeshStandardMaterial({
-      color: 0x1b162b,
-      metalness: 0.18,
+      color: 0x2f1d3d,
+      metalness: 0.16,
       roughness: 0.78,
       envMapIntensity: 0.2,
     });
@@ -88,17 +88,17 @@ export class RoadSegment {
       roughness: 0.35,
     });
     const laneDashMat = new THREE.MeshStandardMaterial({
-      color: 0xe2e8f0,
-      emissive: 0x94a3b8,
-      emissiveIntensity: 0.45,
+      color: 0xfef3c7,
+      emissive: 0xfdba74,
+      emissiveIntensity: 0.42,
       roughness: 0.38,
     });
     const studMat = new THREE.MeshBasicMaterial({ color: 0xfbbf24 });
     const gantrySteelMat = new THREE.MeshStandardMaterial({
-      color: 0x201d33,
-      metalness: 0.68,
-      roughness: 0.45,
-      envMapIntensity: 0.35,
+      color: 0x483157,
+      metalness: 0.45,
+      roughness: 0.48,
+      envMapIntensity: 0.3,
     });
     const highwaySignMat = new THREE.MeshStandardMaterial({
       color: 0x064e3b,

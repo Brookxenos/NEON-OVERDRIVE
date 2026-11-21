@@ -43,14 +43,14 @@ export const CELL_COIN_VALUE = 1;
 export const GOLD_COIN_VALUE = 3;
 
 export const COLORS = {
-  bgVoid: 0x160c24,
-  fogNight: 0x2d183c,
-  roadAsphalt: 0x121420,
-  neonCyan: 0x06b6d4,
-  electricBlue: 0x3b82f6,
-  neonPurple: 0x7c3aed,
-  neonMagenta: 0xdb2777,
-  dangerRed: 0xf43f5e,
-  energyAmber: 0xf59e0b,
-  whiteHot: 0xfdba74,
+  bgVoid: 0x26153c,
+  fogNight: 0x4a2454,
+  roadAsphalt: 0x151221,
+  neonCyan: 0x2dd4bf,
+  electricBlue: 0x60a5fa,
+  neonPurple: 0xa78bfa,
+  neonMagenta: 0xf472b6,
+  dangerRed: 0xfb7185,
+  energyAmber: 0xfbbf24,
+  whiteHot: 0xfef3c7,
 } as const;

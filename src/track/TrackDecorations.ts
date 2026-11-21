@@ -167,16 +167,16 @@ export class TrackDecorations {
     const trunkGeo = createPalmTrunkGeometry();
     const crownGeo = createPalmCrownGeometry();
     const trunkMat = new THREE.MeshStandardMaterial({
-      color: 0x3b2732,
-      roughness: 0.88,
+      color: 0x5c3a58,
+      roughness: 0.85,
       metalness: 0.05,
     });
     const crownMat = new THREE.MeshStandardMaterial({
-      color: 0x1b3b36,
-      roughness: 0.75,
+      color: 0x3f2e5e,
+      roughness: 0.72,
       metalness: 0.08,
-      emissive: 0x2b1636,
-      emissiveIntensity: 0.22,
+      emissive: 0x6b3a6e,
+      emissiveIntensity: 0.26,
     });
 
     this.geometries.push(trunkGeo, crownGeo);

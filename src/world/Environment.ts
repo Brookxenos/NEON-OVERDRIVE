@@ -26,9 +26,9 @@ export class Environment {
     const groundGeo = new THREE.PlaneGeometry(680, 560, 1, 1);
     groundGeo.rotateX(-Math.PI / 2);
     const groundMat = new THREE.MeshStandardMaterial({
-      color: 0x191128,
+      color: 0x261538,
       roughness: 0.72,
-      metalness: 0.18,
+      metalness: 0.14,
       envMapIntensity: 0.25,
     });
     this.geometries.push(groundGeo);
@@ -42,10 +42,10 @@ export class Environment {
     const shimmerGeo = new THREE.PlaneGeometry(420, 480, 18, 22);
     shimmerGeo.rotateX(-Math.PI / 2);
     this.shimmerMat = new THREE.MeshBasicMaterial({
-      color: 0x9d4edd,
+      color: 0xf472b6,
       wireframe: true,
       transparent: true,
-      opacity: 0.06,
+      opacity: 0.08,
     });
     this.geometries.push(shimmerGeo);
     this.materials.push(this.shimmerMat);
@@ -59,11 +59,11 @@ export class Environment {
 
   private buildDistantSkyline(): void {
     const silhouetteGeo = new THREE.BoxGeometry(1, 1, 1);
-    const spireMat = new THREE.MeshBasicMaterial({ color: 0x2a183b });
+    const spireMat = new THREE.MeshBasicMaterial({ color: 0x4b326e });
     const horizonRimMat = new THREE.MeshBasicMaterial({
-      color: 0xf59e56,
+      color: 0xfdba74,
       transparent: true,
-      opacity: 0.28,
+      opacity: 0.36,
     });
 
     this.geometries.push(silhouetteGeo);
