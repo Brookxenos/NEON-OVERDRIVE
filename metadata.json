@@ -1,0 +1,6 @@
+{
+  "name": "NEON OVERDRIVE",
+  "description": "Futuristic 3D cyberpunk arcade highway hover-racing game built with TypeScript, Three.js, and Web Audio.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
