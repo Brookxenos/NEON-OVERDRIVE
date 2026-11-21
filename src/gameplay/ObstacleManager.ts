@@ -459,7 +459,7 @@ export class ObstacleManager {
 
     const instances: ObstacleInstance[] = [];
 
-    for (let i = 0; i < 35; i++) {
+    for (let i = 0; i < 50; i++) {
       const kind = kinds[i % kinds.length];
       const obsGroup = new THREE.Group();
       obsGroup.visible = false;
@@ -843,6 +843,8 @@ export class ObstacleManager {
     worldSpeed = 64,
     difficultyLevel = 1,
     spawnZ = SPAWN_Z,
+    preferredKind?: ObstacleType,
+    relativeSpeedOverride?: number,
   ): LaneIndex[] {
     this.lastWorldSpeed = Math.max(40, worldSpeed);
     const levelOffset = Math.max(0, difficultyLevel - 1);
@@ -852,9 +854,11 @@ export class ObstacleManager {
 
     for (let i = 0; i < lanes.length; i++) {
       const lane = lanes[i];
-      const preferred = ObstacleManager.pickObstacleType(difficultyLevel);
+      const preferred = preferredKind ?? ObstacleManager.pickObstacleType(difficultyLevel);
       let relSpeed =
-        preferred === 'traffic' ? -(1.5 + Math.random() * maxTrafficDelta) : 0;
+        preferred === 'traffic'
+          ? (relativeSpeedOverride ?? -(1.5 + Math.random() * maxTrafficDelta))
+          : 0;
       const candidateHalfZ = ObstacleManager.getObstacleHalfZ(preferred);
 
       if (!this.isSpawnPassable(lane, candidateHalfZ, relSpeed, safetyBufferSec, spawnZ)) {
@@ -868,7 +872,8 @@ export class ObstacleManager {
         }
       }
 
-      const obs = this.pool.acquire((item) => item.kind === preferred);
+      const obs =
+        this.pool.acquire((item) => item.kind === preferred) ?? this.pool.acquire();
       if (!obs) continue;
 
       obs.active = true;
