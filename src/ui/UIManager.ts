@@ -161,7 +161,8 @@ export class UIManager {
       typeof window.matchMedia === 'function' &&
       window.matchMedia('(pointer: coarse)').matches;
     const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    this.isTouchDevice = coarse || (hasTouch && window.innerWidth < 1024);
+    this.isTouchDevice =
+      coarse || (hasTouch && window.innerWidth < 1024) || window.innerWidth < 640;
     this.render();
   };
 

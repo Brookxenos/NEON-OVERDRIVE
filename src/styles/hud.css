@@ -4,7 +4,11 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 16px;
+  padding:
+    max(10px, var(--safe-top))
+    max(10px, var(--safe-right))
+    max(12px, var(--safe-bottom))
+    max(10px, var(--safe-left));
   pointer-events: none;
 }
 
@@ -18,20 +22,30 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
+}
+
+@media (min-width: 640px) {
+  .hud-top-row {
+    gap: 12px;
+  }
 }
 
 .hud-panel {
   background: rgba(7, 11, 24, 0.84);
   border: 1px solid var(--border-cyan);
-  border-radius: 12px;
-  padding: 12px 16px;
-  min-width: 180px;
+  border-radius: 10px;
+  padding: 8px 10px;
+  min-width: 0;
+  flex: 1 1 0;
 }
 
 @media (min-width: 640px) {
   .hud-panel {
+    border-radius: 12px;
+    padding: 12px 16px;
     min-width: 224px;
+    flex: 0 1 auto;
   }
 }
 
@@ -100,7 +114,16 @@
 .hud-right-cluster {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 6px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+@media (min-width: 640px) {
+  .hud-right-cluster {
+    gap: 10px;
+    flex: 0 1 auto;
+  }
 }
 
 .hud-speed-row {
@@ -299,3 +322,147 @@
   color: #020617;
   border-color: #ffffff;
 }
+
+@media (max-width: 639px) {
+  .hud-top-row {
+    flex-wrap: wrap;
+  }
+
+  .hud-banner-slot {
+    order: 3;
+    flex-basis: 100%;
+    padding-top: 2px;
+  }
+
+  .hud-kicker {
+    font-size: 9px;
+    letter-spacing: 0.06em;
+  }
+
+  .hud-multiplier {
+    font-size: 10px;
+    padding: 1px 6px;
+  }
+
+  .hud-score-value {
+    font-size: 20px;
+  }
+
+  .hud-sub-stats {
+    gap: 5px;
+    font-size: 10px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+  }
+
+  .hud-goal-hint {
+    font-size: 10px;
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .hud-speed-row {
+    gap: 8px;
+  }
+
+  .hud-speed-value {
+    font-size: 18px;
+  }
+
+  .hud-speed-unit {
+    font-size: 9px;
+  }
+
+  .hud-distance-value {
+    font-size: 13px;
+  }
+
+  .hud-boost-wrap {
+    margin-top: 6px;
+  }
+
+  .hud-boost-labels {
+    font-size: 9px;
+  }
+
+  .hud-boost-track {
+    height: 6px;
+  }
+
+  .hud-quick-buttons {
+    gap: 6px;
+  }
+
+  .hud-square-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+  }
+
+  .hud-event-banner {
+    font-size: 12px;
+    padding: 5px 12px;
+  }
+
+  .touch-steer-group {
+    gap: 10px;
+  }
+
+  .touch-steer-btn {
+    width: 60px;
+    height: 60px;
+  }
+
+  .touch-boost-btn {
+    height: 60px;
+    padding: 0 20px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 374px) {
+  .touch-steer-btn {
+    width: 54px;
+    height: 54px;
+  }
+
+  .touch-boost-btn {
+    height: 54px;
+    padding: 0 16px;
+  }
+}
+
+@media (max-height: 500px) {
+  .hud-overlay {
+    padding: 8px 14px;
+  }
+
+  .hud-panel {
+    padding: 7px 11px;
+  }
+
+  .hud-score-value {
+    font-size: 20px;
+  }
+
+  .hud-speed-value {
+    font-size: 18px;
+  }
+
+  .hud-goal-hint {
+    display: none;
+  }
+
+  .touch-steer-btn {
+    width: 52px;
+    height: 52px;
+  }
+
+  .touch-boost-btn {
+    height: 52px;
+    padding: 0 18px;
+  }
+}
+

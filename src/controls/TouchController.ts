@@ -31,16 +31,18 @@ export class TouchController {
   };
 
   private handleTouchMove = (event: TouchEvent): void => {
-    if (!this.tracking || this.swipeConsumed || event.touches.length === 0) return;
+    if (!this.tracking || event.touches.length === 0) return;
     const touch = event.touches[0];
     const dx = touch.clientX - this.startX;
     const dy = touch.clientY - this.startY;
 
-    if (Math.abs(dx) > 28 && Math.abs(dx) > Math.abs(dy)) {
+    if (Math.abs(dx) > 34 && Math.abs(dx) > Math.abs(dy)) {
       event.preventDefault();
       this.events.onLaneShift(dx > 0 ? 1 : -1);
-      this.swipeConsumed = true;
-    } else if (dy < -36 && Math.abs(dy) > Math.abs(dx)) {
+      // Reset horizontal anchor so a single fast thumb slide can cross two lanes
+      this.startX = touch.clientX;
+      this.startY = touch.clientY;
+    } else if (!this.swipeConsumed && dy < -34 && Math.abs(dy) > Math.abs(dx)) {
       event.preventDefault();
       this.setBoostHeld(true);
       this.swipeConsumed = true;

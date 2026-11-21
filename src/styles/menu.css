@@ -4,7 +4,12 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 20px;
+  padding:
+    max(14px, var(--safe-top))
+    max(14px, var(--safe-right))
+    max(16px, var(--safe-bottom))
+    max(14px, var(--safe-left));
+  overflow-y: auto;
   pointer-events: none;
 }
 
@@ -18,7 +23,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   pointer-events: auto;
 }
 
@@ -178,6 +183,8 @@
 .modal-card {
   width: 100%;
   max-width: 390px;
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
   background: var(--modal-bg);
   border: 1px solid var(--border-cyan);
   border-radius: 16px;
@@ -882,4 +889,249 @@
   border: 1px solid rgba(251, 191, 36, 0.85);
   color: #fef08a;
 }
+
+@media (max-width: 639px) {
+  .menu-top-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .record-badge {
+    padding: 8px 12px;
+    gap: 8px;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .record-score {
+    font-size: 16px;
+  }
+
+  .record-distance {
+    font-size: 12px;
+  }
+
+  .menu-top-actions {
+    width: 100%;
+    gap: 8px;
+  }
+
+  .menu-top-actions .icon-action-btn {
+    flex: 1 1 0;
+    justify-content: center;
+    height: 40px;
+    padding: 0 8px;
+    font-size: 11px;
+    gap: 5px;
+  }
+
+  .menu-hero {
+    padding-bottom: 24px;
+  }
+
+  .menu-kicker {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+  }
+
+  .menu-title {
+    font-size: clamp(2.1rem, 11vw, 3.2rem);
+  }
+
+  .menu-footer {
+    gap: 12px;
+  }
+
+  .menu-goal-card {
+    padding: 9px 12px;
+  }
+
+  .menu-goal-row {
+    font-size: 11px;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+  }
+
+  .btn-primary-cta {
+    width: 100%;
+    max-width: 320px;
+    height: 50px;
+    padding: 0 24px;
+    font-size: 17px;
+  }
+
+  .controls-legend {
+    padding: 8px 12px;
+    gap: 4px 10px;
+    font-size: 11px;
+  }
+
+  .modal-card {
+    padding: 18px 16px;
+  }
+
+  .modal-title {
+    font-size: 23px;
+  }
+
+  .stats-grid {
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .stat-tile {
+    padding: 10px;
+  }
+
+  .stat-tile-value {
+    font-size: 18px;
+  }
+
+  .modal-row-actions {
+    gap: 8px;
+  }
+}
+
+@media (max-width: 767px) {
+  .garage-backdrop {
+    padding:
+      max(10px, var(--safe-top))
+      max(10px, var(--safe-right))
+      max(10px, var(--safe-bottom))
+      max(10px, var(--safe-left));
+    gap: 8px;
+  }
+
+  .garage-stage-controls {
+    align-items: stretch;
+  }
+
+  .garage-preview-badge {
+    align-self: stretch;
+    max-width: 100%;
+    padding: 8px 11px;
+  }
+
+  .garage-cam-bar {
+    align-self: center;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .garage-cam-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .garage-cam-btn {
+    height: 30px;
+    padding: 0 10px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .modal-card-garage-dock {
+    max-height: 48dvh;
+    padding: 12px 12px 10px;
+  }
+
+  .garage-goal-banner {
+    padding: 7px 10px;
+    margin-bottom: 7px;
+  }
+
+  .garage-goal-top {
+    font-size: 11px;
+  }
+
+  .garage-filter-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+    margin-bottom: 7px;
+  }
+
+  .garage-filter-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .garage-filter-btn {
+    flex-shrink: 0;
+  }
+
+  .garage-car-card {
+    gap: 8px;
+    padding: 7px 8px;
+  }
+
+  .garage-car-visual {
+    width: 72px;
+    height: 38px;
+  }
+
+  .garage-car-visual svg {
+    width: 68px;
+    height: 34px;
+  }
+
+  .garage-car-name {
+    font-size: 13px;
+  }
+
+  .garage-car-tagline {
+    font-size: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .garage-action-btn {
+    height: 32px;
+    padding: 0 10px;
+    font-size: 11px;
+  }
+
+  .garage-footer-row {
+    margin-top: 8px;
+    gap: 8px;
+  }
+
+  .btn-garage-reset {
+    height: 40px;
+    padding: 0 10px;
+    font-size: 11px;
+  }
+}
+
+@media (max-height: 520px) {
+  .menu-screen {
+    padding: 12px 18px;
+  }
+
+  .menu-hero {
+    padding-bottom: 10px;
+  }
+
+  .menu-title {
+    font-size: clamp(1.75rem, 6vh, 2.5rem);
+  }
+
+  .btn-primary-cta {
+    height: 44px;
+    font-size: 16px;
+  }
+
+  .controls-legend {
+    display: none;
+  }
+
+  .modal-card-garage-dock {
+    max-height: 92dvh;
+    width: min(370px, 48vw);
+    padding: 12px;
+  }
+}
+
 

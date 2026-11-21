@@ -7,14 +7,23 @@ export class CameraController {
   private showcaseAngle = 0.65;
   private showcaseMode: 'auto' | 'front' | 'side' | 'rear' = 'auto';
   private shakeIntensity = 0;
+  private currentAspect: number;
   private readonly lookTarget = new THREE.Vector3();
 
   constructor(aspect: number) {
-    this.camera = new THREE.PerspectiveCamera(62, aspect, 0.1, 520);
+    this.currentAspect = Math.max(aspect, 0.35);
+    this.camera = new THREE.PerspectiveCamera(this.getResponsiveFov(62), aspect, 0.1, 520);
     this.camera.position.set(-3.2, 1.7, 5.8);
   }
 
+  private getResponsiveFov(baseFov: number): number {
+    if (this.currentAspect >= 1) return baseFov;
+    const portraitBoost = (1 - this.currentAspect) * 44;
+    return Math.min(92, baseFov + portraitBoost);
+  }
+
   public resize(width: number, height: number): void {
+    this.currentAspect = Math.max(width / Math.max(height, 1), 0.35);
     this.camera.aspect = width / Math.max(height, 1);
     this.camera.updateProjectionMatrix();
   }
@@ -48,7 +57,7 @@ export class CameraController {
     this.camera.position.y = damp(this.camera.position.y, camY, 4.5, dt);
     this.camera.position.z = damp(this.camera.position.z, camZ, 4.5, dt);
 
-    const nextFov = damp(this.camera.fov, 58, 5, dt);
+    const nextFov = damp(this.camera.fov, this.getResponsiveFov(58), 5, dt);
     if (Math.abs(nextFov - this.camera.fov) > 0.005) {
       this.camera.fov = nextFov;
       this.camera.updateProjectionMatrix();
@@ -63,24 +72,25 @@ export class CameraController {
       this.showcaseAngle += dt * 0.48;
     }
 
-    const radius = isNarrowScreen ? 5.6 : 4.9;
+    const radius = isNarrowScreen ? 5.8 : 4.9;
     const camX = playerX + Math.sin(this.showcaseAngle) * radius;
-    const camY = isNarrowScreen ? 1.85 : 1.55;
+    const camY = isNarrowScreen ? 1.95 : 1.55;
     const camZ = Math.cos(this.showcaseAngle) * radius;
 
     this.camera.position.x = damp(this.camera.position.x, camX, 7.5, dt);
     this.camera.position.y = damp(this.camera.position.y, camY, 7.5, dt);
     this.camera.position.z = damp(this.camera.position.z, camZ, 7.5, dt);
 
-    const nextFov = damp(this.camera.fov, 48, 6, dt);
+    const nextFov = damp(this.camera.fov, this.getResponsiveFov(48), 6, dt);
     if (Math.abs(nextFov - this.camera.fov) > 0.005) {
       this.camera.fov = nextFov;
       this.camera.updateProjectionMatrix();
     }
 
-    // Offset look target slightly left on desktop so the docked left Garage panel leaves the 3D car centered in the open right view
+    // Center above the bottom Garage dock on mobile portrait, or offset right on desktop
     const offsetX = isNarrowScreen ? 0 : -1.05;
-    this.lookTarget.set(playerX + offsetX, 0.58, 0);
+    const targetY = isNarrowScreen ? 0.1 : 0.58;
+    this.lookTarget.set(playerX + offsetX, targetY, 0);
     this.camera.lookAt(this.lookTarget);
   }
 
@@ -88,7 +98,7 @@ export class CameraController {
     const targetCamX = playerX * 0.66;
     const targetCamY = isBoosting ? 2.58 : 2.88;
     const targetCamZ = isBoosting ? 6.65 : 7.15 - speedNorm * 0.35;
-    const targetFov = 62 + speedNorm * 8 + (isBoosting ? 7 : 0);
+    const targetFov = this.getResponsiveFov(62 + speedNorm * 8 + (isBoosting ? 7 : 0));
 
     this.camera.position.x = damp(this.camera.position.x, targetCamX, 10, dt);
     this.camera.position.y = damp(this.camera.position.y, targetCamY, 8, dt);
