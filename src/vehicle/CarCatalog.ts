@@ -22,9 +22,7 @@ export type CarId =
   | 'drift_midnight'
   | 'ourea_hyperion'
   | 'magnetar_eclipse'
-  | 'cerbero_carbon'
   | 'chiron_raid'
-  | 'redbull_rb22_2026'
   | 'magnetar_solaris';
 
 export type CarBodyStyle =
@@ -36,8 +34,7 @@ export type CarBodyStyle =
   | 'chiron_rally'
   | 'spectra_wtype'
   | 'janus_racer'
-  | 'chronos_proto'
-  | 'formula_rb22';
+  | 'chronos_proto';
 
 export interface CarSpec {
   id: CarId;
@@ -503,25 +500,6 @@ export const CAR_CATALOG: readonly CarSpec[] = [
     swatchCss: 'linear-gradient(135deg, #4338ca 0%, #1e1b4b 65%, #22d3ee 100%)',
   },
   {
-    id: 'cerbero_carbon',
-    name: 'Cerbero Carbon R',
-    series: 'Cerbero Racing',
-    tagline: 'Forged Carbon Prototype · Gold Brake Calipers',
-    costCoins: 2850,
-    bodyStyle: 'cerbero_racer',
-    primaryColor: 0x27272a,
-    secondaryColor: 0x09090b,
-    stripeColor: 0xf59e0b,
-    rimColor: 0xfbbf24,
-    glassColor: 0x09090b,
-    flameOuterColor: 0xf59e0b,
-    flameInnerColor: 0xfef08a,
-    headlightColor: 0xfef3c7,
-    wheelRadius: 0.35,
-    speedBonus: 10,
-    swatchCss: 'linear-gradient(135deg, #3f3f46 0%, #18181b 65%, #f59e0b 100%)',
-  },
-  {
     id: 'chiron_raid',
     name: 'Chiron Midnight Raid',
     series: 'Chiron Rally',
@@ -539,26 +517,6 @@ export const CAR_CATALOG: readonly CarSpec[] = [
     wheelRadius: 0.36,
     speedBonus: 10.5,
     swatchCss: 'linear-gradient(135deg, #a21caf 0%, #4a044e 65%, #38bdf8 100%)',
-  },
-  {
-    id: 'redbull_rb22_2026',
-    name: '2026 Red Bull RB22',
-    series: 'Formula 2026',
-    tagline: '2026 Gloss RB Cobalt-Blue, Crimson & Yellow · Open-Wheel F1',
-    costCoins: 3400,
-    bodyStyle: 'formula_rb22',
-    featured: true,
-    primaryColor: 0x0c2461,
-    secondaryColor: 0xdc2626,
-    stripeColor: 0xfacc15,
-    rimColor: 0x1e293b,
-    glassColor: 0x090d16,
-    flameOuterColor: 0xef4444,
-    flameInnerColor: 0xfde047,
-    headlightColor: 0xfef08a,
-    wheelRadius: 0.35,
-    speedBonus: 11,
-    swatchCss: 'linear-gradient(135deg, #1e3a8a 0%, #0c2461 58%, #dc2626 82%, #facc15 100%)',
   },
   {
     id: 'magnetar_solaris',

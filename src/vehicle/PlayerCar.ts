@@ -214,7 +214,6 @@ export class PlayerCar {
   public readonly bodyGroup = new THREE.Group();
 
   private readonly closedBodyGroup = new THREE.Group();
-  private readonly formulaBodyGroup: THREE.Group;
   private readonly wheels: WheelAssembly[] = [];
   private readonly styleGroups: Record<CarBodyStyle, THREE.Group>;
   private readonly thrusterOuterCones: THREE.Mesh[] = [];
@@ -602,10 +601,7 @@ export class PlayerCar {
       this.thrusterInnerCones.push(innerCone);
     }
 
-    // 9. Build distinct closed-body kits + open-wheel 2026 RB22 Formula 1 chassis
-    this.formulaBodyGroup = this.buildFormulaRb22Assembly(outerConeGeo, innerConeGeo);
-    this.bodyGroup.add(this.formulaBodyGroup);
-
+    // 9. Build distinct closed-body kits
     this.styleGroups = {
       muscle_blower: this.buildMuscleBlowerKit(),
       drift_widebody: this.buildDriftWidebodyKit(),
@@ -616,7 +612,6 @@ export class PlayerCar {
       spectra_wtype: this.buildSpectraWtypeKit(),
       janus_racer: this.buildJanusRacerKit(),
       chronos_proto: this.buildChronosProtoKit(),
-      formula_rb22: new THREE.Group(),
     };
     for (const kit of Object.values(this.styleGroups)) {
       this.closedBodyGroup.add(kit);
@@ -1123,218 +1118,6 @@ export class PlayerCar {
     return kit;
   }
 
-  private buildFormulaRb22Assembly(
-    outerConeGeo: THREE.BufferGeometry,
-    innerConeGeo: THREE.BufferGeometry,
-  ): THREE.Group {
-    const f1 = new THREE.Group();
-
-    // Narrow sculpted F1 monocoque + nosecone + engine cover
-    const noseGeo = new THREE.BoxGeometry(0.46, 0.24, 1.75);
-    const noseTipGeo = new THREE.BoxGeometry(0.28, 0.14, 0.56);
-    const cockpitTubGeo = new THREE.BoxGeometry(0.68, 0.36, 1.25);
-    const engineCoverGeo = new THREE.BoxGeometry(0.56, 0.38, 1.28);
-    const sharkFinGeo = new THREE.BoxGeometry(0.05, 0.34, 1.15);
-    const airboxGeo = new THREE.BoxGeometry(0.32, 0.28, 0.48);
-    const airboxInletGeo = new THREE.BoxGeometry(0.24, 0.18, 0.08);
-    const floorPlankGeo = new THREE.BoxGeometry(1.74, 0.05, 2.25);
-    const sidepodGeo = new THREE.BoxGeometry(0.46, 0.34, 1.55);
-    const sidepodInletGeo = new THREE.BoxGeometry(0.38, 0.24, 0.08);
-
-    // Multi-plane Front Wing
-    const fwMainGeo = new THREE.BoxGeometry(2.08, 0.05, 0.38);
-    const fwFlapGeo = new THREE.BoxGeometry(1.98, 0.045, 0.2);
-    const fwEndplateGeo = new THREE.BoxGeometry(0.05, 0.22, 0.48);
-
-    // Cockpit tub interior, driver helmet & Halo
-    const cockpitWellGeo = new THREE.BoxGeometry(0.48, 0.12, 0.72);
-    const helmetGeo = new THREE.SphereGeometry(0.15, 16, 12);
-    const haloArcGeo = new THREE.TorusGeometry(0.26, 0.036, 10, 22, Math.PI * 1.15);
-    haloArcGeo.rotateX(-Math.PI / 2);
-    const haloPillarGeo = new THREE.CylinderGeometry(0.028, 0.032, 0.26, 10);
-
-    // Suspension wishbones (front & rear A-arms connecting chassis to exposed slick tires)
-    const wishboneGeo = new THREE.BoxGeometry(0.68, 0.035, 0.075);
-
-    // Dual-element Rear DRS Wing + FIA rain light + single F1 exhaust
-    const rwPylonGeo = new THREE.BoxGeometry(0.05, 0.56, 0.26);
-    const rwMainGeo = new THREE.BoxGeometry(1.76, 0.06, 0.34);
-    const rwDrsFlapGeo = new THREE.BoxGeometry(1.72, 0.05, 0.2);
-    const rwEndplateGeo = new THREE.BoxGeometry(0.05, 0.34, 0.44);
-    const rainLightGeo = new THREE.BoxGeometry(0.14, 0.14, 0.06);
-    const f1PipeGeo = new THREE.CylinderGeometry(0.095, 0.105, 0.32, 16);
-    f1PipeGeo.rotateX(Math.PI / 2);
-
-    this.geometries.push(
-      noseGeo,
-      noseTipGeo,
-      cockpitTubGeo,
-      engineCoverGeo,
-      sharkFinGeo,
-      airboxGeo,
-      airboxInletGeo,
-      floorPlankGeo,
-      sidepodGeo,
-      sidepodInletGeo,
-      fwMainGeo,
-      fwFlapGeo,
-      fwEndplateGeo,
-      cockpitWellGeo,
-      helmetGeo,
-      haloArcGeo,
-      haloPillarGeo,
-      wishboneGeo,
-      rwPylonGeo,
-      rwMainGeo,
-      rwDrsFlapGeo,
-      rwEndplateGeo,
-      rainLightGeo,
-      f1PipeGeo,
-    );
-
-    const floorPlank = new THREE.Mesh(floorPlankGeo, this.tireMat);
-    floorPlank.position.set(0, 0.04, 0.22);
-    floorPlank.castShadow = true;
-    f1.add(floorPlank);
-
-    const nose = new THREE.Mesh(noseGeo, this.paintMat);
-    nose.position.set(0, 0.28, -1.24);
-    nose.rotation.x = 0.06;
-    nose.castShadow = true;
-    f1.add(nose);
-
-    const noseTip = new THREE.Mesh(noseTipGeo, this.stripeMat); // RB Yellow nosecone tip
-    noseTip.position.set(0, 0.2, -2.14);
-    noseTip.rotation.x = 0.08;
-    f1.add(noseTip);
-
-    const cockpitTub = new THREE.Mesh(cockpitTubGeo, this.paintMat);
-    cockpitTub.position.set(0, 0.34, -0.05);
-    cockpitTub.castShadow = true;
-    f1.add(cockpitTub);
-
-    const engineCover = new THREE.Mesh(engineCoverGeo, this.paintMat);
-    engineCover.position.set(0, 0.39, 1.02);
-    engineCover.castShadow = true;
-    f1.add(engineCover);
-
-    const sharkFin = new THREE.Mesh(sharkFinGeo, this.paintMat);
-    sharkFin.position.set(0, 0.72, 1.05);
-    f1.add(sharkFin);
-
-    const airbox = new THREE.Mesh(airboxGeo, this.stripeMat); // Signature RB Yellow airbox
-    airbox.position.set(0, 0.72, 0.38);
-    airbox.castShadow = true;
-    f1.add(airbox);
-
-    const airboxInlet = new THREE.Mesh(airboxInletGeo, this.tireMat);
-    airboxInlet.position.set(0, 0.74, 0.14);
-    f1.add(airboxInlet);
-
-    for (const side of [-1, 1]) {
-      const sidepod = new THREE.Mesh(sidepodGeo, this.paintMat);
-      sidepod.position.set(side * 0.53, 0.28, 0.36);
-      sidepod.castShadow = true;
-      f1.add(sidepod);
-
-      const podInlet = new THREE.Mesh(sidepodInletGeo, this.tireMat);
-      podInlet.position.set(side * 0.53, 0.3, -0.4);
-      f1.add(podInlet);
-
-      // Red Bull Crimson Red side trim along sidepod shoulder
-      const podStripe = new THREE.Mesh(fwFlapGeo, this.secondaryMat);
-      podStripe.scale.set(0.08, 1, 5.2);
-      podStripe.position.set(side * 0.74, 0.37, 0.42);
-      f1.add(podStripe);
-
-      // Front & rear carbon suspension wishbones connecting monocoque to exposed wheels
-      for (const wz of [-1.36, 1.34]) {
-        for (const wy of [0.22, 0.36]) {
-          const arm = new THREE.Mesh(wishboneGeo, this.tireMat);
-          arm.position.set(side * 0.58, wy, wz);
-          arm.rotation.y = side * (wz < 0 ? 0.12 : -0.1);
-          f1.add(arm);
-        }
-      }
-
-      // Front Wing endplates (Crimson Red)
-      const fwEnd = new THREE.Mesh(fwEndplateGeo, this.secondaryMat);
-      fwEnd.position.set(side * 1.04, 0.16, -2.26);
-      f1.add(fwEnd);
-
-      // Rear Wing pylons & endplates
-      const rwPylon = new THREE.Mesh(rwPylonGeo, this.tireMat);
-      rwPylon.position.set(side * 0.24, 0.62, 1.92);
-      f1.add(rwPylon);
-
-      const rwEnd = new THREE.Mesh(rwEndplateGeo, this.paintMat);
-      rwEnd.position.set(side * 0.88, 0.88, 1.98);
-      f1.add(rwEnd);
-    }
-
-    // Front Wing planes
-    const fwMain = new THREE.Mesh(fwMainGeo, this.paintMat);
-    fwMain.position.set(0, 0.11, -2.28);
-    fwMain.castShadow = true;
-    f1.add(fwMain);
-
-    const fwFlap = new THREE.Mesh(fwFlapGeo, this.secondaryMat);
-    fwFlap.position.set(0, 0.16, -2.18);
-    fwFlap.rotation.x = 0.2;
-    f1.add(fwFlap);
-
-    // Open cockpit + Helmet + Halo protection bar
-    const cockpitWell = new THREE.Mesh(cockpitWellGeo, this.tireMat);
-    cockpitWell.position.set(0, 0.51, -0.05);
-    f1.add(cockpitWell);
-
-    const helmet = new THREE.Mesh(helmetGeo, this.stripeMat);
-    helmet.position.set(0, 0.62, 0.02);
-    f1.add(helmet);
-
-    const haloArc = new THREE.Mesh(haloArcGeo, this.tireMat);
-    haloArc.position.set(0, 0.72, 0.04);
-    haloArc.rotation.y = -Math.PI * 0.075;
-    f1.add(haloArc);
-
-    const haloPillar = new THREE.Mesh(haloPillarGeo, this.tireMat);
-    haloPillar.position.set(0, 0.61, -0.22);
-    haloPillar.rotation.x = -0.35;
-    f1.add(haloPillar);
-
-    // Rear DRS Wing
-    const rwMain = new THREE.Mesh(rwMainGeo, this.paintMat);
-    rwMain.position.set(0, 0.88, 1.96);
-    rwMain.castShadow = true;
-    f1.add(rwMain);
-
-    const rwDrs = new THREE.Mesh(rwDrsFlapGeo, this.secondaryMat);
-    rwDrs.position.set(0, 0.96, 2.04);
-    rwDrs.rotation.x = 0.28;
-    f1.add(rwDrs);
-
-    // FIA rain light + single central F1 exhaust + central boost flame
-    const rainLight = new THREE.Mesh(rainLightGeo, this.tailBarMat);
-    rainLight.position.set(0, 0.32, 2.02);
-    f1.add(rainLight);
-
-    const f1Pipe = new THREE.Mesh(f1PipeGeo, this.chromeMat);
-    f1Pipe.position.set(0, 0.44, 1.88);
-    f1.add(f1Pipe);
-
-    const f1OuterCone = new THREE.Mesh(outerConeGeo, this.thrusterOuterMat);
-    f1OuterCone.position.set(0, 0.44, 2.05);
-    f1.add(f1OuterCone);
-    this.thrusterOuterCones.push(f1OuterCone);
-
-    const f1InnerCone = new THREE.Mesh(innerConeGeo, this.thrusterInnerMat);
-    f1InnerCone.position.set(0, 0.44, 2.05);
-    f1.add(f1InnerCone);
-    this.thrusterInnerCones.push(f1InnerCone);
-
-    return f1;
-  }
-
   public applyCarSpec(spec: CarSpec): void {
     this.paintMat.color.setHex(spec.primaryColor);
     this.secondaryMat.color.setHex(spec.secondaryColor);
@@ -1346,10 +1129,6 @@ export class PlayerCar {
     this.thrusterInnerMat.color.setHex(spec.flameInnerColor);
     this.headlightGlow.color.setHex(spec.headlightColor);
     this.underGlowLight.color.setHex(spec.flameOuterColor);
-
-    const isFormula = spec.bodyStyle === 'formula_rb22';
-    this.closedBodyGroup.visible = !isFormula;
-    this.formulaBodyGroup.visible = isFormula;
 
     const styles = Object.keys(this.styleGroups) as CarBodyStyle[];
     for (const style of styles) {

@@ -40,8 +40,7 @@ function matchesFilter(car: CarSpec, filter: GarageFilter): boolean {
         car.bodyStyle === 'cerbero_racer' ||
         car.bodyStyle === 'spectra_wtype' ||
         car.bodyStyle === 'janus_racer' ||
-        car.bodyStyle === 'chronos_proto' ||
-        car.bodyStyle === 'formula_rb22'
+        car.bodyStyle === 'chronos_proto'
       );
     case 'rally':
       return car.bodyStyle === 'chiron_rally';
@@ -57,31 +56,6 @@ function renderCarCardIllustration(car: CarSpec): string {
   const rim = toHexColor(car.rimColor);
   const glass = toHexColor(car.glassColor);
   const lamp = toHexColor(car.headlightColor);
-
-  if (car.bodyStyle === 'formula_rb22') {
-    return `
-      <div class="garage-car-visual">
-        <svg viewBox="0 0 98 46" width="90" height="42" aria-hidden="true">
-          <ellipse cx="49" cy="40" rx="42" ry="3.2" fill="rgba(2, 6, 23, 0.85)"/>
-          <polygon points="8,14 21,14 19,21 10,21" fill="${body}" stroke="${trim}" stroke-width="0.9"/>
-          <rect x="13" y="21" width="3" height="8" fill="#0f172a"/>
-          <path d="M16 29 L22 22 L38 17 L46 15 L52 22 L76 26 L90 29 L90 32 L16 32 Z" fill="${body}"/>
-          <polygon points="36,15 47,14 48,20 35,20" fill="${accent}"/>
-          <path d="M48 22 Q56 17 63 23" fill="none" stroke="#111827" stroke-width="2.2"/>
-          <circle cx="53" cy="21" r="2.8" fill="${accent}"/>
-          <rect x="26" y="26" width="32" height="3.2" rx="1.2" fill="${trim}"/>
-          <polygon points="84,27 94,28 94,32 82,32" fill="${trim}"/>
-          <polygon points="81,27 91,27 89,29.5 81,29.5" fill="${accent}"/>
-          <circle cx="24" cy="33" r="8" fill="#0f172a" stroke="#334155" stroke-width="1.2"/>
-          <circle cx="24" cy="33" r="4.5" fill="${rim}"/>
-          <circle cx="24" cy="33" r="1.8" fill="${accent}"/>
-          <circle cx="76" cy="33.5" r="7.4" fill="#0f172a" stroke="#334155" stroke-width="1.2"/>
-          <circle cx="76" cy="33.5" r="4.2" fill="${rim}"/>
-          <circle cx="76" cy="33.5" r="1.7" fill="${accent}"/>
-        </svg>
-      </div>
-    `;
-  }
 
   let kitOverlay = '';
   if (car.bodyStyle === 'muscle_blower') {
