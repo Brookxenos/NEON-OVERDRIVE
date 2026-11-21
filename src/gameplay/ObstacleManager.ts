@@ -459,7 +459,7 @@ export class ObstacleManager {
 
     const instances: ObstacleInstance[] = [];
 
-    for (let i = 0; i < 26; i++) {
+    for (let i = 0; i < 35; i++) {
       const kind = kinds[i % kinds.length];
       const obsGroup = new THREE.Group();
       obsGroup.visible = false;
@@ -744,13 +744,14 @@ export class ObstacleManager {
     halfZ: number,
     relativeSpeed: number,
     worldSpeed: number,
+    safetyBufferSec: number,
   ): boolean {
     const [newStart, newEnd] = this.getArrivalInterval(
       SPAWN_Z,
       halfZ,
       relativeSpeed,
       worldSpeed,
-      0.38,
+      safetyBufferSec,
     );
     const newCenter = (newStart + newEnd) * 0.5;
     const laneIntervals: Array<[number, number]>[] = [[], [], []];
@@ -758,7 +759,7 @@ export class ObstacleManager {
 
     let sameLaneConflict = false;
     this.pool.forEachActive((obs) => {
-      if (obs.lane === lane && Math.abs(obs.group.position.z - SPAWN_Z) < 20) {
+      if (obs.lane === lane && Math.abs(obs.group.position.z - SPAWN_Z) < 18) {
         sameLaneConflict = true;
       }
       if (obs.group.position.z > 2) return;
@@ -767,7 +768,7 @@ export class ObstacleManager {
         obs.halfZ,
         obs.relativeSpeed,
         worldSpeed,
-        0.38,
+        safetyBufferSec,
       );
       if (obs.lane === lane && obsEnd >= newStart && obsStart <= newEnd) {
         sameLaneConflict = true;
@@ -777,7 +778,7 @@ export class ObstacleManager {
 
     if (sameLaneConflict) return false;
 
-    const sampleTimes = [newStart + 0.08, newCenter, newEnd - 0.08];
+    const sampleTimes = [newStart + 0.06, newCenter, newEnd - 0.06];
     for (const sampleTime of sampleTimes) {
       let openCount = 0;
       for (let l = 0; l < 3; l++) {
@@ -792,34 +793,70 @@ export class ObstacleManager {
     return true;
   }
 
-  private isSpawnPassable(lane: LaneIndex, halfZ: number, relativeSpeed: number): boolean {
+  private isSpawnPassable(
+    lane: LaneIndex,
+    halfZ: number,
+    relativeSpeed: number,
+    safetyBufferSec: number,
+  ): boolean {
     return (
-      this.canSpawnSafelyAtSpeed(lane, halfZ, relativeSpeed, this.lastWorldSpeed) &&
-      this.canSpawnSafelyAtSpeed(lane, halfZ, relativeSpeed, this.lastWorldSpeed + 50)
+      this.canSpawnSafelyAtSpeed(
+        lane,
+        halfZ,
+        relativeSpeed,
+        this.lastWorldSpeed,
+        safetyBufferSec,
+      ) &&
+      this.canSpawnSafelyAtSpeed(
+        lane,
+        halfZ,
+        relativeSpeed,
+        this.lastWorldSpeed + 50,
+        safetyBufferSec,
+      )
     );
+  }
+
+  private static pickObstacleType(difficultyLevel: number): ObstacleType {
+    const levelBoost = Math.min(1, Math.max(0, difficultyLevel - 1) / 9);
+    const trafficWeight = 0.16 + levelBoost * 0.2;
+    const hazardWeight = 0.12 + levelBoost * 0.14;
+    const gateWeight = 0.22 + levelBoost * 0.04;
+    const barrierWeight = 0.25 - levelBoost * 0.19;
+    const roll = Math.random();
+
+    if (roll < trafficWeight) return 'traffic';
+    if (roll < trafficWeight + hazardWeight) return 'hazard_zone';
+    if (roll < trafficWeight + hazardWeight + gateWeight) return 'laser_gate';
+    if (roll < trafficWeight + hazardWeight + gateWeight + barrierWeight) return 'barrier';
+    return 'roadblock';
   }
 
   private lastWorldSpeed = 64;
 
-  public spawnInLanes(lanes: LaneIndex[], worldSpeed = 64): LaneIndex[] {
+  public spawnInLanes(
+    lanes: LaneIndex[],
+    worldSpeed = 64,
+    difficultyLevel = 1,
+  ): LaneIndex[] {
     this.lastWorldSpeed = Math.max(40, worldSpeed);
-    const obstacleTypes: ObstacleType[] = [
-      'barrier',
-      'traffic',
-      'roadblock',
-      'laser_gate',
-      'hazard_zone',
-    ];
+    const levelOffset = Math.max(0, difficultyLevel - 1);
+    const safetyBufferSec = Math.max(0.24, 0.38 - levelOffset * 0.015);
+    const maxTrafficDelta = Math.min(7.5, 2.2 + levelOffset * 0.55);
     const spawnedLanes: LaneIndex[] = [];
 
     for (let i = 0; i < lanes.length; i++) {
       const lane = lanes[i];
-      const preferred = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
-      let relSpeed = preferred === 'traffic' ? -(1.8 + Math.random() * 2.2) : 0;
+      const preferred = ObstacleManager.pickObstacleType(difficultyLevel);
+      let relSpeed =
+        preferred === 'traffic' ? -(1.5 + Math.random() * maxTrafficDelta) : 0;
       const candidateHalfZ = ObstacleManager.getObstacleHalfZ(preferred);
 
-      if (!this.isSpawnPassable(lane, candidateHalfZ, relSpeed)) {
-        if (preferred === 'traffic' && this.isSpawnPassable(lane, candidateHalfZ, 0)) {
+      if (!this.isSpawnPassable(lane, candidateHalfZ, relSpeed, safetyBufferSec)) {
+        if (
+          preferred === 'traffic' &&
+          this.isSpawnPassable(lane, candidateHalfZ, 0, safetyBufferSec)
+        ) {
           relSpeed = 0;
         } else {
           continue;
@@ -841,9 +878,20 @@ export class ObstacleManager {
     return spawnedLanes;
   }
 
-  public isLaneClearForSafeCorridor(lane: LaneIndex, worldSpeed: number): boolean {
+  public isLaneClearForSafeCorridor(
+    lane: LaneIndex,
+    worldSpeed: number,
+    difficultyLevel = 1,
+  ): boolean {
     const safeSpeed = Math.max(40, worldSpeed);
-    const [newStart, newEnd] = this.getArrivalInterval(SPAWN_Z, 1.6, 0, safeSpeed, 0.34);
+    const safetyBufferSec = Math.max(0.24, 0.36 - Math.max(0, difficultyLevel - 1) * 0.012);
+    const [newStart, newEnd] = this.getArrivalInterval(
+      SPAWN_Z,
+      1.6,
+      0,
+      safeSpeed,
+      safetyBufferSec,
+    );
     let clear = true;
     this.pool.forEachActive((obs) => {
       if (obs.lane !== lane || obs.group.position.z > 2) return;
@@ -852,7 +900,7 @@ export class ObstacleManager {
         obs.halfZ,
         obs.relativeSpeed,
         safeSpeed,
-        0.34,
+        safetyBufferSec,
       );
       if (obsEnd >= newStart && obsStart <= newEnd) {
         clear = false;

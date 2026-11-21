@@ -64,6 +64,8 @@ export class Game {
   private currentSpeed = BASE_START_SPEED;
   private spawnDistanceRemaining = 42;
   private lastSafeLane: LaneIndex = 1;
+  private runElapsedSeconds = 0;
+  private lastAnnouncedLevel = 1;
   private hudSyncTimer = 0;
   private announcedGoalId: CarId | null = null;
   private garagePreviewOpen = false;
@@ -338,6 +340,8 @@ export class Game {
     this.currentSpeed = BASE_START_SPEED + this.carController.getCarSpec().speedBonus;
     this.spawnDistanceRemaining = 42;
     this.lastSafeLane = 1;
+    this.runElapsedSeconds = 0;
+    this.lastAnnouncedLevel = 1;
     this.hudSyncTimer = 0;
     const nextGoal = getNextLockedCar(this.saveData.unlockedCars);
     this.announcedGoalId =
@@ -383,16 +387,28 @@ export class Game {
   private spawnNextWave(difficultyLevel: number): number {
     const lanes = LaneSystem.getAllLanes();
     const clearLanes = lanes.filter((l) =>
-      this.obstacleManager.isLaneClearForSafeCorridor(l, this.currentSpeed),
+      this.obstacleManager.isLaneClearForSafeCorridor(l, this.currentSpeed, difficultyLevel),
     );
     const corridorPool = clearLanes.length > 0 ? clearLanes : lanes;
 
     const allowTwoLaneJump =
-      difficultyLevel < 6 && !this.boostSystem.isAnyBoostActive() && Math.random() < 0.22;
-    const reachablePool = allowTwoLaneJump
-      ? corridorPool
-      : corridorPool.filter((l) => Math.abs(l - this.lastSafeLane) <= 1);
-    const safeCandidates = reachablePool.length > 0 ? reachablePool : corridorPool;
+      !this.boostSystem.isAnyBoostActive() &&
+      Math.random() < this.difficultyManager.getTwoLaneJumpChance(difficultyLevel);
+    const twoLaneTargets = corridorPool.filter((l) => Math.abs(l - this.lastSafeLane) === 2);
+
+    let reachablePool: LaneIndex[];
+    if (allowTwoLaneJump && twoLaneTargets.length > 0) {
+      reachablePool = twoLaneTargets;
+    } else {
+      const oneStepPool = corridorPool.filter((l) => Math.abs(l - this.lastSafeLane) <= 1);
+      reachablePool = oneStepPool.length > 0 ? oneStepPool : corridorPool;
+    }
+
+    const shouldForceWeave = Math.random() < this.difficultyManager.getForcedWeaveChance(difficultyLevel);
+    const weavePool = shouldForceWeave
+      ? reachablePool.filter((l) => l !== this.lastSafeLane)
+      : reachablePool;
+    const safeCandidates = weavePool.length > 0 ? weavePool : reachablePool;
 
     const safeLane = safeCandidates[Math.floor(Math.random() * safeCandidates.length)];
     const laneShiftSteps = Math.abs(safeLane - this.lastSafeLane);
@@ -411,6 +427,7 @@ export class Game {
     const spawnedBlocked = this.obstacleManager.spawnInLanes(
       blockedCandidates.slice(0, blockCount),
       this.currentSpeed,
+      difficultyLevel,
     );
 
     const openLanes = lanes.filter((l) => !spawnedBlocked.includes(l));
@@ -471,8 +488,22 @@ export class Game {
     }
 
     // Active racing simulation
+    this.runElapsedSeconds += dt;
     const distance = this.scoreManager.getDistance();
-    const difficultyLevel = this.difficultyManager.getLevel(distance);
+    const difficultyLevel = this.difficultyManager.getLevel(distance, this.runElapsedSeconds);
+
+    if (difficultyLevel > this.lastAnnouncedLevel) {
+      this.lastAnnouncedLevel = difficultyLevel;
+      const tierMsg =
+        difficultyLevel === 2
+          ? 'TIER 2 · TRAFFIC INTENSIFIES'
+          : difficultyLevel === 3
+            ? 'TIER 3 · TIGHT CORRIDORS'
+            : difficultyLevel === 4
+              ? 'TIER 4 · SLALOM LOCKDOWN'
+              : `TIER ${difficultyLevel} · VELOCITY SURGE`;
+      this.state.pushBanner(tierMsg, difficultyLevel >= 4 ? 'magenta' : 'amber');
+    }
 
     if (this.boostSystem.update(dt)) {
       this.audioManager.playBoostActivate();
@@ -647,7 +678,7 @@ export class Game {
       multiplier: this.scoreManager.getMultiplier(),
       orbsCollected: this.scoreManager.getOrbsCollected(),
       runCoins: this.scoreManager.getRunCoins(),
-      difficultyLevel: this.difficultyManager.getLevel(finalDistance),
+      difficultyLevel: this.difficultyManager.getLevel(finalDistance, this.runElapsedSeconds),
       bestScore: this.saveData.bestScore,
       bestDistance: this.saveData.bestDistance,
       isNewRecord,
