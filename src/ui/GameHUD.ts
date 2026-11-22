@@ -270,6 +270,11 @@ export class GameHUD {
         banner.className = `animate-hud-pop hud-event-banner tone-${snapshot.eventBanner.tone}`;
         banner.textContent = snapshot.eventBanner.text;
         this.bannerSlot.replaceChildren(banner);
+      } else {
+        const existing = this.bannerSlot.firstElementChild;
+        if (existing && existing.textContent !== snapshot.eventBanner.text) {
+          existing.textContent = snapshot.eventBanner.text;
+        }
       }
     } else if (this.bannerSlot.childElementCount > 0) {
       this.bannerSlot.replaceChildren();

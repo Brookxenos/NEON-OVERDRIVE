@@ -110,6 +110,24 @@ export class GameState {
     this.notify();
   }
 
+  public updateActiveBannerText(text: string): boolean {
+    if (
+      !this.snapshot.eventBanner ||
+      this.bannerTimeRemaining <= 0 ||
+      this.snapshot.eventBanner.tone !== 'amber' ||
+      !this.snapshot.eventBanner.text.startsWith('+')
+    ) {
+      return false;
+    }
+    this.snapshot.eventBanner = {
+      ...this.snapshot.eventBanner,
+      text,
+    };
+    this.bannerTimeRemaining = 1.15;
+    this.notify();
+    return true;
+  }
+
   public tickBanner(dt: number): void {
     if (this.bannerTimeRemaining <= 0) return;
     this.bannerTimeRemaining -= dt;

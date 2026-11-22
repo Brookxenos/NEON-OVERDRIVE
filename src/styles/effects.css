@@ -1,19 +1,19 @@
 @keyframes hud-pop {
   0% {
     opacity: 0;
-    transform: translateY(10px) scale(0.92);
+    transform: translateY(6px) scale(0.97);
   }
-  20% {
+  16% {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
-  80% {
+  84% {
     opacity: 1;
-    transform: translateY(-4px) scale(1);
+    transform: translateY(-2px) scale(1);
   }
   100% {
     opacity: 0;
-    transform: translateY(-12px) scale(0.96);
+    transform: translateY(-8px) scale(0.98);
   }
 }
 
@@ -24,7 +24,7 @@
 @keyframes modal-enter {
   0% {
     opacity: 0;
-    transform: translateY(12px) scale(0.98);
+    transform: translateY(10px) scale(0.985);
   }
   100% {
     opacity: 1;
@@ -33,5 +33,5 @@
 }
 
 .animate-modal-enter {
-  animation: modal-enter 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: modal-enter 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

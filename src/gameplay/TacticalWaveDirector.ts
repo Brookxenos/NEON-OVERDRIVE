@@ -28,7 +28,8 @@ type OpeningFormationId =
   | 'emp_corridor'
   | 'armor_lockdown'
   | 'split_apex'
-  | 'turbo_chicane';
+  | 'turbo_chicane'
+  | 'reaper_ambush';
 
 type FormationId =
   | 'center_funnel'
@@ -42,6 +43,8 @@ type FormationId =
   | 'emp_laser_combo'
   | 'fortress_corridor'
   | 'gauntlet_crossfire'
+  | 'evil_gauntlet'
+  | 'evil_crossfire'
   | 'phantom_zig_zag'
   | 'velocity_choke'
   | 'overdrive_blitz'
@@ -56,6 +59,7 @@ const OPENING_FORMATION_LABELS: Record<OpeningFormationId, string> = {
   armor_lockdown: 'ARMOR LOCKDOWN',
   split_apex: 'SPLIT APEX',
   turbo_chicane: 'TURBO CHICANE',
+  reaper_ambush: 'REAPER AMBUSH',
 };
 
 export class TacticalWaveDirector {
@@ -81,6 +85,7 @@ export class TacticalWaveDirector {
       'armor_lockdown',
       'split_apex',
       'turbo_chicane',
+      'reaper_ambush',
     ];
     const nonRepeating = openingPool.filter((id) => id !== this.lastOpeningFormation);
     const candidates = nonRepeating.length > 0 ? nonRepeating : openingPool;
@@ -305,6 +310,29 @@ export class TacticalWaveDirector {
         this.lastFormation = 'emp_laser_combo';
         break;
       }
+
+      case 'reaper_ambush': {
+        const sequence: LaneIndex[] = [1, flank, oppFlank, 1, flank];
+        const kinds: ObstacleType[] = [
+          'evil_drone',
+          'barrier',
+          'evil_drone',
+          'laser_gate',
+          'evil_drone',
+        ];
+        sequence.forEach((lane, idx) => {
+          const isLast = idx === sequence.length - 1;
+          this.queue.push({
+            safeLane: lane,
+            blockCount: idx === 0 ? 1 : 2,
+            obstacleKind: kinds[idx],
+            spacingScale: isLast ? 0.94 : 0.84,
+            preferRewardInSafeLane: true,
+          });
+        });
+        this.lastFormation = 'evil_gauntlet';
+        break;
+      }
     }
 
     return OPENING_FORMATION_LABELS[chosen];
@@ -373,10 +401,16 @@ export class TacticalWaveDirector {
             'fortress_corridor',
           ];
     if (difficultyLevel >= 2) {
-      available.push('hazard_chicane', 'double_squeeze', 'emp_laser_combo', 'twin_convoy_cut');
+      available.push(
+        'hazard_chicane',
+        'double_squeeze',
+        'emp_laser_combo',
+        'twin_convoy_cut',
+        'evil_gauntlet',
+      );
     }
     if (difficultyLevel >= 2 && allowTwoLaneJump) available.push('apex_sweep');
-    if (difficultyLevel >= 3) available.push('gauntlet_crossfire');
+    if (difficultyLevel >= 3) available.push('gauntlet_crossfire', 'evil_crossfire');
     if (difficultyLevel >= 5 && allowTwoLaneJump) available.push('phantom_zig_zag', 'phantom_zig_zag');
     if (difficultyLevel >= 6) available.push('velocity_choke', 'velocity_choke');
     if (difficultyLevel >= 8) available.push('overdrive_blitz', 'overdrive_blitz');
@@ -613,13 +647,56 @@ export class TacticalWaveDirector {
         break;
       }
 
+      case 'evil_gauntlet': {
+        const lanesOrder: LaneIndex[] = [flank, 1, oppFlank, 1];
+        const kinds: ObstacleType[] = [
+          'evil_drone',
+          'laser_gate',
+          'evil_drone',
+          'roadblock',
+        ];
+        lanesOrder.forEach((lane, idx) => {
+          const isLast = idx === lanesOrder.length - 1;
+          this.queue.push({
+            safeLane: lane,
+            blockCount: 2,
+            obstacleKind: kinds[idx],
+            spacingScale: isLast ? 0.94 : 0.82,
+            preferRewardInSafeLane: true,
+          });
+        });
+        break;
+      }
+
+      case 'evil_crossfire': {
+        const lanesOrder: LaneIndex[] = [1, flank, 1, oppFlank, flank];
+        const kinds: ObstacleType[] = [
+          'evil_drone',
+          'hazard_zone',
+          'evil_drone',
+          'laser_gate',
+          'evil_drone',
+        ];
+        lanesOrder.forEach((lane, idx) => {
+          const isLast = idx === lanesOrder.length - 1;
+          this.queue.push({
+            safeLane: lane,
+            blockCount: 2,
+            obstacleKind: kinds[idx],
+            spacingScale: isLast ? 0.96 : 0.82,
+            preferRewardInSafeLane: true,
+          });
+        });
+        break;
+      }
+
       case 'phantom_zig_zag': {
         const lanesOrder: LaneIndex[] = [flank, oppFlank, 1, flank, oppFlank];
         const kinds: ObstacleType[] = [
-          'laser_gate',
+          'evil_drone',
           'roadblock',
           'hazard_zone',
-          'laser_gate',
+          'evil_drone',
           'roadblock',
         ];
         lanesOrder.forEach((lane, idx) => {
@@ -710,10 +787,10 @@ export class TacticalWaveDirector {
         const lanesOrder: LaneIndex[] = [flank, 1, oppFlank, flank, 1, oppFlank];
         const kinds: ObstacleType[] = [
           'traffic',
-          'roadblock',
+          'evil_drone',
           'traffic',
           'laser_gate',
-          'hazard_zone',
+          'evil_drone',
           'traffic',
         ];
         lanesOrder.forEach((lane, idx) => {

@@ -73,6 +73,9 @@ export class Game {
   private lastScoreMilestone = 0;
   private scoreFeverTimer = 0;
   private feverSparkTimer = 0;
+  private coinChainTimer = 0;
+  private coinChainCoins = 0;
+  private coinChainPoints = 0;
   private hudSyncTimer = 0;
   private saveFlushTimer = 0;
   private saveDirty = false;
@@ -360,6 +363,9 @@ export class Game {
     this.lastScoreMilestone = 0;
     this.scoreFeverTimer = 0;
     this.feverSparkTimer = 0;
+    this.coinChainTimer = 0;
+    this.coinChainCoins = 0;
+    this.coinChainPoints = 0;
     this.waveDirector.reset();
     this.hudSyncTimer = 0;
     this.saveFlushTimer = 0;
@@ -574,6 +580,13 @@ export class Game {
         this.visualEffects.emitCollectibleBurst(this.boostBurstPos, COLORS.energyAmber, 6, 5);
       }
     }
+    if (this.coinChainTimer > 0) {
+      this.coinChainTimer = Math.max(0, this.coinChainTimer - dt);
+      if (this.coinChainTimer === 0) {
+        this.coinChainCoins = 0;
+        this.coinChainPoints = 0;
+      }
+    }
     const isFeverActive = this.scoreFeverTimer > 0;
 
     const isManualBoost = this.boostSystem.isManualBoosting();
@@ -754,8 +767,19 @@ export class Game {
         this.boostSystem.addEnergy(16);
         this.visualEffects.emitCollectibleBurst(item.position, COLORS.neonCyan, 16, 8);
       } else if (item.kind === 'score_crystal') {
-        this.visualEffects.emitCollectibleBurst(item.position, COLORS.energyAmber, 20, 10);
-        this.state.pushBanner(`+${reward.coins} COINS · +${reward.points}`, 'amber');
+        this.visualEffects.emitCoinClaimPopup(item.position);
+        const isContinuingChain = this.coinChainTimer > 0;
+        this.coinChainCoins = isContinuingChain
+          ? this.coinChainCoins + reward.coins
+          : reward.coins;
+        this.coinChainPoints = isContinuingChain
+          ? this.coinChainPoints + reward.points
+          : reward.points;
+        this.coinChainTimer = 0.75;
+        const label = `+${this.coinChainCoins} COINS · +${this.coinChainPoints.toLocaleString()}`;
+        if (!isContinuingChain || !this.state.updateActiveBannerText(label)) {
+          this.state.pushBanner(label, 'amber');
+        }
       } else {
         this.boostSystem.addEnergy(38);
         this.visualEffects.emitCollectibleBurst(item.position, COLORS.electricBlue, 20, 10);
