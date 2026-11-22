@@ -873,11 +873,11 @@ export class ObstacleManager {
     return 'roadblock';
   }
 
-  private lastWorldSpeed = 28;
+  private lastWorldSpeed = 34;
 
   public spawnInLanes(
     lanes: LaneIndex[],
-    worldSpeed = 28,
+    worldSpeed = 34,
     difficultyLevel = 1,
     spawnZ = SPAWN_Z,
     preferredKind?: ObstacleType,
@@ -885,7 +885,7 @@ export class ObstacleManager {
   ): LaneIndex[] {
     this.lastWorldSpeed = Math.max(24, worldSpeed);
     const levelOffset = Math.max(0, difficultyLevel - 1);
-    const safetyBufferSec = Math.max(0.14, 0.24 - levelOffset * 0.004);
+    const safetyBufferSec = Math.max(0.12, 0.21 - levelOffset * 0.004);
     const maxTrafficDelta = Math.min(18, 3.0 + levelOffset * 0.45);
     const spawnedLanes: LaneIndex[] = [];
 
@@ -938,7 +938,7 @@ export class ObstacleManager {
     spawnZ = SPAWN_Z,
   ): boolean {
     const safeSpeed = Math.max(24, worldSpeed);
-    const safetyBufferSec = Math.max(0.14, 0.24 - Math.max(0, difficultyLevel - 1) * 0.004);
+    const safetyBufferSec = Math.max(0.12, 0.21 - Math.max(0, difficultyLevel - 1) * 0.004);
     const [newStart, newEnd] = this.getArrivalInterval(
       spawnZ,
       1.6,
@@ -992,7 +992,8 @@ export class ObstacleManager {
     this.warningAmberMat.emissiveIntensity = 1.65 + pulse * 0.25;
     this.dangerRedMat.emissiveIntensity = 1.78 - pulse * 0.22;
 
-    const enableTrafficWeave = distance >= 2500;
+    const enableTrafficWeave = distance >= 1200;
+    const weaveChance = distance >= 2500 ? 0.55 : 0.42;
 
     this.pool.forEachActive((obs) => {
       obs.prevX = obs.group.position.x;
@@ -1008,7 +1009,7 @@ export class ObstacleManager {
         obs.group.position.z <= -115
       ) {
         obs.hasShiftedLane = true;
-        if (Math.random() < 0.38) {
+        if (Math.random() < weaveChance) {
           const candidate: LaneIndex =
             obs.lane === 1 ? (Math.random() < 0.5 ? 0 : 2) : 1;
           if (this.canTrafficShiftTo(obs, candidate)) {

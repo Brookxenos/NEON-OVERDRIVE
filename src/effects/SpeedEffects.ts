@@ -41,7 +41,7 @@ export class SpeedEffects {
 
   public update(dt: number, worldSpeed: number, isBoosting: boolean): void {
     const streakSpeed = worldSpeed * (isBoosting ? 1.55 : 1.0);
-    const speedRatio = Math.max(0, (worldSpeed - 54) / 56);
+    const speedRatio = Math.max(0, (worldSpeed - 60) / 64);
     this.speedLineMat.opacity = isBoosting ? 0.24 : Math.min(0.14, speedRatio * 0.14);
     this.speedLineMat.color.setHex(isBoosting ? 0x67e8f9 : 0xfde68a);
 

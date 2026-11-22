@@ -80,7 +80,7 @@ export class GameHUD {
               <div>
                 <div class="hud-kicker">Speed</div>
                 <div class="font-mono-num hud-speed-value">
-                  <span data-role="speed">101</span> <span class="hud-speed-unit">KM/H</span>
+                  <span data-role="speed">122</span> <span class="hud-speed-unit">KM/H</span>
                 </div>
               </div>
               <div style="text-align:right">

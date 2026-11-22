@@ -42,10 +42,11 @@ export class ScoreManager {
     worldSpeed: number,
     isBoosting: boolean,
     isExpressZone = false,
+    isFeverActive = false,
   ): void {
     const deltaMeters = worldSpeed * dt;
     this.distance += deltaMeters;
-    const zoneBonus = isExpressZone ? 1.5 : 1;
+    const zoneBonus = (isExpressZone ? 1.5 : 1) * (isFeverActive ? 2 : 1);
     this.score +=
       deltaMeters * SCORE_PER_METER * this.multiplier * (isBoosting ? 1.5 : 1) * zoneBonus;
 
@@ -65,6 +66,7 @@ export class ScoreManager {
   public registerCollectible(
     kind: 'energy_orb' | 'score_crystal' | 'boost_cell',
     isExpressZone = false,
+    isFeverActive = false,
   ): CollectibleReward {
     this.orbsCollected += 1;
     this.comboTimer = COMBO_DURATION;
@@ -84,7 +86,10 @@ export class ScoreManager {
           ? CELL_COIN_VALUE
           : ORB_COIN_VALUE;
 
-    const points = Math.round(baseValue * this.multiplier * (isExpressZone ? 1.5 : 1));
+    const feverBonus = isFeverActive ? 2 : 1;
+    const points = Math.round(
+      baseValue * this.multiplier * (isExpressZone ? 1.5 : 1) * feverBonus,
+    );
     this.score += points;
     this.runCoins += coinReward;
     return { points, coins: coinReward };

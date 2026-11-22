@@ -71,8 +71,8 @@ export class Game {
   private passed500m = false;
   private passed2500m = false;
   private lastScoreMilestone = 0;
-  private magnetFeverTimer = 0;
-  private magnetSparkTimer = 0;
+  private scoreFeverTimer = 0;
+  private feverSparkTimer = 0;
   private hudSyncTimer = 0;
   private saveFlushTimer = 0;
   private saveDirty = false;
@@ -358,8 +358,8 @@ export class Game {
     this.passed500m = false;
     this.passed2500m = false;
     this.lastScoreMilestone = 0;
-    this.magnetFeverTimer = 0;
-    this.magnetSparkTimer = 0;
+    this.scoreFeverTimer = 0;
+    this.feverSparkTimer = 0;
     this.waveDirector.reset();
     this.hudSyncTimer = 0;
     this.saveFlushTimer = 0;
@@ -409,11 +409,11 @@ export class Game {
     // Populate starter rewards and a randomized 5-wave tactical opening formation on every start/restart
     this.collectibleManager.spawnRewardInLane(1, -44);
     const openingLabel = this.waveDirector.seedOpeningFormation();
-    const openingZPositions = [-96, -152, -208, -264, -320];
+    const openingZPositions = [-92, -144, -196, -248, -300];
     for (const zPos of openingZPositions) {
       this.spawnNextWave(1, zPos);
     }
-    this.spawnDistanceRemaining = 26;
+    this.spawnDistanceRemaining = 24;
     return openingLabel;
   }
 
@@ -565,15 +565,16 @@ export class Game {
       this.state.pushBanner('OVERDRIVE ENGAGED', 'cyan');
     }
 
-    if (this.magnetFeverTimer > 0) {
-      this.magnetFeverTimer = Math.max(0, this.magnetFeverTimer - dt);
-      this.magnetSparkTimer += dt;
-      if (this.magnetSparkTimer >= 0.18) {
-        this.magnetSparkTimer = 0;
+    if (this.scoreFeverTimer > 0) {
+      this.scoreFeverTimer = Math.max(0, this.scoreFeverTimer - dt);
+      this.feverSparkTimer += dt;
+      if (this.feverSparkTimer >= 0.18) {
+        this.feverSparkTimer = 0;
         this.boostBurstPos.set(this.carController.getX(), 0.65, 0);
         this.visualEffects.emitCollectibleBurst(this.boostBurstPos, COLORS.energyAmber, 6, 5);
       }
     }
+    const isFeverActive = this.scoreFeverTimer > 0;
 
     const isManualBoost = this.boostSystem.isManualBoosting();
     const isPadBoost = this.boostSystem.isPadBoosting();
@@ -602,12 +603,7 @@ export class Game {
     const currPlayerX = this.carController.getX();
 
     this.obstacleManager.update(dt, this.currentSpeed, exactDistance);
-    this.collectibleManager.update(
-      dt,
-      this.currentSpeed,
-      currPlayerX,
-      this.magnetFeverTimer > 0,
-    );
+    this.collectibleManager.update(dt, this.currentSpeed);
 
     this.collisionSystem.evaluate(
       prevPlayerX,
@@ -622,14 +618,20 @@ export class Game {
       this.obstacleManager.snapToFraction(crashFrac);
       this.trackManager.update(dt * crashFrac, this.currentSpeed, isAnyBoost);
       this.sceneManager.update(dt * crashFrac, this.currentSpeed, isAnyBoost, exactDistance);
-      this.scoreManager.updateRun(dt * crashFrac, this.currentSpeed, isAnyBoost, isExpressZone);
-      this.processCollisionEvents(isExpressZone);
+      this.scoreManager.updateRun(
+        dt * crashFrac,
+        this.currentSpeed,
+        isAnyBoost,
+        isExpressZone,
+        isFeverActive,
+      );
+      this.processCollisionEvents(isExpressZone, isFeverActive);
       this.visualEffects.update(dt, 0, false);
       this.renderer.render(this.sceneManager.scene, this.sceneManager.cameraController.camera);
       return;
     }
 
-    this.scoreManager.updateRun(dt, this.currentSpeed, isAnyBoost, isExpressZone);
+    this.scoreManager.updateRun(dt, this.currentSpeed, isAnyBoost, isExpressZone, isFeverActive);
     this.trackManager.update(dt, this.currentSpeed, isAnyBoost);
     this.sceneManager.update(dt, this.currentSpeed, isAnyBoost, exactDistance);
     this.visualEffects.update(dt, this.currentSpeed, isAnyBoost);
@@ -650,17 +652,17 @@ export class Game {
         waveTiming.laneShiftSteps,
       );
       const tierCompression = this.difficultyManager.getFormationCompression(difficultyLevel);
-      const minHumanReactSec = waveTiming.laneShiftSteps >= 2 ? 0.54 : 0.38;
+      const minHumanReactSec = waveTiming.laneShiftSteps >= 2 ? 0.48 : 0.33;
       const minSafeSpacing =
-        projectedPeakSpeed * minHumanReactSec + (waveTiming.laneShiftSteps >= 2 ? 7 : 6);
+        projectedPeakSpeed * minHumanReactSec + (waveTiming.laneShiftSteps >= 2 ? 6.5 : 5);
       this.spawnDistanceRemaining = Math.max(
-        28,
+        24,
         minSafeSpacing,
         baseSpacing * waveTiming.spacingScale * tierCompression,
       );
     }
 
-    this.processCollisionEvents(isExpressZone);
+    this.processCollisionEvents(isExpressZone, isFeverActive);
     if (this.state.getStatus() === 'playing') {
       this.checkScoreMilestone();
     }
@@ -710,14 +712,14 @@ export class Game {
     this.scoreManager.addBonusCoins(bonusCoins);
     this.saveDirty = true;
     this.boostSystem.addEnergy(100);
-    this.magnetFeverTimer = 8.0;
-    this.magnetSparkTimer = 0;
+    this.scoreFeverTimer = 8.0;
+    this.feverSparkTimer = 0;
 
     this.boostBurstPos.set(this.carController.getX(), 0.75, 0);
     this.visualEffects.emitCollectibleBurst(this.boostBurstPos, COLORS.energyAmber, 28, 12);
     this.audioManager.playMilestoneFanfare();
     this.state.pushBanner(
-      `${(milestoneStep * 10).toLocaleString()}K FEVER · MAGNET +${bonusCoins} COINS!`,
+      `${(milestoneStep * 10).toLocaleString()}K FEVER · 2X SCORE +${bonusCoins} COINS!`,
       'amber',
     );
     this.checkCarUnlockGoal();
@@ -735,10 +737,14 @@ export class Game {
     }
   }
 
-  private processCollisionEvents(isExpressZone: boolean): void {
+  private processCollisionEvents(isExpressZone: boolean, isFeverActive: boolean): void {
     let coinsChanged = false;
     for (const item of this.collisionReport.collected) {
-      const reward = this.scoreManager.registerCollectible(item.kind, isExpressZone);
+      const reward = this.scoreManager.registerCollectible(
+        item.kind,
+        isExpressZone,
+        isFeverActive,
+      );
       if (reward.coins > 0) {
         this.saveData.coins += reward.coins;
         coinsChanged = true;

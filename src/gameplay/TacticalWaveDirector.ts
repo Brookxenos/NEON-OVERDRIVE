@@ -363,7 +363,7 @@ export class TacticalWaveDirector {
 
   private enqueueFormation(difficultyLevel: number, allowTwoLaneJump: boolean): void {
     const available: FormationId[] =
-      difficultyLevel >= 8
+      difficultyLevel >= 6
         ? ['checkpoint_lockdown', 'fortress_corridor']
         : [
             'center_funnel',
@@ -375,13 +375,13 @@ export class TacticalWaveDirector {
     if (difficultyLevel >= 2) {
       available.push('hazard_chicane', 'double_squeeze', 'emp_laser_combo', 'twin_convoy_cut');
     }
-    if (difficultyLevel >= 3 && allowTwoLaneJump) available.push('apex_sweep');
-    if (difficultyLevel >= 5) available.push('gauntlet_crossfire');
-    if (difficultyLevel >= 8 && allowTwoLaneJump) available.push('phantom_zig_zag', 'phantom_zig_zag');
-    if (difficultyLevel >= 10) available.push('velocity_choke', 'velocity_choke');
-    if (difficultyLevel >= 12) available.push('overdrive_blitz', 'overdrive_blitz');
-    if (difficultyLevel >= 15) available.push('rush_hour_convoy', 'rush_hour_convoy');
-    if (difficultyLevel >= 18) available.push('apex_hellstorm', 'apex_hellstorm');
+    if (difficultyLevel >= 2 && allowTwoLaneJump) available.push('apex_sweep');
+    if (difficultyLevel >= 3) available.push('gauntlet_crossfire');
+    if (difficultyLevel >= 5 && allowTwoLaneJump) available.push('phantom_zig_zag', 'phantom_zig_zag');
+    if (difficultyLevel >= 6) available.push('velocity_choke', 'velocity_choke');
+    if (difficultyLevel >= 8) available.push('overdrive_blitz', 'overdrive_blitz');
+    if (difficultyLevel >= 10) available.push('rush_hour_convoy', 'rush_hour_convoy');
+    if (difficultyLevel >= 12) available.push('apex_hellstorm', 'apex_hellstorm');
 
     const nonRepeating = available.filter((id) => id !== this.lastFormation);
     const pool = nonRepeating.length > 0 ? nonRepeating : available;
@@ -400,7 +400,7 @@ export class TacticalWaveDirector {
             blockCount: 2,
             preferredBlocked: [0, 2],
             obstacleKind: 'barrier',
-            spacingScale: 0.88,
+            spacingScale: 0.84,
             preferRewardInSafeLane: true,
           },
           {
@@ -408,7 +408,7 @@ export class TacticalWaveDirector {
             blockCount: 2,
             preferredBlocked: [1, oppFlank],
             obstacleKind: 'roadblock',
-            spacingScale: 0.88,
+            spacingScale: 0.82,
             preferRewardInSafeLane: true,
           },
           {
@@ -416,7 +416,7 @@ export class TacticalWaveDirector {
             blockCount: 2,
             preferredBlocked: [0, 2],
             obstacleKind: 'laser_gate',
-            spacingScale: 0.98,
+            spacingScale: 0.92,
             preferRewardInSafeLane: true,
           },
         );
@@ -433,7 +433,7 @@ export class TacticalWaveDirector {
             safeLane: lane,
             blockCount,
             obstacleKind: kind,
-            spacingScale: isLast ? 0.98 : 0.84,
+            spacingScale: isLast ? 0.92 : 0.78,
             preferRewardInSafeLane: true,
           });
         });
@@ -441,7 +441,7 @@ export class TacticalWaveDirector {
       }
 
       case 'traffic_convoy': {
-        const convoySpeed = -Math.min(15.5, 3.2 + (difficultyLevel - 1) * 0.42);
+        const convoySpeed = -Math.min(16.5, 3.6 + (difficultyLevel - 1) * 0.45);
         const lanesOrder: LaneIndex[] = [flank, 1, oppFlank];
         lanesOrder.forEach((lane, idx) => {
           const isLast = idx === lanesOrder.length - 1;
@@ -450,7 +450,7 @@ export class TacticalWaveDirector {
             blockCount: difficultyLevel >= 2 || idx >= 1 ? 2 : 1,
             obstacleKind: 'traffic',
             relativeSpeedOverride: convoySpeed,
-            spacingScale: isLast ? 1.0 : 0.9,
+            spacingScale: isLast ? 0.94 : 0.84,
             preferRewardInSafeLane: true,
           });
         });

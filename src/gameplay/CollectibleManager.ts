@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { LaneIndex, LaneSystem } from '../track/LaneSystem';
 import { DESPAWN_Z, SPAWN_Z } from '../utils/Constants';
-import { damp } from '../utils/MathUtils';
 import { ObjectPool, Poolable } from '../utils/ObjectPool';
 import { TextureBundle } from '../utils/TextureFactory';
 
@@ -207,27 +206,17 @@ export class CollectibleManager {
     }
   }
 
-  public update(
-    dt: number,
-    worldSpeed: number,
-    playerX = 0,
-    magnetActive = false,
-  ): void {
+  public update(dt: number, worldSpeed: number): void {
     this.elapsed = (this.elapsed + dt) % (Math.PI * 200);
 
     this.collectiblePool.forEachActive((col) => {
       col.prevX = col.group.position.x;
       col.prevZ = col.group.position.z;
       col.group.position.z += worldSpeed * dt;
-      if (magnetActive && col.group.position.z > -58 && col.group.position.z < 4) {
-        col.group.position.x = damp(col.group.position.x, playerX, 11.5, dt);
-      }
       col.group.rotation.y =
         (col.group.rotation.y + dt * (col.kind === 'score_crystal' ? 3.8 : 3.0)) %
         (Math.PI * 2);
-      col.group.position.y =
-        (magnetActive && col.group.position.z > -58 ? 1.08 : 0.95) +
-        Math.sin(this.elapsed * 4.5 + col.phase) * 0.14;
+      col.group.position.y = 0.95 + Math.sin(this.elapsed * 4.5 + col.phase) * 0.14;
 
       if (col.group.position.z > DESPAWN_Z) {
         col.active = false;

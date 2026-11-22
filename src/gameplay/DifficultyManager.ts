@@ -3,20 +3,20 @@ import { randomRange } from '../utils/MathUtils';
 
 export class DifficultyManager {
   public getLevel(distance: number, elapsedRunSeconds = 0): number {
-    const progDist = Math.max(0, distance) + Math.max(0, elapsedRunSeconds) * 3;
-    return 1 + Math.floor(Math.pow(progDist / 650, 0.62));
+    const progDist = Math.max(0, distance) + Math.max(0, elapsedRunSeconds) * 4;
+    return 1 + Math.floor(Math.pow(progDist / 450, 0.64));
   }
 
   public getBaseSpeed(distance: number, elapsedRunSeconds = 0): number {
-    // Smooth warmup 0..500m (28 -> 34 m/s = 101 -> 122 km/h) for comfortable control learning,
-    // then noticeably faster distance-driven acceleration past 500m up to BASE_MAX_SPEED (96 m/s = 346 km/h)
-    const progDist = Math.max(0, distance) + Math.max(0, elapsedRunSeconds) * 3;
+    // Brisk opening warmup 0..500m (34 -> 42 m/s = 122 -> 151 km/h),
+    // then aggressive mid-to-late ramp past 500m up to BASE_MAX_SPEED (108 m/s = 389 km/h)
+    const progDist = Math.max(0, distance) + Math.max(0, elapsedRunSeconds) * 4;
     const warmup = Math.min(progDist, 500) / 500;
-    const earlySpeed = BASE_START_SPEED + 6 * Math.pow(warmup, 1.15);
+    const earlySpeed = BASE_START_SPEED + 8 * Math.pow(warmup, 1.1);
     const extraDist = Math.max(0, progDist - 500);
-    const postFactor = extraDist / (extraDist + 2400);
-    const postCurve = Math.pow(postFactor, 0.92);
-    return earlySpeed + (BASE_MAX_SPEED - (BASE_START_SPEED + 6)) * postCurve;
+    const postFactor = extraDist / (extraDist + 2050);
+    const postCurve = Math.pow(postFactor, 0.88);
+    return earlySpeed + (BASE_MAX_SPEED - (BASE_START_SPEED + 8)) * postCurve;
   }
 
   public getNextWaveSpacing(
@@ -24,34 +24,34 @@ export class DifficultyManager {
     currentSpeed = BASE_START_SPEED,
     laneShiftSteps = 1,
   ): number {
-    // Fair reaction window across speed progression without sudden cadence spikes
+    // Tighter tactical wave cadence with fair cross-lane reaction allowance
     const levelOffset = Math.max(0, difficultyLevel - 1);
-    const tierProgress = 1 - Math.exp(-levelOffset / 10);
-    const baseMinTime = 1.05 - tierProgress * 0.62; // 1.05s early -> 0.43s late
-    const baseMaxTime = 1.32 - tierProgress * 0.76; // 1.32s early -> 0.56s late
-    const shiftTimeBonus = laneShiftSteps >= 2 ? 0.2 : 0;
-    const minSpacing = Math.max(28, currentSpeed * (baseMinTime + shiftTimeBonus) + 6);
-    const maxSpacing = Math.max(minSpacing + 6, currentSpeed * (baseMaxTime + shiftTimeBonus) + 9);
+    const tierProgress = 1 - Math.exp(-levelOffset / 8);
+    const baseMinTime = 0.78 - tierProgress * 0.42; // 0.78s early -> 0.36s late
+    const baseMaxTime = 1.0 - tierProgress * 0.52; // 1.00s early -> 0.48s late
+    const shiftTimeBonus = laneShiftSteps >= 2 ? 0.17 : 0;
+    const minSpacing = Math.max(24, currentSpeed * (baseMinTime + shiftTimeBonus) + 5);
+    const maxSpacing = Math.max(minSpacing + 5, currentSpeed * (baseMaxTime + shiftTimeBonus) + 8);
     return randomRange(minSpacing, maxSpacing);
   }
 
   public getFormationCompression(difficultyLevel: number): number {
-    const extraLevels = Math.max(0, difficultyLevel - 3);
-    return Math.max(0.84, 1 - extraLevels * 0.004);
+    const extraLevels = Math.max(0, difficultyLevel - 2);
+    return Math.max(0.8, 1 - extraLevels * 0.005);
   }
 
   public getDoubleBlockChance(difficultyLevel: number): number {
     const levelOffset = Math.max(0, difficultyLevel - 1);
-    return Math.min(0.96, 0.45 + (1 - Math.exp(-levelOffset / 6)) * 0.51);
+    return Math.min(0.98, 0.68 + (1 - Math.exp(-levelOffset / 5)) * 0.3);
   }
 
   public getForcedWeaveChance(difficultyLevel: number): number {
     const levelOffset = Math.max(0, difficultyLevel - 1);
-    return Math.min(0.95, 0.58 + (1 - Math.exp(-levelOffset / 7)) * 0.37);
+    return Math.min(0.97, 0.72 + (1 - Math.exp(-levelOffset / 6)) * 0.25);
   }
 
   public getTwoLaneJumpChance(difficultyLevel: number): number {
     if (difficultyLevel < 2) return 0;
-    return Math.min(0.48, 0.06 + (1 - Math.exp(-(difficultyLevel - 2) / 14)) * 0.42);
+    return Math.min(0.58, 0.16 + (1 - Math.exp(-(difficultyLevel - 2) / 10)) * 0.42);
   }
 }
