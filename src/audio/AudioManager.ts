@@ -1,6 +1,6 @@
 import { GameStatus } from '../core/GameState';
 import { GameSettingsData } from '../settings/GameSettings';
-import { DeezerAudio, DeezerTrack } from './DeezerAudio';
+import { ClassicSoundtrack } from './ClassicSoundtrack';
 import { CollectibleSoundType, SoundEffects } from './SoundEffects';
 
 function clampFreq(freq: number): number {
@@ -8,31 +8,29 @@ function clampFreq(freq: number): number {
   return Math.max(24, Math.min(18000, freq));
 }
 
-function scheduleSynthEnvelope(
-  gainParam: AudioParam,
-  startTime: number,
-  peak: number,
-  attackSec: number,
-  decayEndTime: number,
-  stopTime: number,
-): void {
-  const safePeak = Math.max(0.001, Math.min(0.42, peak));
-  const safeAttack = Math.max(0.004, attackSec);
-  const safeFadeEnd = Math.max(startTime + safeAttack + 0.01, decayEndTime);
-  const safeZero = Math.max(safeFadeEnd + 0.006, stopTime - 0.003);
+function safeFinite(value: number, fallback: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.max(min, Math.min(max, value));
+}
 
-  gainParam.setValueAtTime(0, startTime);
-  gainParam.linearRampToValueAtTime(safePeak, startTime + safeAttack);
-  gainParam.exponentialRampToValueAtTime(0.0006, safeFadeEnd);
-  gainParam.linearRampToValueAtTime(0, safeZero);
+function createSoftClipCurve(): Float32Array<ArrayBuffer> {
+  const samples = 2048;
+  const buffer = new ArrayBuffer(samples * Float32Array.BYTES_PER_ELEMENT);
+  const curve = new Float32Array(buffer);
+  for (let i = 0; i < samples; i++) {
+    const x = (i * 2) / (samples - 1) - 1;
+    // Gentle tanh limiter keeping signals cleanly bounded within [-0.96, 0.96]
+    curve[i] = Math.tanh(x * 1.15) * 0.96;
+  }
+  return curve;
 }
 
 export class AudioManager {
   private ctx: AudioContext | null = null;
   private compressor: DynamicsCompressorNode | null = null;
+  private softClipper: WaveShaperNode | null = null;
   private masterGain: GainNode | null = null;
   private musicGain: GainNode | null = null;
-  private synthGain: GainNode | null = null;
   private sfxGain: GainNode | null = null;
   private delaySend: GainNode | null = null;
 
@@ -47,38 +45,46 @@ export class AudioManager {
 
   private settings: GameSettingsData;
   private isUnlocked = false;
+  private disposed = false;
+  private lastResumeAttemptMs = 0;
   private noiseBuffer: AudioBuffer | null = null;
   private readonly sfx = new SoundEffects();
-  private readonly deezer = new DeezerAudio();
-
-  private stepIndex = 0;
-  private stepAccumulator = 0;
-  private readonly chordRoots = [55.0, 43.65, 65.41, 49.0];
-  private readonly padChords = [
-    [220.0, 261.63, 329.63],
-    [174.61, 220.0, 261.63],
-    [261.63, 329.63, 392.0],
-    [196.0, 246.94, 293.66],
-  ];
-  private readonly leadScale = [440, 523.25, 659.25, 587.33, 493.88, 392.0, 523.25, 659.25];
+  private readonly soundtrack = new ClassicSoundtrack();
 
   constructor(initialSettings: GameSettingsData) {
     this.settings = { ...initialSettings };
   }
 
-  public getCurrentMusicTrack(): DeezerTrack | null {
-    return this.deezer.getCurrentTrack();
+  private readonly handleVisibilityChange = (): void => {
+    if (this.disposed || !this.isUnlocked || !this.ctx) return;
+    if (!document.hidden && this.ctx.state !== 'running') {
+      this.tryResumeContext();
+    }
+  };
+
+  private readonly handleContextStateChange = (): void => {
+    if (this.disposed || !this.ctx) return;
+    if (this.ctx.state === 'running') {
+      this.soundtrack.resetClock();
+    }
+  };
+
+  private tryResumeContext(): void {
+    if (this.disposed || !this.ctx || this.ctx.state === 'running') return;
+    const nowMs = Date.now();
+    if (nowMs - this.lastResumeAttemptMs < 1200) return;
+    this.lastResumeAttemptMs = nowMs;
+    void this.ctx.resume().catch(() => undefined);
   }
 
   public unlock(): void {
+    if (this.disposed) return;
+
     if (this.isUnlocked && this.ctx) {
-      if (this.ctx.state === 'suspended') {
-        void this.ctx.resume();
+      if (this.ctx.state !== 'running') {
+        this.tryResumeContext();
       }
-      this.stepAccumulator = 0;
-      if (this.settings.musicEnabled && !this.settings.muted) {
-        this.deezer.startOrResume();
-      }
+      this.soundtrack.resetClock();
       return;
     }
 
@@ -88,6 +94,8 @@ export class AudioManager {
     if (!AudioCtx) return;
 
     this.ctx = new AudioCtx();
+    this.ctx.addEventListener('statechange', this.handleContextStateChange);
+    document.addEventListener('visibilitychange', this.handleVisibilityChange);
 
     this.compressor = this.ctx.createDynamicsCompressor();
     this.compressor.threshold.value = -14;
@@ -96,17 +104,20 @@ export class AudioManager {
     this.compressor.attack.value = 0.004;
     this.compressor.release.value = 0.16;
 
+    this.softClipper = this.ctx.createWaveShaper();
+    this.softClipper.curve = createSoftClipCurve();
+    this.softClipper.oversample = '2x';
+
     this.masterGain = this.ctx.createGain();
     this.musicGain = this.ctx.createGain();
-    this.synthGain = this.ctx.createGain();
     this.sfxGain = this.ctx.createGain();
 
     this.delaySend = this.ctx.createGain();
-    this.delaySend.gain.value = 0.22;
+    this.delaySend.gain.value = 0.2;
     const delayNode = this.ctx.createDelay(1.0);
     delayNode.delayTime.value = 0.23;
     const delayFeedback = this.ctx.createGain();
-    delayFeedback.gain.value = 0.28;
+    delayFeedback.gain.value = 0.26;
     const delayFilter = this.ctx.createBiquadFilter();
     delayFilter.type = 'lowpass';
     delayFilter.frequency.value = 2000;
@@ -117,11 +128,10 @@ export class AudioManager {
     delayFeedback.connect(delayNode);
     delayFilter.connect(this.compressor);
 
-    this.synthGain.gain.value = 1;
-    this.synthGain.connect(this.musicGain);
     this.musicGain.connect(this.compressor);
     this.sfxGain.connect(this.compressor);
-    this.compressor.connect(this.masterGain);
+    this.compressor.connect(this.softClipper);
+    this.softClipper.connect(this.masterGain);
     this.masterGain.connect(this.ctx.destination);
 
     // Strictly bounded [-0.85, 0.85] pink-tinted noise buffer so percussion/wind never clip
@@ -180,51 +190,43 @@ export class AudioManager {
     this.engineAirSource.start();
 
     this.sfx.attach(this.ctx, this.sfxGain, this.delaySend, this.noiseBuffer);
-    this.deezer.attach(this.ctx, this.musicGain);
+    this.soundtrack.attach(this.ctx, this.musicGain, this.delaySend, this.noiseBuffer);
 
     this.isUnlocked = true;
     this.applyVolumes();
-
-    if (this.settings.musicEnabled && !this.settings.muted) {
-      this.deezer.startOrResume();
-    }
   }
 
   public updateSettings(next: GameSettingsData): void {
     this.settings = { ...next };
     this.applyVolumes();
-
-    if (!this.isUnlocked) return;
-    if (this.settings.musicEnabled && !this.settings.muted) {
-      this.deezer.startOrResume();
-    } else {
-      this.deezer.pause();
-    }
   }
 
   private applyVolumes(): void {
     if (!this.ctx || !this.masterGain || !this.musicGain || !this.sfxGain) return;
     const now = this.ctx.currentTime;
-    const rawMaster = Number.isFinite(this.settings.masterVolume)
-      ? Math.max(0, Math.min(1, this.settings.masterVolume))
-      : 0.75;
+    if (!Number.isFinite(now)) return;
+    const rawMaster = safeFinite(this.settings.masterVolume, 0.75, 0, 1);
     const master = this.settings.muted ? 0 : rawMaster * 0.88;
     this.masterGain.gain.setTargetAtTime(master, now, 0.04);
-    this.musicGain.gain.setTargetAtTime(this.settings.musicEnabled ? 0.56 : 0, now, 0.06);
-    this.sfxGain.gain.setTargetAtTime(this.settings.sfxEnabled ? 0.86 : 0, now, 0.04);
+    this.musicGain.gain.setTargetAtTime(this.settings.musicEnabled ? 0.62 : 0, now, 0.06);
+    this.sfxGain.gain.setTargetAtTime(this.settings.sfxEnabled ? 0.68 : 0, now, 0.04);
   }
 
   public update(dt: number, status: GameStatus, speedNorm: number, isBoosting: boolean): void {
-    if (!this.ctx || !this.isUnlocked) return;
+    if (!this.ctx || !this.isUnlocked || this.disposed) return;
 
-    // Never schedule oscillators or step accumulators while AudioContext is suspended
+    // Automatically heal suspended/interrupted AudioContext mid-game if user is active
     if (this.ctx.state !== 'running') {
-      this.stepAccumulator = 0;
+      if (status === 'playing' && !document.hidden) {
+        this.tryResumeContext();
+      }
       return;
     }
 
     const now = this.ctx.currentTime;
-    const safeSpeedNorm = Number.isFinite(speedNorm) ? Math.max(0, Math.min(1.5, speedNorm)) : 0;
+    if (!Number.isFinite(now)) return;
+
+    const safeSpeedNorm = safeFinite(speedNorm, 0, 0, 1.5);
 
     if (
       this.engineGain &&
@@ -236,10 +238,20 @@ export class AudioManager {
       this.engineAirFilter
     ) {
       if (status === 'playing' && this.settings.sfxEnabled && !this.settings.muted) {
-        const targetGain = 0.065 + safeSpeedNorm * 0.05 + (isBoosting ? 0.045 : 0);
+        const targetGain = safeFinite(
+          0.065 + safeSpeedNorm * 0.05 + (isBoosting ? 0.045 : 0),
+          0.065,
+          0,
+          0.22,
+        );
         const rootFreq = clampFreq(54 + safeSpeedNorm * 58 + (isBoosting ? 28 : 0));
         const filterFreq = clampFreq(260 + safeSpeedNorm * 820 + (isBoosting ? 900 : 0));
-        const airVol = 0.014 + safeSpeedNorm * 0.04 + (isBoosting ? 0.04 : 0);
+        const airVol = safeFinite(
+          0.014 + safeSpeedNorm * 0.04 + (isBoosting ? 0.04 : 0),
+          0.014,
+          0,
+          0.14,
+        );
         const airFreq = clampFreq(500 + safeSpeedNorm * 1400 + (isBoosting ? 900 : 0));
 
         this.engineGain.gain.setTargetAtTime(targetGain, now, 0.07);
@@ -256,278 +268,11 @@ export class AudioManager {
     }
 
     if (!this.settings.musicEnabled || this.settings.muted || status === 'paused') {
-      this.stepAccumulator = 0;
-      this.deezer.pause();
-      if (this.synthGain) {
-        this.synthGain.gain.setTargetAtTime(0, now, 0.06);
-      }
+      this.soundtrack.resetClock();
       return;
     }
 
-    this.deezer.startOrResume();
-    this.deezer.updateMix(safeSpeedNorm, isBoosting, status === 'playing');
-
-    const streamActive = this.deezer.isStreamPlaying();
-    if (this.synthGain) {
-      this.synthGain.gain.setTargetAtTime(streamActive ? 0 : 1, now, 0.18);
-    }
-
-    if (streamActive) {
-      this.stepAccumulator = 0;
-      return;
-    }
-
-    const safeDt = Number.isFinite(dt) ? Math.min(Math.max(dt, 0), 0.05) : 0;
-    const bpm = status === 'playing' ? 124 + safeSpeedNorm * 24 + (isBoosting ? 12 : 0) : 102;
-    const sixteenthDur = 60 / bpm / 4;
-    this.stepAccumulator = Math.min(this.stepAccumulator + safeDt, sixteenthDur * 1.5);
-
-    if (this.stepAccumulator >= sixteenthDur) {
-      this.stepAccumulator -= sixteenthDur;
-      this.triggerMusicStep(this.stepIndex, status, safeSpeedNorm, isBoosting);
-      this.stepIndex = (this.stepIndex + 1) % 64;
-    }
-  }
-
-  private triggerMusicStep(
-    step: number,
-    status: GameStatus,
-    speedNorm: number,
-    isBoosting: boolean,
-  ): void {
-    if (!this.ctx || !this.synthGain || this.ctx.state !== 'running') return;
-    const now = this.ctx.currentTime;
-    const barIdx = Math.floor(step / 16);
-    const barStep = step % 16;
-    const rootFreq = this.chordRoots[barIdx];
-
-    if (barStep === 0) {
-      const chord = this.padChords[barIdx];
-      for (const freq of chord) {
-        const oscA = this.ctx.createOscillator();
-        const oscB = this.ctx.createOscillator();
-        const filter = this.ctx.createBiquadFilter();
-        const env = this.ctx.createGain();
-
-        oscA.type = 'sawtooth';
-        oscB.type = 'sawtooth';
-        oscA.frequency.setValueAtTime(clampFreq(freq), now);
-        oscB.frequency.setValueAtTime(clampFreq(freq * 1.0055), now);
-
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(
-          isBoosting ? 1800 : status === 'playing' ? 1200 : 700,
-          now,
-        );
-
-        const level = status === 'playing' ? 0.048 : 0.036;
-        scheduleSynthEnvelope(env.gain, now, level, 0.22, now + 1.82, now + 1.9);
-
-        oscA.connect(filter);
-        oscB.connect(filter);
-        filter.connect(env);
-        env.connect(this.synthGain);
-        if (this.delaySend) env.connect(this.delaySend);
-
-        oscA.onended = () => {
-          try {
-            oscA.disconnect();
-            oscB.disconnect();
-            filter.disconnect();
-            env.disconnect();
-          } catch {
-            // Ignore
-          }
-        };
-
-        oscA.start(now);
-        oscB.start(now);
-        oscA.stop(now + 1.9);
-        oscB.stop(now + 1.9);
-      }
-    }
-
-    const bassFreq = barStep % 4 === 2 ? rootFreq * 2 : rootFreq;
-    const bassOsc = this.ctx.createOscillator();
-    const bassSub = this.ctx.createOscillator();
-    const bassFilter = this.ctx.createBiquadFilter();
-    const bassEnv = this.ctx.createGain();
-
-    bassOsc.type = 'sawtooth';
-    bassSub.type = 'triangle';
-    bassOsc.frequency.setValueAtTime(clampFreq(bassFreq), now);
-    bassSub.frequency.setValueAtTime(clampFreq(rootFreq), now);
-
-    bassFilter.type = 'lowpass';
-    bassFilter.Q.value = isBoosting ? 3.6 : 2.4;
-    const cutoffStart = isBoosting
-      ? 1400
-      : status === 'playing'
-        ? 700 + speedNorm * 420
-        : 360;
-    bassFilter.frequency.setValueAtTime(clampFreq(cutoffStart), now);
-    bassFilter.frequency.exponentialRampToValueAtTime(110, now + 0.13);
-
-    const accent = barStep % 4 === 0 ? 0.22 : barStep % 2 === 0 ? 0.16 : 0.12;
-    scheduleSynthEnvelope(bassEnv.gain, now, accent, 0.008, now + 0.135, now + 0.155);
-
-    bassOsc.connect(bassFilter);
-    bassSub.connect(bassFilter);
-    bassFilter.connect(bassEnv);
-    bassEnv.connect(this.synthGain);
-    bassOsc.onended = () => {
-      try {
-        bassOsc.disconnect();
-        bassSub.disconnect();
-        bassFilter.disconnect();
-        bassEnv.disconnect();
-      } catch {
-        // Ignore
-      }
-    };
-    bassOsc.start(now);
-    bassSub.start(now);
-    bassOsc.stop(now + 0.155);
-    bassSub.stop(now + 0.155);
-
-    if (status !== 'playing') return;
-
-    if (barStep % 4 === 0) {
-      const kickOsc = this.ctx.createOscillator();
-      const kickEnv = this.ctx.createGain();
-      kickOsc.type = 'sine';
-      kickOsc.frequency.setValueAtTime(155, now);
-      kickOsc.frequency.exponentialRampToValueAtTime(42, now + 0.095);
-      scheduleSynthEnvelope(kickEnv.gain, now, 0.36, 0.005, now + 0.155, now + 0.175);
-      kickOsc.connect(kickEnv);
-      kickEnv.connect(this.synthGain);
-      kickOsc.onended = () => {
-        try {
-          kickOsc.disconnect();
-          kickEnv.disconnect();
-        } catch {
-          // Ignore
-        }
-      };
-      kickOsc.start(now);
-      kickOsc.stop(now + 0.175);
-    }
-
-    if (barStep === 4 || barStep === 12) {
-      const bodyOsc = this.ctx.createOscillator();
-      const bodyEnv = this.ctx.createGain();
-      bodyOsc.type = 'triangle';
-      bodyOsc.frequency.setValueAtTime(195, now);
-      bodyOsc.frequency.exponentialRampToValueAtTime(95, now + 0.1);
-      scheduleSynthEnvelope(bodyEnv.gain, now, 0.2, 0.005, now + 0.125, now + 0.145);
-      bodyOsc.connect(bodyEnv);
-      bodyEnv.connect(this.synthGain);
-      bodyOsc.onended = () => {
-        try {
-          bodyOsc.disconnect();
-          bodyEnv.disconnect();
-        } catch {
-          // Ignore
-        }
-      };
-      bodyOsc.start(now);
-      bodyOsc.stop(now + 0.145);
-
-      if (this.noiseBuffer) {
-        const snareNoise = this.ctx.createBufferSource();
-        snareNoise.buffer = this.noiseBuffer;
-        const snareFilter = this.ctx.createBiquadFilter();
-        snareFilter.type = 'highpass';
-        snareFilter.frequency.value = 980;
-        const snareEnv = this.ctx.createGain();
-        scheduleSynthEnvelope(snareEnv.gain, now, 0.18, 0.005, now + 0.18, now + 0.2);
-        snareNoise.connect(snareFilter);
-        snareFilter.connect(snareEnv);
-        snareEnv.connect(this.synthGain);
-        if (this.delaySend) snareEnv.connect(this.delaySend);
-        snareNoise.onended = () => {
-          try {
-            snareNoise.disconnect();
-            snareFilter.disconnect();
-            snareEnv.disconnect();
-          } catch {
-            // Ignore
-          }
-        };
-        snareNoise.start(now);
-        snareNoise.stop(now + 0.2);
-      }
-    }
-
-    if (barStep % 2 === 1 && this.noiseBuffer) {
-      const hat = this.ctx.createBufferSource();
-      hat.buffer = this.noiseBuffer;
-      const hatFilter = this.ctx.createBiquadFilter();
-      hatFilter.type = 'highpass';
-      hatFilter.frequency.value = 6200;
-      const hatEnv = this.ctx.createGain();
-      scheduleSynthEnvelope(
-        hatEnv.gain,
-        now,
-        barStep % 4 === 2 ? 0.07 : 0.045,
-        0.004,
-        now + 0.042,
-        now + 0.055,
-      );
-      hat.connect(hatFilter);
-      hatFilter.connect(hatEnv);
-      hatEnv.connect(this.synthGain);
-      hat.onended = () => {
-        try {
-          hat.disconnect();
-          hatFilter.disconnect();
-          hatEnv.disconnect();
-        } catch {
-          // Ignore
-        }
-      };
-      hat.start(now);
-      hat.stop(now + 0.055);
-    }
-
-    if (barStep % 2 === 0 || isBoosting) {
-      const noteFreq =
-        this.leadScale[(step + barIdx) % this.leadScale.length] * (isBoosting ? 1.5 : 1);
-      const leadOsc = this.ctx.createOscillator();
-      const leadFilter = this.ctx.createBiquadFilter();
-      const leadEnv = this.ctx.createGain();
-
-      leadOsc.type = isBoosting ? 'sawtooth' : 'triangle';
-      leadOsc.frequency.setValueAtTime(clampFreq(noteFreq), now);
-
-      leadFilter.type = 'lowpass';
-      leadFilter.frequency.value = isBoosting ? 3400 : 2100;
-
-      scheduleSynthEnvelope(
-        leadEnv.gain,
-        now,
-        isBoosting ? 0.088 : 0.068,
-        0.008,
-        now + 0.155,
-        now + 0.175,
-      );
-
-      leadOsc.connect(leadFilter);
-      leadFilter.connect(leadEnv);
-      leadEnv.connect(this.synthGain);
-      if (this.delaySend) leadEnv.connect(this.delaySend);
-      leadOsc.onended = () => {
-        try {
-          leadOsc.disconnect();
-          leadFilter.disconnect();
-          leadEnv.disconnect();
-        } catch {
-          // Ignore
-        }
-      };
-      leadOsc.start(now);
-      leadOsc.stop(now + 0.175);
-    }
+    this.soundtrack.update(dt, status, safeSpeedNorm, isBoosting);
   }
 
   private canPlaySfx(): boolean {
@@ -563,7 +308,11 @@ export class AudioManager {
   }
 
   public dispose(): void {
-    this.deezer.dispose();
+    this.disposed = true;
+    document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+    if (this.ctx) {
+      this.ctx.removeEventListener('statechange', this.handleContextStateChange);
+    }
     try {
       this.engineSubOsc?.stop();
       this.engineMainOsc?.stop();
