@@ -37,10 +37,17 @@ export class ScoreManager {
     this.peakSpeedKmh = Math.round(BASE_START_SPEED * SPEED_TO_KMH);
   }
 
-  public updateRun(dt: number, worldSpeed: number, isBoosting: boolean): void {
+  public updateRun(
+    dt: number,
+    worldSpeed: number,
+    isBoosting: boolean,
+    isExpressZone = false,
+  ): void {
     const deltaMeters = worldSpeed * dt;
     this.distance += deltaMeters;
-    this.score += deltaMeters * SCORE_PER_METER * this.multiplier * (isBoosting ? 1.5 : 1);
+    const zoneBonus = isExpressZone ? 1.5 : 1;
+    this.score +=
+      deltaMeters * SCORE_PER_METER * this.multiplier * (isBoosting ? 1.5 : 1) * zoneBonus;
 
     const kmh = Math.round(worldSpeed * SPEED_TO_KMH);
     if (kmh > this.peakSpeedKmh) {
@@ -57,6 +64,7 @@ export class ScoreManager {
 
   public registerCollectible(
     kind: 'energy_orb' | 'score_crystal' | 'boost_cell',
+    isExpressZone = false,
   ): CollectibleReward {
     this.orbsCollected += 1;
     this.comboTimer = COMBO_DURATION;
@@ -76,10 +84,16 @@ export class ScoreManager {
           ? CELL_COIN_VALUE
           : ORB_COIN_VALUE;
 
-    const points = baseValue * this.multiplier;
+    const points = Math.round(baseValue * this.multiplier * (isExpressZone ? 1.5 : 1));
     this.score += points;
     this.runCoins += coinReward;
     return { points, coins: coinReward };
+  }
+
+  public addBonusCoins(coins: number): void {
+    if (coins > 0) {
+      this.runCoins += coins;
+    }
   }
 
   public registerBoostPad(): number {

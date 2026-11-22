@@ -8,15 +8,15 @@ export class DifficultyManager {
   }
 
   public getBaseSpeed(distance: number, elapsedRunSeconds = 0): number {
-    // Smooth continuous progression driven primarily by distance traveled:
-    // Early (0..1,200 m): 28 -> 41 m/s (101 -> 147 km/h) for learning controls & reading waves
-    // Mid (1,200..5,500 m): 41 -> 63 m/s (147 -> 227 km/h) steady arcade ramp
-    // Late (5,500+ m): 63 -> 88 m/s (227 -> 317 km/h) asymptotic ceiling
+    // Smooth warmup 0..500m (28 -> 34 m/s = 101 -> 122 km/h) for comfortable control learning,
+    // then noticeably faster distance-driven acceleration past 500m up to BASE_MAX_SPEED (96 m/s = 346 km/h)
     const progDist = Math.max(0, distance) + Math.max(0, elapsedRunSeconds) * 3;
-    const speedSpan = BASE_MAX_SPEED - BASE_START_SPEED;
-    const norm = progDist / (progDist + 3600);
-    const curve = Math.pow(norm, 1.18);
-    return BASE_START_SPEED + speedSpan * curve;
+    const warmup = Math.min(progDist, 500) / 500;
+    const earlySpeed = BASE_START_SPEED + 6 * Math.pow(warmup, 1.15);
+    const extraDist = Math.max(0, progDist - 500);
+    const postFactor = extraDist / (extraDist + 2400);
+    const postCurve = Math.pow(postFactor, 0.92);
+    return earlySpeed + (BASE_MAX_SPEED - (BASE_START_SPEED + 6)) * postCurve;
   }
 
   public getNextWaveSpacing(

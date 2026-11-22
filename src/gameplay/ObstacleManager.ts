@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { LaneIndex, LaneSystem } from '../track/LaneSystem';
 import { DESPAWN_Z, SPAWN_Z } from '../utils/Constants';
+import { clamp, damp } from '../utils/MathUtils';
 import { ObjectPool, Poolable } from '../utils/ObjectPool';
 import { TextureBundle } from '../utils/TextureFactory';
 
@@ -14,6 +15,8 @@ export type ObstacleType =
 export interface ObstacleInstance extends Poolable {
   kind: ObstacleType;
   lane: LaneIndex;
+  targetLane: LaneIndex;
+  hasShiftedLane: boolean;
   group: THREE.Group;
   hoverTarget: THREE.Object3D | null;
   trafficWheels: THREE.Group[];
@@ -21,6 +24,7 @@ export interface ObstacleInstance extends Poolable {
   phase: number;
   halfW: number;
   halfZ: number;
+  prevX: number;
   prevZ: number;
   relativeSpeed: number;
   nearMissed: boolean;
@@ -719,6 +723,8 @@ export class ObstacleManager {
         active: false,
         kind,
         lane: 1,
+        targetLane: 1,
+        hasShiftedLane: false,
         group: obsGroup,
         hoverTarget,
         trafficWheels,
@@ -726,6 +732,7 @@ export class ObstacleManager {
         phase: i * 0.85,
         halfW,
         halfZ,
+        prevX: 0,
         prevZ: SPAWN_Z,
         relativeSpeed,
         nearMissed: false,
@@ -906,12 +913,17 @@ export class ObstacleManager {
         this.pool.acquire((item) => item.kind === preferred) ?? this.pool.acquire();
       if (!obs) continue;
 
+      const laneX = LaneSystem.getLaneX(lane);
       obs.active = true;
       obs.lane = lane;
+      obs.targetLane = lane;
+      obs.hasShiftedLane = false;
       obs.nearMissed = false;
       obs.relativeSpeed = obs.kind === 'traffic' ? relSpeed : 0;
+      obs.prevX = laneX;
       obs.prevZ = spawnZ;
-      obs.group.position.set(LaneSystem.getLaneX(lane), 0, spawnZ);
+      obs.group.position.set(laneX, 0, spawnZ);
+      obs.group.rotation.z = 0;
       obs.group.visible = true;
       spawnedLanes.push(lane);
     }
@@ -951,16 +963,69 @@ export class ObstacleManager {
     return clear;
   }
 
-  public update(dt: number, worldSpeed: number): void {
+  private canTrafficShiftTo(movingObs: ObstacleInstance, candidateLane: LaneIndex): boolean {
+    const z = movingObs.group.position.z;
+    const laneOccupied: [boolean, boolean, boolean] = [false, false, false];
+    let targetBlocked = false;
+
+    this.pool.forEachActive((other) => {
+      if (other === movingObs) return;
+      const dz = Math.abs(other.group.position.z - z);
+      if (dz < 36) {
+        laneOccupied[other.targetLane] = true;
+        laneOccupied[other.lane] = true;
+      }
+      if ((other.lane === candidateLane || other.targetLane === candidateLane) && dz < 46) {
+        targetBlocked = true;
+      }
+    });
+
+    if (targetBlocked) return false;
+    laneOccupied[candidateLane] = true;
+    const openCount = laneOccupied.filter((occupied) => !occupied).length;
+    return openCount >= 1;
+  }
+
+  public update(dt: number, worldSpeed: number, distance = 0): void {
     this.elapsed = (this.elapsed + dt) % (Math.PI * 200);
     const pulse = Math.sin(this.elapsed * 5.2);
     this.warningAmberMat.emissiveIntensity = 1.65 + pulse * 0.25;
     this.dangerRedMat.emissiveIntensity = 1.78 - pulse * 0.22;
 
+    const enableTrafficWeave = distance >= 2500;
+
     this.pool.forEachActive((obs) => {
+      obs.prevX = obs.group.position.x;
       obs.prevZ = obs.group.position.z;
       const effectiveSpeed = Math.max(12, worldSpeed + obs.relativeSpeed);
       obs.group.position.z += effectiveSpeed * dt;
+
+      if (
+        enableTrafficWeave &&
+        obs.kind === 'traffic' &&
+        !obs.hasShiftedLane &&
+        obs.group.position.z >= -170 &&
+        obs.group.position.z <= -115
+      ) {
+        obs.hasShiftedLane = true;
+        if (Math.random() < 0.38) {
+          const candidate: LaneIndex =
+            obs.lane === 1 ? (Math.random() < 0.5 ? 0 : 2) : 1;
+          if (this.canTrafficShiftTo(obs, candidate)) {
+            obs.targetLane = candidate;
+          }
+        }
+      }
+
+      if (obs.kind === 'traffic') {
+        const targetX = LaneSystem.getLaneX(obs.targetLane);
+        const nextX = damp(obs.group.position.x, targetX, 5.4, dt);
+        obs.group.position.x = nextX;
+        obs.group.rotation.z = clamp(-(targetX - nextX) * 0.045, -0.14, 0.14);
+        if (Math.abs(targetX - nextX) < 0.08) {
+          obs.lane = obs.targetLane;
+        }
+      }
 
       if (obs.hoverTarget) {
         obs.hoverTarget.position.y =
@@ -984,6 +1049,7 @@ export class ObstacleManager {
   public snapToFraction(fraction: number): void {
     const t = Math.max(0, Math.min(1, fraction));
     this.pool.forEachActive((obs) => {
+      obs.group.position.x = obs.prevX + (obs.group.position.x - obs.prevX) * t;
       obs.group.position.z = obs.prevZ + (obs.group.position.z - obs.prevZ) * t;
     });
   }
@@ -1011,6 +1077,8 @@ export class ObstacleManager {
     this.elapsed = 0;
     this.pool.forEachAll((obs) => {
       obs.active = false;
+      obs.hasShiftedLane = false;
+      obs.group.rotation.z = 0;
       obs.group.visible = false;
     });
   }

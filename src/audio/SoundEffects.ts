@@ -186,4 +186,26 @@ export class SoundEffects {
     osc.start(now);
     osc.stop(now + 0.09);
   }
+
+  public playMilestoneFanfare(): void {
+    if (!this.ctx || !this.outputNode) return;
+    const now = this.ctx.currentTime;
+    const notes = [523.25, 659.25, 783.99, 1046.5];
+    notes.forEach((freq, idx) => {
+      if (!this.ctx || !this.outputNode) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = idx === notes.length - 1 ? 'sawtooth' : 'triangle';
+      const t = now + idx * 0.065;
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.001, t);
+      gain.gain.linearRampToValueAtTime(idx === notes.length - 1 ? 0.14 : 0.12, t + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.32);
+      osc.connect(gain);
+      gain.connect(this.outputNode);
+      if (this.delaySend) gain.connect(this.delaySend);
+      osc.start(t);
+      osc.stop(t + 0.34);
+    });
+  }
 }

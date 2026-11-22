@@ -408,6 +408,10 @@ export class AudioManager {
     if (this.canPlaySfx()) this.sfx.playUiClick(confirm);
   }
 
+  public playMilestoneFanfare(): void {
+    if (this.canPlaySfx()) this.sfx.playMilestoneFanfare();
+  }
+
   public dispose(): void {
     try {
       this.engineSubOsc?.stop();

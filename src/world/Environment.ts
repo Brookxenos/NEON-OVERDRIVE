@@ -6,6 +6,8 @@ export class Environment {
 
   private readonly shimmerPlane: THREE.Mesh;
   private readonly shimmerMat: THREE.MeshBasicMaterial;
+  private readonly baseShimmerColor = new THREE.Color(0xf7b99b);
+  private readonly expressShimmerColor = new THREE.Color(0xf472b6);
   private readonly geometries: THREE.BufferGeometry[] = [];
   private readonly materials: THREE.Material[] = [];
   private shimmerOffset = 0;
@@ -103,10 +105,11 @@ export class Environment {
     }
   }
 
-  public update(dt: number, worldSpeed: number, isBoosting: boolean): void {
+  public update(dt: number, worldSpeed: number, isBoosting: boolean, zoneBlend = 0): void {
     this.shimmerOffset = (this.shimmerOffset + dt * worldSpeed * 0.4) % 21.8;
     this.shimmerPlane.position.z = -210 + this.shimmerOffset;
-    this.shimmerMat.opacity = isBoosting ? 0.16 : 0.1;
+    this.shimmerMat.color.copy(this.baseShimmerColor).lerp(this.expressShimmerColor, zoneBlend);
+    this.shimmerMat.opacity = (isBoosting ? 0.16 : 0.1) + zoneBlend * 0.06;
   }
 
   public dispose(): void {

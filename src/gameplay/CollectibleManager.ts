@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { LaneIndex, LaneSystem } from '../track/LaneSystem';
 import { DESPAWN_Z, SPAWN_Z } from '../utils/Constants';
+import { damp } from '../utils/MathUtils';
 import { ObjectPool, Poolable } from '../utils/ObjectPool';
 import { TextureBundle } from '../utils/TextureFactory';
 
@@ -11,6 +12,7 @@ export interface CollectibleInstance extends Poolable {
   lane: LaneIndex;
   group: THREE.Group;
   phase: number;
+  prevX: number;
   prevZ: number;
 }
 
@@ -132,6 +134,7 @@ export class CollectibleManager {
         lane: 1,
         group: cGroup,
         phase: i * 0.7,
+        prevX: 0,
         prevZ: SPAWN_Z,
       });
     }
@@ -154,7 +157,7 @@ export class CollectibleManager {
     this.padPool = new ObjectPool(padItems);
   }
 
-  public spawnRewardInLane(lane: LaneIndex, spawnZ = SPAWN_Z): void {
+  public spawnRewardInLane(lane: LaneIndex, spawnZ = SPAWN_Z, expressZone = false): void {
     const roll = Math.random();
     if (roll < 0.055) {
       const pad = this.padPool.acquire();
@@ -168,46 +171,63 @@ export class CollectibleManager {
       return;
     }
 
-    if (roll < 0.88) {
+    if (roll < (expressZone ? 0.94 : 0.88)) {
       const kindRoll = Math.random();
       const kind: CollectibleType =
         kindRoll < 0.08
           ? 'boost_cell'
-          : kindRoll < 0.62
+          : kindRoll < (expressZone ? 0.72 : 0.62)
             ? 'score_crystal'
             : 'energy_orb';
       const count =
         kind === 'score_crystal'
-          ? Math.random() < 0.55
-            ? 3
-            : 2
+          ? expressZone
+            ? Math.random() < 0.65
+              ? 4
+              : 3
+            : Math.random() < 0.55
+              ? 3
+              : 2
           : kind === 'energy_orb'
             ? 2
             : 1;
 
+      const laneX = LaneSystem.getLaneX(lane);
       for (let i = 0; i < count; i++) {
         const item = this.collectiblePool.acquire((c) => c.kind === kind);
         if (!item) break;
-        const z = spawnZ - i * 5.0;
+        const z = spawnZ - i * 4.8;
         item.active = true;
         item.lane = lane;
+        item.prevX = laneX;
         item.prevZ = z;
-        item.group.position.set(LaneSystem.getLaneX(lane), 1.0, z);
+        item.group.position.set(laneX, 1.0, z);
         item.group.visible = true;
       }
     }
   }
 
-  public update(dt: number, worldSpeed: number): void {
+  public update(
+    dt: number,
+    worldSpeed: number,
+    playerX = 0,
+    magnetActive = false,
+  ): void {
     this.elapsed = (this.elapsed + dt) % (Math.PI * 200);
 
     this.collectiblePool.forEachActive((col) => {
+      col.prevX = col.group.position.x;
       col.prevZ = col.group.position.z;
       col.group.position.z += worldSpeed * dt;
+      if (magnetActive && col.group.position.z > -58 && col.group.position.z < 4) {
+        col.group.position.x = damp(col.group.position.x, playerX, 11.5, dt);
+      }
       col.group.rotation.y =
         (col.group.rotation.y + dt * (col.kind === 'score_crystal' ? 3.8 : 3.0)) %
         (Math.PI * 2);
-      col.group.position.y = 0.95 + Math.sin(this.elapsed * 4.5 + col.phase) * 0.14;
+      col.group.position.y =
+        (magnetActive && col.group.position.z > -58 ? 1.08 : 0.95) +
+        Math.sin(this.elapsed * 4.5 + col.phase) * 0.14;
 
       if (col.group.position.z > DESPAWN_Z) {
         col.active = false;

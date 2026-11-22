@@ -16,7 +16,7 @@ export const PLAYER_HOVER_Y = 0;
 export const CAR_CHASSIS_CLEARANCE = 0.24;
 
 export const BASE_START_SPEED = 28;
-export const BASE_MAX_SPEED = 88;
+export const BASE_MAX_SPEED = 96;
 export const THROTTLE_BONUS = 8;
 export const BRAKE_PENALTY = 8;
 export const BOOST_SPEED_BONUS = 20;
