@@ -21,6 +21,7 @@ export interface ObstacleInstance extends Poolable {
   phase: number;
   halfW: number;
   halfZ: number;
+  prevZ: number;
   relativeSpeed: number;
   nearMissed: boolean;
 }
@@ -515,8 +516,8 @@ export class ObstacleManager {
           obsGroup.add(rail);
         }
 
-        halfW = 1.12;
-        halfZ = 0.48;
+        halfW = 1.28;
+        halfZ = 0.44;
       } else if (kind === 'traffic') {
         const carMat = trafficCarMats[i % trafficCarMats.length];
         const carBody = new THREE.Group();
@@ -611,8 +612,8 @@ export class ObstacleManager {
 
         hoverTarget = carBody;
         baseY = 0.22;
-        halfW = 0.96;
-        halfZ = 1.92;
+        halfW = 0.98;
+        halfZ = 2.04;
         relativeSpeed = -3;
       } else if (kind === 'roadblock') {
         const floorMarker = new THREE.Mesh(floorStripGeo, laneFloorWarningMat);
@@ -637,7 +638,7 @@ export class ObstacleManager {
           obsGroup.add(beacon);
         }
 
-        halfW = 1.14;
+        halfW = 1.34;
         halfZ = 0.58;
       } else if (kind === 'laser_gate') {
         const floorMarker = new THREE.Mesh(floorStripGeo, laneFloorWarningMat);
@@ -665,8 +666,8 @@ export class ObstacleManager {
           obsGroup.add(beam);
         }
 
-        halfW = 1.12;
-        halfZ = 0.44;
+        halfW = 1.34;
+        halfZ = 0.34;
       } else {
         const floorMarker = new THREE.Mesh(floorStripGeo, laneFloorWarningMat);
         floorMarker.position.set(0, 0.03, 1.78);
@@ -709,7 +710,7 @@ export class ObstacleManager {
           obsGroup.add(crossBar);
         }
 
-        halfW = 1.1;
+        halfW = 1.3;
         halfZ = 1.62;
       }
 
@@ -725,6 +726,7 @@ export class ObstacleManager {
         phase: i * 0.85,
         halfW,
         halfZ,
+        prevZ: SPAWN_Z,
         relativeSpeed,
         nearMissed: false,
       });
@@ -736,15 +738,15 @@ export class ObstacleManager {
   private static getObstacleHalfZ(kind: ObstacleType): number {
     switch (kind) {
       case 'traffic':
-        return 1.92;
+        return 2.04;
       case 'hazard_zone':
         return 1.62;
       case 'roadblock':
         return 0.58;
       case 'barrier':
-        return 0.48;
-      case 'laser_gate':
         return 0.44;
+      case 'laser_gate':
+        return 0.34;
     }
   }
 
@@ -757,7 +759,7 @@ export class ObstacleManager {
   ): [number, number] {
     const effectiveSpeed = Math.max(18, worldSpeed + relativeSpeed);
     const arrivalTime = Math.max(0, -z) / effectiveSpeed;
-    const halfDuration = (halfZ + 1.55) / effectiveSpeed + safetyBufferSec;
+    const halfDuration = (halfZ + 2.2) / effectiveSpeed + safetyBufferSec;
     return [arrivalTime - halfDuration, arrivalTime + halfDuration];
   }
 
@@ -801,7 +803,13 @@ export class ObstacleManager {
 
     if (sameLaneConflict) return false;
 
-    const sampleTimes = [newStart + 0.06, newCenter, newEnd - 0.06];
+    const sampleTimes = [
+      newStart + 0.04,
+      newStart * 0.75 + newEnd * 0.25,
+      newCenter,
+      newStart * 0.25 + newEnd * 0.75,
+      newEnd - 0.04,
+    ];
     for (const sampleTime of sampleTimes) {
       let openCount = 0;
       for (let l = 0; l < 3; l++) {
@@ -836,8 +844,8 @@ export class ObstacleManager {
         lane,
         halfZ,
         relativeSpeed,
-        this.lastWorldSpeed + 50,
-        safetyBufferSec * 0.7,
+        this.lastWorldSpeed + 28,
+        safetyBufferSec * 0.75,
         spawnZ,
       )
     );
@@ -858,19 +866,19 @@ export class ObstacleManager {
     return 'roadblock';
   }
 
-  private lastWorldSpeed = 36;
+  private lastWorldSpeed = 28;
 
   public spawnInLanes(
     lanes: LaneIndex[],
-    worldSpeed = 36,
+    worldSpeed = 28,
     difficultyLevel = 1,
     spawnZ = SPAWN_Z,
     preferredKind?: ObstacleType,
     relativeSpeedOverride?: number,
   ): LaneIndex[] {
-    this.lastWorldSpeed = Math.max(28, worldSpeed);
+    this.lastWorldSpeed = Math.max(24, worldSpeed);
     const levelOffset = Math.max(0, difficultyLevel - 1);
-    const safetyBufferSec = Math.max(0.115, 0.22 - levelOffset * 0.004);
+    const safetyBufferSec = Math.max(0.14, 0.24 - levelOffset * 0.004);
     const maxTrafficDelta = Math.min(18, 3.0 + levelOffset * 0.45);
     const spawnedLanes: LaneIndex[] = [];
 
@@ -902,6 +910,7 @@ export class ObstacleManager {
       obs.lane = lane;
       obs.nearMissed = false;
       obs.relativeSpeed = obs.kind === 'traffic' ? relSpeed : 0;
+      obs.prevZ = spawnZ;
       obs.group.position.set(LaneSystem.getLaneX(lane), 0, spawnZ);
       obs.group.visible = true;
       spawnedLanes.push(lane);
@@ -916,8 +925,8 @@ export class ObstacleManager {
     difficultyLevel = 1,
     spawnZ = SPAWN_Z,
   ): boolean {
-    const safeSpeed = Math.max(28, worldSpeed);
-    const safetyBufferSec = Math.max(0.115, 0.22 - Math.max(0, difficultyLevel - 1) * 0.004);
+    const safeSpeed = Math.max(24, worldSpeed);
+    const safetyBufferSec = Math.max(0.14, 0.24 - Math.max(0, difficultyLevel - 1) * 0.004);
     const [newStart, newEnd] = this.getArrivalInterval(
       spawnZ,
       1.6,
@@ -949,6 +958,7 @@ export class ObstacleManager {
     this.dangerRedMat.emissiveIntensity = 1.78 - pulse * 0.22;
 
     this.pool.forEachActive((obs) => {
+      obs.prevZ = obs.group.position.z;
       const effectiveSpeed = Math.max(12, worldSpeed + obs.relativeSpeed);
       obs.group.position.z += effectiveSpeed * dt;
 
@@ -968,6 +978,13 @@ export class ObstacleManager {
         obs.active = false;
         obs.group.visible = false;
       }
+    });
+  }
+
+  public snapToFraction(fraction: number): void {
+    const t = Math.max(0, Math.min(1, fraction));
+    this.pool.forEachActive((obs) => {
+      obs.group.position.z = obs.prevZ + (obs.group.position.z - obs.prevZ) * t;
     });
   }
 

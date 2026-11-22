@@ -102,6 +102,10 @@ export class ScoreManager {
     return Math.floor(this.distance);
   }
 
+  public getExactDistance(): number {
+    return this.distance;
+  }
+
   public getMultiplier(): number {
     return this.multiplier;
   }

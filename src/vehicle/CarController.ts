@@ -51,8 +51,11 @@ export class CarController {
     return this.physics.getCurrentX();
   }
 
-  public triggerCrash(): void {
-    this.physics.triggerCrash();
+  public triggerCrash(crashX?: number): void {
+    this.physics.triggerCrash(crashX);
+    if (crashX !== undefined) {
+      this.model.group.position.x = crashX;
+    }
   }
 
   public reset(): void {

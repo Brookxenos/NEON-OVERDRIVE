@@ -78,6 +78,7 @@ export class Game {
 
   private readonly collisionReport: CollisionReport = {
     crashed: false,
+    crashTime: 1,
     crashCause: '',
     crashPosition: new THREE.Vector3(),
     collected: [],
@@ -486,13 +487,17 @@ export class Game {
     }
 
     // Active racing simulation
+    if (this.carController.physics.isCrashed()) {
+      this.state.setStatus('gameover');
+      this.renderer.render(this.sceneManager.scene, this.sceneManager.cameraController.camera);
+      return;
+    }
+
     this.runElapsedSeconds += dt;
-    const distance = this.scoreManager.getDistance();
-    const currentScore = this.scoreManager.getScore();
+    const exactDistance = this.scoreManager.getExactDistance();
     const difficultyLevel = this.difficultyManager.getLevel(
-      distance,
+      exactDistance,
       this.runElapsedSeconds,
-      currentScore,
     );
 
     if (difficultyLevel > this.lastAnnouncedLevel) {
@@ -538,18 +543,18 @@ export class Game {
     const isAnyBoost = this.boostSystem.isAnyBoostActive();
 
     let targetSpeed =
-      this.difficultyManager.getBaseSpeed(distance, this.runElapsedSeconds, currentScore) +
+      this.difficultyManager.getBaseSpeed(exactDistance, this.runElapsedSeconds) +
       this.carController.getCarSpec().speedBonus;
     if (this.carController.isThrottling()) targetSpeed += THROTTLE_BONUS;
     if (this.carController.isBraking() && !isAnyBoost) targetSpeed -= BRAKE_PENALTY;
     if (isManualBoost) targetSpeed += BOOST_SPEED_BONUS;
     if (isPadBoost) targetSpeed += PAD_BOOST_BONUS;
+    targetSpeed = Math.max(20, targetSpeed);
 
-    this.currentSpeed = damp(this.currentSpeed, targetSpeed, 4.2, dt);
+    const speedLambda = targetSpeed >= this.currentSpeed ? 4.2 : 3.2;
+    this.currentSpeed = damp(this.currentSpeed, targetSpeed, speedLambda, dt);
 
-    this.scoreManager.updateRun(dt, this.currentSpeed, isAnyBoost);
-    this.trackManager.update(dt, this.currentSpeed, isAnyBoost);
-    this.sceneManager.update(dt, this.currentSpeed, isAnyBoost);
+    const prevPlayerX = this.carController.getX();
     this.carController.update(
       dt,
       this.currentSpeed,
@@ -557,13 +562,43 @@ export class Game {
       false,
       this.visualEffects.particles,
     );
+    const currPlayerX = this.carController.getX();
+
+    this.obstacleManager.update(dt, this.currentSpeed);
+    this.collectibleManager.update(dt, this.currentSpeed);
+
+    this.collisionSystem.evaluate(
+      prevPlayerX,
+      currPlayerX,
+      this.obstacleManager,
+      this.collectibleManager,
+      this.collisionReport,
+    );
+
+    if (this.collisionReport.crashed) {
+      const crashFrac = clamp(this.collisionReport.crashTime, 0, 1);
+      this.obstacleManager.snapToFraction(crashFrac);
+      this.trackManager.update(dt * crashFrac, this.currentSpeed, isAnyBoost);
+      this.sceneManager.update(dt * crashFrac, this.currentSpeed, isAnyBoost);
+      this.scoreManager.updateRun(dt * crashFrac, this.currentSpeed, isAnyBoost);
+      this.processCollisionEvents();
+      this.visualEffects.update(dt, 0, false);
+      this.renderer.render(this.sceneManager.scene, this.sceneManager.cameraController.camera);
+      return;
+    }
+
+    this.scoreManager.updateRun(dt, this.currentSpeed, isAnyBoost);
+    this.trackManager.update(dt, this.currentSpeed, isAnyBoost);
+    this.sceneManager.update(dt, this.currentSpeed, isAnyBoost);
+    this.visualEffects.update(dt, this.currentSpeed, isAnyBoost);
 
     this.spawnDistanceRemaining -= this.currentSpeed * dt;
     if (this.spawnDistanceRemaining <= 0) {
       const waveTiming = this.spawnNextWave(difficultyLevel);
+      const postDist = this.scoreManager.getExactDistance();
       const projectedPeakSpeed = Math.max(
         this.currentSpeed,
-        this.difficultyManager.getBaseSpeed(distance, this.runElapsedSeconds, currentScore) +
+        this.difficultyManager.getBaseSpeed(postDist, this.runElapsedSeconds) +
           this.carController.getCarSpec().speedBonus +
           (isAnyBoost ? PAD_BOOST_BONUS : THROTTLE_BONUS),
       );
@@ -573,26 +608,15 @@ export class Game {
         waveTiming.laneShiftSteps,
       );
       const tierCompression = this.difficultyManager.getFormationCompression(difficultyLevel);
-      const minHumanReactSec = waveTiming.laneShiftSteps >= 2 ? 0.46 : 0.3;
+      const minHumanReactSec = waveTiming.laneShiftSteps >= 2 ? 0.54 : 0.38;
       const minSafeSpacing =
-        projectedPeakSpeed * minHumanReactSec + (waveTiming.laneShiftSteps >= 2 ? 6 : 5);
+        projectedPeakSpeed * minHumanReactSec + (waveTiming.laneShiftSteps >= 2 ? 7 : 6);
       this.spawnDistanceRemaining = Math.max(
-        24,
+        28,
         minSafeSpacing,
         baseSpacing * waveTiming.spacingScale * tierCompression,
       );
     }
-
-    this.obstacleManager.update(dt, this.currentSpeed);
-    this.collectibleManager.update(dt, this.currentSpeed);
-    this.visualEffects.update(dt, this.currentSpeed, isAnyBoost);
-
-    this.collisionSystem.evaluate(
-      this.carController.getX(),
-      this.obstacleManager,
-      this.collectibleManager,
-      this.collisionReport,
-    );
 
     this.processCollisionEvents();
 
@@ -664,7 +688,7 @@ export class Game {
       }
     }
 
-    if (this.collisionReport.hitBoostPad) {
+    if (!this.collisionReport.crashed && this.collisionReport.hitBoostPad) {
       this.boostSystem.activatePadBoost();
       this.scoreManager.registerBoostPad();
       this.audioManager.playBoostActivate();
@@ -678,7 +702,7 @@ export class Game {
       this.state.pushBanner('TURBO PAD SURGE', 'cyan');
     }
 
-    if (this.collisionReport.nearMissCount > 0) {
+    if (!this.collisionReport.crashed && this.collisionReport.nearMissCount > 0) {
       const bonus = this.scoreManager.registerNearMiss(this.collisionReport.nearMissCount);
       this.boostSystem.addEnergy(8);
       this.audioManager.playNearMiss();
@@ -691,7 +715,10 @@ export class Game {
   }
 
   private handleCrash(cause: string, crashPosition: THREE.Vector3): void {
-    this.carController.triggerCrash();
+    if (this.state.getStatus() !== 'playing') return;
+
+    this.currentSpeed = 0;
+    this.carController.triggerCrash(crashPosition.x);
     this.sceneManager.cameraController.triggerShake(1.15);
     this.visualEffects.emitCrashExplosion(crashPosition);
     this.audioManager.playCrash();
@@ -700,6 +727,7 @@ export class Game {
 
     const finalScore = this.scoreManager.getScore();
     const finalDistance = this.scoreManager.getDistance();
+    const exactFinalDistance = this.scoreManager.getExactDistance();
     const isNewRecord = finalScore > this.saveData.bestScore;
 
     if (isNewRecord) this.saveData.bestScore = finalScore;
@@ -721,9 +749,8 @@ export class Game {
       orbsCollected: this.scoreManager.getOrbsCollected(),
       runCoins: this.scoreManager.getRunCoins(),
       difficultyLevel: this.difficultyManager.getLevel(
-        finalDistance,
+        exactFinalDistance,
         this.runElapsedSeconds,
-        finalScore,
       ),
       bestScore: this.saveData.bestScore,
       bestDistance: this.saveData.bestDistance,

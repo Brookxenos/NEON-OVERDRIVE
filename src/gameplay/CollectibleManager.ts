@@ -11,11 +11,13 @@ export interface CollectibleInstance extends Poolable {
   lane: LaneIndex;
   group: THREE.Group;
   phase: number;
+  prevZ: number;
 }
 
 export interface BoostPadInstance extends Poolable {
   lane: LaneIndex;
   mesh: THREE.Mesh;
+  prevZ: number;
 }
 
 export class CollectibleManager {
@@ -130,6 +132,7 @@ export class CollectibleManager {
         lane: 1,
         group: cGroup,
         phase: i * 0.7,
+        prevZ: SPAWN_Z,
       });
     }
 
@@ -143,6 +146,7 @@ export class CollectibleManager {
         active: false,
         lane: 1,
         mesh,
+        prevZ: SPAWN_Z,
       });
     }
 
@@ -157,6 +161,7 @@ export class CollectibleManager {
       if (pad) {
         pad.active = true;
         pad.lane = lane;
+        pad.prevZ = spawnZ;
         pad.mesh.position.set(LaneSystem.getLaneX(lane), 0.04, spawnZ);
         pad.mesh.visible = true;
       }
@@ -183,9 +188,11 @@ export class CollectibleManager {
       for (let i = 0; i < count; i++) {
         const item = this.collectiblePool.acquire((c) => c.kind === kind);
         if (!item) break;
+        const z = spawnZ - i * 5.0;
         item.active = true;
         item.lane = lane;
-        item.group.position.set(LaneSystem.getLaneX(lane), 1.0, spawnZ - i * 5.0);
+        item.prevZ = z;
+        item.group.position.set(LaneSystem.getLaneX(lane), 1.0, z);
         item.group.visible = true;
       }
     }
@@ -195,6 +202,7 @@ export class CollectibleManager {
     this.elapsed = (this.elapsed + dt) % (Math.PI * 200);
 
     this.collectiblePool.forEachActive((col) => {
+      col.prevZ = col.group.position.z;
       col.group.position.z += worldSpeed * dt;
       col.group.rotation.y =
         (col.group.rotation.y + dt * (col.kind === 'score_crystal' ? 3.8 : 3.0)) %
@@ -208,6 +216,7 @@ export class CollectibleManager {
     });
 
     this.padPool.forEachActive((pad) => {
+      pad.prevZ = pad.mesh.position.z;
       pad.mesh.position.z += worldSpeed * dt;
       if (pad.mesh.position.z > DESPAWN_Z) {
         pad.active = false;
