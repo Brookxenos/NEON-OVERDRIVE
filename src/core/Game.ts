@@ -19,7 +19,6 @@ import {
   BASE_START_SPEED,
   BOOST_SPEED_BONUS,
   BRAKE_PENALTY,
-  COLORS,
   PAD_BOOST_BONUS,
   SPAWN_Z,
   SPEED_TO_KMH,
@@ -72,17 +71,12 @@ export class Game {
   private passed2500m = false;
   private lastScoreMilestone = 0;
   private scoreFeverTimer = 0;
-  private feverSparkTimer = 0;
-  private coinChainTimer = 0;
-  private coinChainCoins = 0;
-  private coinChainPoints = 0;
   private hudSyncTimer = 0;
   private saveFlushTimer = 0;
   private saveDirty = false;
   private announcedGoalId: CarId | null = null;
   private garagePreviewOpen = false;
   private previewedCarId: CarId;
-  private readonly boostBurstPos = new THREE.Vector3();
 
   private readonly collisionReport: CollisionReport = {
     crashed: false,
@@ -362,10 +356,6 @@ export class Game {
     this.passed2500m = false;
     this.lastScoreMilestone = 0;
     this.scoreFeverTimer = 0;
-    this.feverSparkTimer = 0;
-    this.coinChainTimer = 0;
-    this.coinChainCoins = 0;
-    this.coinChainPoints = 0;
     this.waveDirector.reset();
     this.hudSyncTimer = 0;
     this.saveFlushTimer = 0;
@@ -528,8 +518,6 @@ export class Game {
       this.passed2500m = true;
       this.boostSystem.addEnergy(100);
       this.audioManager.playMilestoneFanfare();
-      this.boostBurstPos.set(this.carController.getX(), 0.7, 0);
-      this.visualEffects.emitCollectibleBurst(this.boostBurstPos, COLORS.energyAmber, 26, 12);
       this.state.pushBanner('2,500M EXPRESS ZONE · +50% SCORE & LIVE TRAFFIC', 'amber');
     }
 
@@ -573,19 +561,6 @@ export class Game {
 
     if (this.scoreFeverTimer > 0) {
       this.scoreFeverTimer = Math.max(0, this.scoreFeverTimer - dt);
-      this.feverSparkTimer += dt;
-      if (this.feverSparkTimer >= 0.18) {
-        this.feverSparkTimer = 0;
-        this.boostBurstPos.set(this.carController.getX(), 0.65, 0);
-        this.visualEffects.emitCollectibleBurst(this.boostBurstPos, COLORS.energyAmber, 6, 5);
-      }
-    }
-    if (this.coinChainTimer > 0) {
-      this.coinChainTimer = Math.max(0, this.coinChainTimer - dt);
-      if (this.coinChainTimer === 0) {
-        this.coinChainCoins = 0;
-        this.coinChainPoints = 0;
-      }
     }
     const isFeverActive = this.scoreFeverTimer > 0;
 
@@ -726,10 +701,7 @@ export class Game {
     this.saveDirty = true;
     this.boostSystem.addEnergy(100);
     this.scoreFeverTimer = 8.0;
-    this.feverSparkTimer = 0;
 
-    this.boostBurstPos.set(this.carController.getX(), 0.75, 0);
-    this.visualEffects.emitCollectibleBurst(this.boostBurstPos, COLORS.energyAmber, 28, 12);
     this.audioManager.playMilestoneFanfare();
     this.state.pushBanner(
       `${(milestoneStep * 10).toLocaleString()}K FEVER · 2X SCORE +${bonusCoins} COINS!`,
@@ -765,25 +737,8 @@ export class Game {
 
       if (item.kind === 'energy_orb') {
         this.boostSystem.addEnergy(16);
-        this.visualEffects.emitCollectibleBurst(item.position, COLORS.neonCyan, 16, 8);
-      } else if (item.kind === 'score_crystal') {
-        this.visualEffects.emitCoinClaimPopup(item.position);
-        const isContinuingChain = this.coinChainTimer > 0;
-        this.coinChainCoins = isContinuingChain
-          ? this.coinChainCoins + reward.coins
-          : reward.coins;
-        this.coinChainPoints = isContinuingChain
-          ? this.coinChainPoints + reward.points
-          : reward.points;
-        this.coinChainTimer = 0.75;
-        const label = `+${this.coinChainCoins} COINS · +${this.coinChainPoints.toLocaleString()}`;
-        if (!isContinuingChain || !this.state.updateActiveBannerText(label)) {
-          this.state.pushBanner(label, 'amber');
-        }
-      } else {
+      } else if (item.kind === 'boost_cell') {
         this.boostSystem.addEnergy(38);
-        this.visualEffects.emitCollectibleBurst(item.position, COLORS.electricBlue, 20, 10);
-        this.state.pushBanner(`+38% BOOST · +${reward.coins} COINS`, 'blue');
       }
       this.audioManager.playCollectible(item.kind, this.scoreManager.getMultiplier());
     }
@@ -797,14 +752,6 @@ export class Game {
       this.boostSystem.activatePadBoost();
       this.scoreManager.registerBoostPad();
       this.audioManager.playBoostActivate();
-      this.boostBurstPos.set(this.carController.getX(), 0.5, 0);
-      this.visualEffects.emitCollectibleBurst(
-        this.boostBurstPos,
-        COLORS.neonCyan,
-        22,
-        11,
-      );
-      this.state.pushBanner('TURBO PAD SURGE', 'cyan');
     }
 
     if (!this.collisionReport.crashed && this.collisionReport.nearMissCount > 0) {

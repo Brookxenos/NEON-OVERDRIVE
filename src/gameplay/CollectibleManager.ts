@@ -96,16 +96,15 @@ export class CollectibleManager {
 
     this.materials.push(orbMat, coinGoldMat, coinRimMat, cellMat, whiteRingMat, padMat);
 
-    const kinds: CollectibleType[] = [
-      'score_crystal',
-      'energy_orb',
-      'score_crystal',
-      'boost_cell',
-    ];
+    const kindPlan: CollectibleType[] = [];
+    for (let i = 0; i < 60; i++) kindPlan.push('score_crystal');
+    for (let i = 0; i < 20; i++) kindPlan.push('energy_orb');
+    for (let i = 0; i < 16; i++) kindPlan.push('boost_cell');
+
     const colItems: CollectibleInstance[] = [];
 
-    for (let i = 0; i < 30; i++) {
-      const kind = kinds[i % kinds.length];
+    for (let i = 0; i < kindPlan.length; i++) {
+      const kind = kindPlan[i];
       const cGroup = new THREE.Group();
       cGroup.visible = false;
 
@@ -139,7 +138,7 @@ export class CollectibleManager {
     }
 
     const padItems: BoostPadInstance[] = [];
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 12; i++) {
       const mesh = new THREE.Mesh(padGeo, padMat);
       mesh.visible = false;
       mesh.position.y = 0.04;
@@ -193,7 +192,7 @@ export class CollectibleManager {
 
       const laneX = LaneSystem.getLaneX(lane);
       for (let i = 0; i < count; i++) {
-        const item = this.collectiblePool.acquire((c) => c.kind === kind);
+        const item = this.collectiblePool.acquire((c) => c.kind === kind, true);
         if (!item) break;
         const z = spawnZ - i * 4.8;
         item.active = true;
@@ -224,7 +223,8 @@ export class CollectibleManager {
       }
     });
 
-    this.padPool.forEachActive((pad) => {
+    this.padPool.forEachAll((pad) => {
+      if (!pad.mesh.visible) return;
       pad.prevZ = pad.mesh.position.z;
       pad.mesh.position.z += worldSpeed * dt;
       if (pad.mesh.position.z > DESPAWN_Z) {

@@ -9,7 +9,7 @@ export class ObjectPool<T extends Poolable> {
     this.items = items;
   }
 
-  public acquire(predicate?: (item: T) => boolean): T | null {
+  public acquire(predicate?: (item: T) => boolean, strict = false): T | null {
     if (predicate) {
       for (let i = 0; i < this.items.length; i++) {
         const item = this.items[i];
@@ -17,6 +17,7 @@ export class ObjectPool<T extends Poolable> {
           return item;
         }
       }
+      if (strict) return null;
     }
 
     for (let i = 0; i < this.items.length; i++) {

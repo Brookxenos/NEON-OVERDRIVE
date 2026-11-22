@@ -92,14 +92,14 @@ export class CollisionSystem {
         PLAYER_Z,
         currPlayerX,
         PLAYER_Z,
-        1.05,
-        1.85,
+        0.96,
+        1.9,
         col.prevX,
         col.prevZ,
         col.group.position.x,
         col.group.position.z,
-        0.5,
-        0.8,
+        0.45,
+        0.35,
       );
       if (hitTime !== null && (!report.crashed || hitTime < report.crashTime)) {
         col.active = false;
@@ -130,7 +130,6 @@ export class CollisionSystem {
         );
         if (hitTime !== null) {
           pad.active = false;
-          pad.mesh.visible = false;
           report.hitBoostPad = true;
         }
       });
