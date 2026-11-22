@@ -1,5 +1,6 @@
 import { GameStatus } from '../core/GameState';
 import { GameSettingsData } from '../settings/GameSettings';
+import { DeezerAudio, DeezerTrack } from './DeezerAudio';
 import { CollectibleSoundType, SoundEffects } from './SoundEffects';
 
 function clampFreq(freq: number): number {
@@ -31,6 +32,7 @@ export class AudioManager {
   private compressor: DynamicsCompressorNode | null = null;
   private masterGain: GainNode | null = null;
   private musicGain: GainNode | null = null;
+  private synthGain: GainNode | null = null;
   private sfxGain: GainNode | null = null;
   private delaySend: GainNode | null = null;
 
@@ -47,6 +49,7 @@ export class AudioManager {
   private isUnlocked = false;
   private noiseBuffer: AudioBuffer | null = null;
   private readonly sfx = new SoundEffects();
+  private readonly deezer = new DeezerAudio();
 
   private stepIndex = 0;
   private stepAccumulator = 0;
@@ -63,12 +66,19 @@ export class AudioManager {
     this.settings = { ...initialSettings };
   }
 
+  public getCurrentMusicTrack(): DeezerTrack | null {
+    return this.deezer.getCurrentTrack();
+  }
+
   public unlock(): void {
     if (this.isUnlocked && this.ctx) {
       if (this.ctx.state === 'suspended') {
         void this.ctx.resume();
       }
       this.stepAccumulator = 0;
+      if (this.settings.musicEnabled && !this.settings.muted) {
+        this.deezer.startOrResume();
+      }
       return;
     }
 
@@ -88,6 +98,7 @@ export class AudioManager {
 
     this.masterGain = this.ctx.createGain();
     this.musicGain = this.ctx.createGain();
+    this.synthGain = this.ctx.createGain();
     this.sfxGain = this.ctx.createGain();
 
     this.delaySend = this.ctx.createGain();
@@ -106,6 +117,8 @@ export class AudioManager {
     delayFeedback.connect(delayNode);
     delayFilter.connect(this.compressor);
 
+    this.synthGain.gain.value = 1;
+    this.synthGain.connect(this.musicGain);
     this.musicGain.connect(this.compressor);
     this.sfxGain.connect(this.compressor);
     this.compressor.connect(this.masterGain);
@@ -167,14 +180,26 @@ export class AudioManager {
     this.engineAirSource.start();
 
     this.sfx.attach(this.ctx, this.sfxGain, this.delaySend, this.noiseBuffer);
+    this.deezer.attach(this.ctx, this.musicGain);
 
     this.isUnlocked = true;
     this.applyVolumes();
+
+    if (this.settings.musicEnabled && !this.settings.muted) {
+      this.deezer.startOrResume();
+    }
   }
 
   public updateSettings(next: GameSettingsData): void {
     this.settings = { ...next };
     this.applyVolumes();
+
+    if (!this.isUnlocked) return;
+    if (this.settings.musicEnabled && !this.settings.muted) {
+      this.deezer.startOrResume();
+    } else {
+      this.deezer.pause();
+    }
   }
 
   private applyVolumes(): void {
@@ -232,6 +257,23 @@ export class AudioManager {
 
     if (!this.settings.musicEnabled || this.settings.muted || status === 'paused') {
       this.stepAccumulator = 0;
+      this.deezer.pause();
+      if (this.synthGain) {
+        this.synthGain.gain.setTargetAtTime(0, now, 0.06);
+      }
+      return;
+    }
+
+    this.deezer.startOrResume();
+    this.deezer.updateMix(safeSpeedNorm, isBoosting, status === 'playing');
+
+    const streamActive = this.deezer.isStreamPlaying();
+    if (this.synthGain) {
+      this.synthGain.gain.setTargetAtTime(streamActive ? 0 : 1, now, 0.18);
+    }
+
+    if (streamActive) {
+      this.stepAccumulator = 0;
       return;
     }
 
@@ -253,7 +295,7 @@ export class AudioManager {
     speedNorm: number,
     isBoosting: boolean,
   ): void {
-    if (!this.ctx || !this.musicGain || this.ctx.state !== 'running') return;
+    if (!this.ctx || !this.synthGain || this.ctx.state !== 'running') return;
     const now = this.ctx.currentTime;
     const barIdx = Math.floor(step / 16);
     const barStep = step % 16;
@@ -284,7 +326,7 @@ export class AudioManager {
         oscA.connect(filter);
         oscB.connect(filter);
         filter.connect(env);
-        env.connect(this.musicGain);
+        env.connect(this.synthGain);
         if (this.delaySend) env.connect(this.delaySend);
 
         oscA.onended = () => {
@@ -332,7 +374,7 @@ export class AudioManager {
     bassOsc.connect(bassFilter);
     bassSub.connect(bassFilter);
     bassFilter.connect(bassEnv);
-    bassEnv.connect(this.musicGain);
+    bassEnv.connect(this.synthGain);
     bassOsc.onended = () => {
       try {
         bassOsc.disconnect();
@@ -358,7 +400,7 @@ export class AudioManager {
       kickOsc.frequency.exponentialRampToValueAtTime(42, now + 0.095);
       scheduleSynthEnvelope(kickEnv.gain, now, 0.36, 0.005, now + 0.155, now + 0.175);
       kickOsc.connect(kickEnv);
-      kickEnv.connect(this.musicGain);
+      kickEnv.connect(this.synthGain);
       kickOsc.onended = () => {
         try {
           kickOsc.disconnect();
@@ -379,7 +421,7 @@ export class AudioManager {
       bodyOsc.frequency.exponentialRampToValueAtTime(95, now + 0.1);
       scheduleSynthEnvelope(bodyEnv.gain, now, 0.2, 0.005, now + 0.125, now + 0.145);
       bodyOsc.connect(bodyEnv);
-      bodyEnv.connect(this.musicGain);
+      bodyEnv.connect(this.synthGain);
       bodyOsc.onended = () => {
         try {
           bodyOsc.disconnect();
@@ -401,7 +443,7 @@ export class AudioManager {
         scheduleSynthEnvelope(snareEnv.gain, now, 0.18, 0.005, now + 0.18, now + 0.2);
         snareNoise.connect(snareFilter);
         snareFilter.connect(snareEnv);
-        snareEnv.connect(this.musicGain);
+        snareEnv.connect(this.synthGain);
         if (this.delaySend) snareEnv.connect(this.delaySend);
         snareNoise.onended = () => {
           try {
@@ -434,7 +476,7 @@ export class AudioManager {
       );
       hat.connect(hatFilter);
       hatFilter.connect(hatEnv);
-      hatEnv.connect(this.musicGain);
+      hatEnv.connect(this.synthGain);
       hat.onended = () => {
         try {
           hat.disconnect();
@@ -472,7 +514,7 @@ export class AudioManager {
 
       leadOsc.connect(leadFilter);
       leadFilter.connect(leadEnv);
-      leadEnv.connect(this.musicGain);
+      leadEnv.connect(this.synthGain);
       if (this.delaySend) leadEnv.connect(this.delaySend);
       leadOsc.onended = () => {
         try {
@@ -521,6 +563,7 @@ export class AudioManager {
   }
 
   public dispose(): void {
+    this.deezer.dispose();
     try {
       this.engineSubOsc?.stop();
       this.engineMainOsc?.stop();
