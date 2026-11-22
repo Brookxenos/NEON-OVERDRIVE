@@ -187,6 +187,7 @@ export class Game {
 
   public start(): void {
     this.audioManager.unlock();
+    this.audioManager.nextMusicTrack();
     this.audioManager.playUiClick(true);
     this.resetRun();
     const openingLabel = this.seedOpeningHighway();

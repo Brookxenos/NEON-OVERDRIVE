@@ -196,6 +196,10 @@ export class AudioManager {
     this.applyVolumes();
   }
 
+  public nextMusicTrack(): void {
+    this.soundtrack.selectNextTrack();
+  }
+
   public updateSettings(next: GameSettingsData): void {
     this.settings = { ...next };
     this.applyVolumes();
