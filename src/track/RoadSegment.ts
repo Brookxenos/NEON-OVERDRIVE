@@ -290,7 +290,7 @@ export class RoadSegment {
     geos: RoadSegmentGeometries,
   ) {
     this.index = index;
-    this.group.position.z = 16 - index * SEGMENT_LENGTH;
+    this.group.position.z = 376 - index * SEGMENT_LENGTH;
 
     const deck = new THREE.Mesh(geos.deckGeo, mats.roadMat);
     deck.position.y = -0.325;

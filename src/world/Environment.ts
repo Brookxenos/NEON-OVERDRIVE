@@ -14,7 +14,7 @@ export class Environment {
 
   constructor(textures: TextureBundle) {
     // Warm golden-pink coastal sky dome
-    const skyGeo = new THREE.SphereGeometry(460, 28, 18);
+    const skyGeo = new THREE.SphereGeometry(520, 28, 18);
     const skyMat = new THREE.MeshBasicMaterial({
       map: textures.skyBackdrop,
       side: THREE.BackSide,
@@ -24,8 +24,8 @@ export class Environment {
     this.materials.push(skyMat);
     this.group.add(new THREE.Mesh(skyGeo, skyMat));
 
-    // Sun-warmed coastal ground terrain flanking the boulevard (no dark doom void)
-    const groundGeo = new THREE.PlaneGeometry(760, 620, 1, 1);
+    // Sun-warmed coastal ground terrain flanking both front (-Z) and rear (+Z) boulevard views
+    const groundGeo = new THREE.PlaneGeometry(860, 960, 1, 1);
     groundGeo.rotateX(-Math.PI / 2);
     const groundMat = new THREE.MeshStandardMaterial({
       color: 0x76677f,
@@ -37,11 +37,11 @@ export class Environment {
     this.materials.push(groundMat);
 
     const ground = new THREE.Mesh(groundGeo, groundMat);
-    ground.position.set(0, -1.2, -210);
+    ground.position.set(0, -1.2, 0);
     this.group.add(ground);
 
     // Subtle sunlit bay / roadside grass verge sheen moving smoothly with speed
-    const shimmerGeo = new THREE.PlaneGeometry(460, 500, 1, 1);
+    const shimmerGeo = new THREE.PlaneGeometry(520, 920, 1, 1);
     shimmerGeo.rotateX(-Math.PI / 2);
     this.shimmerMat = new THREE.MeshBasicMaterial({
       color: 0xf7b99b,
@@ -52,7 +52,7 @@ export class Environment {
     this.materials.push(this.shimmerMat);
 
     this.shimmerPlane = new THREE.Mesh(shimmerGeo, this.shimmerMat);
-    this.shimmerPlane.position.set(0, -1.15, -210);
+    this.shimmerPlane.position.set(0, -1.15, 0);
     this.group.add(this.shimmerPlane);
 
     this.buildDistantSkyline(textures);
@@ -82,17 +82,10 @@ export class Environment {
     this.geometries.push(silhouetteGeo);
     this.materials.push(towerSunMat, towerLavenderMat, penthouseMat);
 
-    for (let i = -15; i <= 15; i++) {
-      if (Math.abs(i) < 2) continue;
-      const h = 24 + Math.abs(Math.sin(i * 1.47)) * 62;
-      const w = 13 + (Math.abs(i * 3) % 11);
-      const d = 14 + (Math.abs(i * 5) % 8);
-      const zPos = -360 - (Math.abs(i) % 3) * 28;
-      const xPos = i * 19;
-
+    const addTower = (xPos: number, zPos: number, w: number, h: number, d: number, isEven: boolean) => {
       const tower = new THREE.Mesh(
         silhouetteGeo,
-        Math.abs(i) % 2 === 0 ? towerSunMat : towerLavenderMat,
+        isEven ? towerSunMat : towerLavenderMat,
       );
       tower.scale.set(w, h, d);
       tower.position.set(xPos, h * 0.5 - 2, zPos);
@@ -102,12 +95,29 @@ export class Environment {
       crown.scale.set(w * 0.68, 2.4, d * 0.68);
       crown.position.set(xPos, h - 2 + 1.2, zPos);
       this.group.add(crown);
+    };
+
+    for (let i = -15; i <= 15; i++) {
+      if (Math.abs(i) < 2) continue;
+      const h = 24 + Math.abs(Math.sin(i * 1.47)) * 62;
+      const w = 13 + (Math.abs(i * 3) % 11);
+      const d = 14 + (Math.abs(i * 5) % 8);
+      const xPos = i * 19;
+
+      // Front horizon (-Z)
+      const zPosFront = -360 - (Math.abs(i) % 3) * 28;
+      addTower(xPos, zPosFront, w, h, d, Math.abs(i) % 2 === 0);
+
+      // Symmetrical Rear horizon (+Z) so Rear and 360° garage camera views match the Front city vista
+      const zPosRear = 360 + ((Math.abs(i) + 1) % 3) * 28;
+      const hRear = 24 + Math.abs(Math.sin((i + 3) * 1.47)) * 62;
+      addTower(xPos, zPosRear, w, hRear, d, (Math.abs(i) + 1) % 2 === 0);
     }
   }
 
   public update(dt: number, worldSpeed: number, isBoosting: boolean, zoneBlend = 0): void {
     this.shimmerOffset = (this.shimmerOffset + dt * worldSpeed * 0.4) % 21.8;
-    this.shimmerPlane.position.z = -210 + this.shimmerOffset;
+    this.shimmerPlane.position.z = this.shimmerOffset;
     this.shimmerMat.color.copy(this.baseShimmerColor).lerp(this.expressShimmerColor, zoneBlend);
     this.shimmerMat.opacity = (isBoosting ? 0.16 : 0.1) + zoneBlend * 0.06;
   }

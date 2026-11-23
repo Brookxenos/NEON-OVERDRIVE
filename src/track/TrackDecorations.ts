@@ -2,11 +2,11 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { TextureBundle } from '../utils/TextureFactory';
 
-const BUILDING_PAIRS = 14;
+const BUILDING_PAIRS = 30;
 const BUILDING_SPACING = 28;
-const PALM_COUNT = 56;
+const PALM_COUNT = 120;
 const PALM_SPACING = 14;
-const TREE_COUNT = 56;
+const TREE_COUNT = 120;
 const TREE_SPACING = 14;
 
 interface PalmSlot {
@@ -276,7 +276,7 @@ export class TrackDecorations {
       }
 
       const xOffset = side * (19.5 + width * 0.5 + (idx % 3) * 4.5);
-      const zPos = 24 - idx * BUILDING_SPACING;
+      const zPos = 416 - idx * BUILDING_SPACING;
       bGroup.position.set(xOffset, 0, zPos);
 
       this.group.add(bGroup);
@@ -311,7 +311,7 @@ export class TrackDecorations {
       const side = i % 2 === 0 ? -1 : 1;
       const row = Math.floor(i / 2);
       const x = side * (9.5 + (row % 3) * 0.65);
-      const z = 20 - row * PALM_SPACING;
+      const z = 416 - row * PALM_SPACING;
       const scale = 0.88 + ((row * 7) % 5) * 0.09;
       const rotY = side < 0 ? 0.3 + (row % 5) * 0.4 : Math.PI - 0.3 - (row % 5) * 0.4;
       const leanX = side * -0.06;
@@ -344,7 +344,7 @@ export class TrackDecorations {
       const side = i % 2 === 0 ? -1 : 1;
       const row = Math.floor(i / 2);
       const x = side * (13.4 + (row % 3) * 1.4);
-      const z = 14 - row * TREE_SPACING;
+      const z = 410 - row * TREE_SPACING;
       const scale = 0.8 + ((row * 3) % 5) * 0.12;
       const rotY = (row * 1.7 + side) % (Math.PI * 2);
       this.treeSlots.push({ x, z, scale, rotY });
@@ -388,7 +388,7 @@ export class TrackDecorations {
     for (let i = 0; i < this.buildings.length; i++) {
       const b = this.buildings[i];
       b.position.z += dz * 0.92;
-      if (b.position.z > 42) {
+      if (b.position.z > 420) {
         b.position.z -= totalBuildingDepth;
       }
     }
@@ -397,7 +397,7 @@ export class TrackDecorations {
     for (let i = 0; i < PALM_COUNT; i++) {
       const slot = this.palmSlots[i];
       slot.z += dz;
-      if (slot.z > 28) {
+      if (slot.z > 420) {
         slot.z -= totalPalmDepth;
       }
     }
@@ -407,7 +407,7 @@ export class TrackDecorations {
     for (let i = 0; i < TREE_COUNT; i++) {
       const slot = this.treeSlots[i];
       slot.z += dz;
-      if (slot.z > 28) {
+      if (slot.z > 420) {
         slot.z -= totalTreeDepth;
       }
     }

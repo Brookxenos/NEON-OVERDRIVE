@@ -39,7 +39,7 @@ export class TrackManager {
     for (let i = 0; i < this.segments.length; i++) {
       const seg = this.segments[i];
       seg.group.position.z += dz;
-      if (seg.group.position.z > SEGMENT_LENGTH + 8) {
+      if (seg.group.position.z > 376 + SEGMENT_LENGTH * 0.5) {
         seg.group.position.z -= totalTrackLen;
       }
       seg.animate(this.elapsed, isBoosting);

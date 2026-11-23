@@ -92,11 +92,11 @@ export class SoundEffects {
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = 'sine';
-    const startFreq = direction < 0 ? 310 : 250;
-    const endFreq = direction < 0 ? 520 : 430;
+    const startFreq = direction < 0 ? 329.63 : 293.66;
+    const endFreq = direction < 0 ? 440.0 : 392.0;
     osc.frequency.setValueAtTime(clampFreq(startFreq), now);
-    osc.frequency.exponentialRampToValueAtTime(clampFreq(endFreq), now + 0.075);
-    scheduleCleanEnvelope(gain.gain, now, 0.085, 0.005, now + 0.082, now + 0.095);
+    osc.frequency.exponentialRampToValueAtTime(clampFreq(endFreq), now + 0.07);
+    scheduleCleanEnvelope(gain.gain, now, 0.055, 0.005, now + 0.078, now + 0.09);
 
     let panner: StereoPannerNode | null = null;
     if (typeof this.ctx.createStereoPanner === 'function') {
@@ -185,9 +185,9 @@ export class SoundEffects {
     if (this.lastCollectibleAt >= 0 && now - this.lastCollectibleAt < 0.05) return;
     this.lastCollectibleAt = now;
 
-    const pitchScale = 1 + Math.min(Math.max(multiplier - 1, 0), 6) * 0.045;
+    const pitchScale = 1 + Math.min(Math.max(multiplier - 1, 0), 4) * 0.05;
     const base =
-      kind === 'score_crystal' ? 659.25 : kind === 'boost_cell' ? 523.25 : 587.33;
+      kind === 'score_crystal' ? 659.25 : kind === 'boost_cell' ? 523.25 : 440.0;
 
     const freqs =
       this.activeVoices <= MAX_ACTIVE_SFX_VOICES - 2
@@ -222,12 +222,11 @@ export class SoundEffects {
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(1080, now);
-    osc.frequency.exponentialRampToValueAtTime(240, now + 0.16);
-    scheduleCleanEnvelope(gain.gain, now, 0.095, 0.005, now + 0.165, now + 0.185);
+    osc.frequency.setValueAtTime(880, now);
+    osc.frequency.exponentialRampToValueAtTime(220, now + 0.15);
+    scheduleCleanEnvelope(gain.gain, now, 0.055, 0.006, now + 0.155, now + 0.175);
     osc.connect(gain);
     gain.connect(this.outputNode);
-    if (this.delaySend) gain.connect(this.delaySend);
     this.trackVoice(osc, () => {
       osc.disconnect();
       gain.disconnect();
@@ -303,21 +302,21 @@ export class SoundEffects {
   public playMilestoneFanfare(): void {
     if (!this.canSchedule(3) || !this.ctx || !this.outputNode) return;
     const now = this.ctx.currentTime;
-    const notes = [523.25, 659.25, 783.99, 1046.5];
+    const notes = [440.0, 523.25, 659.25, 880.0];
     notes.forEach((freq, idx) => {
       if (!this.ctx || !this.outputNode) return;
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
-      osc.type = idx === notes.length - 1 ? 'sawtooth' : 'triangle';
+      osc.type = 'triangle';
       const t = now + idx * 0.065;
       osc.frequency.setValueAtTime(clampFreq(freq), t);
       scheduleCleanEnvelope(
         gain.gain,
         t,
-        idx === notes.length - 1 ? 0.12 : 0.1,
+        idx === notes.length - 1 ? 0.09 : 0.075,
         0.012,
-        t + 0.31,
-        t + 0.34,
+        t + 0.3,
+        t + 0.33,
       );
       osc.connect(gain);
       gain.connect(this.outputNode);

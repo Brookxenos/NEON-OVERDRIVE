@@ -7,7 +7,7 @@ export const LANE_POSITIONS: readonly [number, number, number] = [
 
 export const ROAD_WIDTH = 12.4;
 export const SEGMENT_LENGTH = 36;
-export const SEGMENT_COUNT = 13;
+export const SEGMENT_COUNT = 23;
 export const DESPAWN_Z = 22;
 export const SPAWN_Z = -340;
 

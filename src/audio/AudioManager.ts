@@ -162,13 +162,13 @@ export class AudioManager {
     this.engineSubOsc.connect(this.engineGain);
 
     this.engineMainOsc = this.ctx.createOscillator();
-    this.engineMainOsc.type = 'sawtooth';
-    this.engineMainOsc.frequency.value = 116;
+    this.engineMainOsc.type = 'triangle';
+    this.engineMainOsc.frequency.value = 110;
     this.engineMainOsc.connect(this.engineFilter);
 
     this.engineWhineOsc = this.ctx.createOscillator();
-    this.engineWhineOsc.type = 'triangle';
-    this.engineWhineOsc.frequency.value = 232.5;
+    this.engineWhineOsc.type = 'sine';
+    this.engineWhineOsc.frequency.value = 220;
     this.engineWhineOsc.connect(this.engineFilter);
 
     this.engineAirFilter = this.ctx.createBiquadFilter();
@@ -243,25 +243,25 @@ export class AudioManager {
     ) {
       if (status === 'playing' && this.settings.sfxEnabled && !this.settings.muted) {
         const targetGain = safeFinite(
-          0.065 + safeSpeedNorm * 0.05 + (isBoosting ? 0.045 : 0),
-          0.065,
+          0.032 + safeSpeedNorm * 0.028 + (isBoosting ? 0.022 : 0),
+          0.032,
           0,
-          0.22,
+          0.11,
         );
-        const rootFreq = clampFreq(54 + safeSpeedNorm * 58 + (isBoosting ? 28 : 0));
-        const filterFreq = clampFreq(260 + safeSpeedNorm * 820 + (isBoosting ? 900 : 0));
+        const rootFreq = clampFreq(55 + safeSpeedNorm * 52 + (isBoosting ? 24 : 0));
+        const filterFreq = clampFreq(210 + safeSpeedNorm * 520 + (isBoosting ? 420 : 0));
         const airVol = safeFinite(
-          0.014 + safeSpeedNorm * 0.04 + (isBoosting ? 0.04 : 0),
-          0.014,
+          0.008 + safeSpeedNorm * 0.022 + (isBoosting ? 0.02 : 0),
+          0.008,
           0,
-          0.14,
+          0.07,
         );
-        const airFreq = clampFreq(500 + safeSpeedNorm * 1400 + (isBoosting ? 900 : 0));
+        const airFreq = clampFreq(480 + safeSpeedNorm * 1100 + (isBoosting ? 650 : 0));
 
         this.engineGain.gain.setTargetAtTime(targetGain, now, 0.07);
         this.engineSubOsc.frequency.setTargetAtTime(rootFreq, now, 0.07);
         this.engineMainOsc.frequency.setTargetAtTime(clampFreq(rootFreq * 2), now, 0.07);
-        this.engineWhineOsc.frequency.setTargetAtTime(clampFreq(rootFreq * 4.02), now, 0.07);
+        this.engineWhineOsc.frequency.setTargetAtTime(clampFreq(rootFreq * 4.0), now, 0.07);
         this.engineFilter.frequency.setTargetAtTime(filterFreq, now, 0.07);
         this.engineAirGain.gain.setTargetAtTime(airVol, now, 0.08);
         this.engineAirFilter.frequency.setTargetAtTime(airFreq, now, 0.08);

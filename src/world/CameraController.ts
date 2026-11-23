@@ -12,7 +12,7 @@ export class CameraController {
 
   constructor(aspect: number) {
     this.currentAspect = Math.max(aspect, 0.35);
-    this.camera = new THREE.PerspectiveCamera(this.getResponsiveFov(62), aspect, 0.1, 520);
+    this.camera = new THREE.PerspectiveCamera(this.getResponsiveFov(62), aspect, 0.1, 660);
     this.camera.position.set(-3.2, 1.7, 5.8);
   }
 
