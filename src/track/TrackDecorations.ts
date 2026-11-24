@@ -227,7 +227,7 @@ export class TrackDecorations {
     );
     this.geometries.push(boxGeo, towerTrimGeo, decoTrimGeo, plazaTrimGeo);
 
-    // Realistic Miami Beach / Ocean Drive buildings flanking the boulevard
+    // Coastal Art Deco buildings flanking the boulevard
     for (let i = 0; i < BUILDING_PAIRS * 2; i++) {
       const side = i % 2 === 0 ? -1 : 1;
       const idx = Math.floor(i / 2);
@@ -319,7 +319,7 @@ export class TrackDecorations {
       this.palmSlots.push({ x, z, scale, rotY, leanX });
     }
 
-    // Lush coastal broadleaf trees lining the city blocks (like Image 1!)
+    // Coastal broadleaf trees lining the city blocks
     const treeTrunkGeo = createStreetTreeTrunkGeometry();
     const treeCanopyGeo = createStreetTreeCanopyGeometry();
     const treeTrunkMat = new THREE.MeshStandardMaterial({

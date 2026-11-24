@@ -13,13 +13,25 @@ export type ObstacleType =
   | 'hazard_zone'
   | 'evil_drone';
 
+export type DynamicMotionMode = 'none' | 'weave' | 'swoop' | 'slide' | 'patrol';
+
 export interface ObstacleInstance extends Poolable {
   kind: ObstacleType;
   lane: LaneIndex;
   targetLane: LaneIndex;
+  pendingLane: LaneIndex;
   hasShiftedLane: boolean;
+  telegraphTimer: number;
+  motionMode: DynamicMotionMode;
+  deployProgress: number;
   group: THREE.Group;
   hoverTarget: THREE.Object3D | null;
+  signalLeft: THREE.Object3D | null;
+  signalRight: THREE.Object3D | null;
+  droneCore: THREE.Mesh | null;
+  laserBeams: THREE.Mesh[];
+  hazardCage: THREE.Group | null;
+  roadblockDeck: THREE.Group | null;
   trafficWheels: THREE.Group[];
   baseY: number;
   phase: number;
@@ -279,6 +291,7 @@ export class ObstacleManager {
   private readonly warningAmberMat: THREE.MeshStandardMaterial;
   private readonly dangerRedMat: THREE.MeshStandardMaterial;
   private elapsed = 0;
+  private lastDifficultyLevel = 1;
 
   constructor(textures: TextureBundle) {
     // High-visibility cream-champagne frame & vivid warning emissives so every obstacle reads clearly from afar
@@ -465,6 +478,7 @@ export class ObstacleManager {
     const rivalSpoilerBladeGeo = new THREE.BoxGeometry(1.68, 0.06, 0.22);
     const rivalTailHousingGeo = new THREE.BoxGeometry(1.6, 0.19, 0.08);
     const rivalTailClusterGeo = new THREE.BoxGeometry(1.5, 0.13, 0.06);
+    const rivalSignalGeo = new THREE.BoxGeometry(0.26, 0.13, 0.08);
     const rivalPlateGeo = new THREE.BoxGeometry(0.38, 0.12, 0.03);
     const rivalDiffuserGeo = new THREE.BoxGeometry(1.28, 0.11, 0.12);
     const rivalExhaustGeo = new THREE.CylinderGeometry(0.065, 0.075, 0.22, 12);
@@ -528,6 +542,7 @@ export class ObstacleManager {
       rivalSpoilerBladeGeo,
       rivalTailHousingGeo,
       rivalTailClusterGeo,
+      rivalSignalGeo,
       rivalPlateGeo,
       rivalDiffuserGeo,
       rivalExhaustGeo,
@@ -576,6 +591,12 @@ export class ObstacleManager {
       obsGroup.visible = false;
 
       let hoverTarget: THREE.Object3D | null = null;
+      let signalLeft: THREE.Object3D | null = null;
+      let signalRight: THREE.Object3D | null = null;
+      let droneCore: THREE.Mesh | null = null;
+      const laserBeams: THREE.Mesh[] = [];
+      let hazardCage: THREE.Group | null = null;
+      let roadblockDeck: THREE.Group | null = null;
       const trafficWheels: THREE.Group[] = [];
       let baseY = 0;
       let halfW = 1.15;
@@ -665,6 +686,18 @@ export class ObstacleManager {
         tailBar.position.set(0, 0.39, 2.055);
         carBody.add(tailBar);
 
+        const leftSignal = new THREE.Mesh(rivalSignalGeo, this.warningAmberMat);
+        leftSignal.position.set(-0.78, 0.46, 2.065);
+        leftSignal.visible = false;
+        carBody.add(leftSignal);
+        signalLeft = leftSignal;
+
+        const rightSignal = new THREE.Mesh(rivalSignalGeo, this.warningAmberMat);
+        rightSignal.position.set(0.78, 0.46, 2.065);
+        rightSignal.visible = false;
+        carBody.add(rightSignal);
+        signalRight = rightSignal;
+
         const plate = new THREE.Mesh(rivalPlateGeo, trafficPlateMat);
         plate.position.set(0, 0.25, 2.045);
         carBody.add(plate);
@@ -721,23 +754,27 @@ export class ObstacleManager {
         floorMarker.position.set(0, 0.03, 0.85);
         obsGroup.add(floorMarker);
 
+        const deck = new THREE.Group();
         const jersey = new THREE.Mesh(jerseyGeo, chassisSteelMat);
         jersey.castShadow = true;
-        obsGroup.add(jersey);
+        deck.add(jersey);
 
         const stripeBand = new THREE.Mesh(roadblockStripeGeo, hazardStripeMat);
         stripeBand.position.set(0, 0.36, 0);
-        obsGroup.add(stripeBand);
+        deck.add(stripeBand);
 
         const topWarnRail = new THREE.Mesh(roadblockTopRailGeo, this.dangerRedMat);
         topWarnRail.position.set(0, 1.18, 0);
-        obsGroup.add(topWarnRail);
+        deck.add(topWarnRail);
 
         for (const bx of [-0.98, 0.98]) {
           const beacon = new THREE.Mesh(beaconDomeGeo, this.warningAmberMat);
           beacon.position.set(bx, 1.32, 0);
-          obsGroup.add(beacon);
+          deck.add(beacon);
         }
+
+        obsGroup.add(deck);
+        roadblockDeck = deck;
 
         halfW = 1.34;
         halfZ = 0.58;
@@ -765,6 +802,7 @@ export class ObstacleManager {
           const beam = new THREE.Mesh(laserBeamGeo, this.dangerRedMat);
           beam.position.set(0, by, 0);
           obsGroup.add(beam);
+          laserBeams.push(beam);
         }
 
         halfW = 1.34;
@@ -784,11 +822,12 @@ export class ObstacleManager {
         topBand.scale.set(1, 1.28, 1);
         obsGroup.add(topBand);
 
+        const cage = new THREE.Group();
         for (const angle of [0, Math.PI / 2]) {
           const arc = new THREE.Mesh(hazardArcGeo, this.dangerRedMat);
           arc.position.y = 0.34;
           arc.rotation.y = angle;
-          obsGroup.add(arc);
+          cage.add(arc);
         }
 
         for (const px of [-1.1, 1.1]) {
@@ -796,11 +835,11 @@ export class ObstacleManager {
             const pylon = new THREE.Mesh(hazardPylonGeo, chassisSteelMat);
             pylon.position.set(px, 0.76, pz);
             pylon.castShadow = true;
-            obsGroup.add(pylon);
+            cage.add(pylon);
 
             const tip = new THREE.Mesh(hazardTipGeo, this.warningAmberMat);
             tip.position.set(px, 1.56, pz);
-            obsGroup.add(tip);
+            cage.add(tip);
           }
         }
 
@@ -808,8 +847,11 @@ export class ObstacleManager {
           const crossBar = new THREE.Mesh(hazardCrossBarGeo, this.dangerRedMat);
           crossBar.position.set(0, 1.42, 0);
           crossBar.rotation.y = rotY;
-          obsGroup.add(crossBar);
+          cage.add(crossBar);
         }
+
+        obsGroup.add(cage);
+        hazardCage = cage;
 
         halfW = 1.3;
         halfZ = 1.62;
@@ -862,6 +904,7 @@ export class ObstacleManager {
         const core = new THREE.Mesh(evilCoreGeo, evilCrimsonMat);
         core.position.set(0, 0.54, -0.84);
         droneBody.add(core);
+        droneCore = core;
 
         obsGroup.add(droneBody);
         hoverTarget = droneBody;
@@ -876,9 +919,19 @@ export class ObstacleManager {
         kind,
         lane: 1,
         targetLane: 1,
+        pendingLane: 1,
         hasShiftedLane: false,
+        telegraphTimer: 0,
+        motionMode: 'none',
+        deployProgress: 1,
         group: obsGroup,
         hoverTarget,
+        signalLeft,
+        signalRight,
+        droneCore,
+        laserBeams,
+        hazardCage,
+        roadblockDeck,
         trafficWheels,
         baseY,
         phase: i * 0.85,
@@ -1042,6 +1095,7 @@ export class ObstacleManager {
     relativeSpeedOverride?: number,
   ): LaneIndex[] {
     this.lastWorldSpeed = Math.max(24, worldSpeed);
+    this.lastDifficultyLevel = Math.max(1, difficultyLevel);
     const levelOffset = Math.max(0, difficultyLevel - 1);
     const safetyBufferSec = Math.max(0.12, 0.21 - levelOffset * 0.004);
     const maxTrafficDelta = Math.min(18, 3.0 + levelOffset * 0.45);
@@ -1075,13 +1129,22 @@ export class ObstacleManager {
       obs.active = true;
       obs.lane = lane;
       obs.targetLane = lane;
+      obs.pendingLane = lane;
       obs.hasShiftedLane = false;
+      obs.telegraphTimer = 0;
+      obs.motionMode = 'none';
+      obs.deployProgress = obs.kind === 'roadblock' ? 0 : 1;
       obs.nearMissed = false;
       obs.relativeSpeed = obs.kind === 'traffic' ? relSpeed : 0;
       obs.prevX = laneX;
       obs.prevZ = spawnZ;
       obs.group.position.set(laneX, 0, spawnZ);
       obs.group.rotation.z = 0;
+      if (obs.signalLeft) obs.signalLeft.visible = false;
+      if (obs.signalRight) obs.signalRight.visible = false;
+      if (obs.droneCore) obs.droneCore.scale.set(1, 1, 1);
+      if (obs.hazardCage) obs.hazardCage.rotation.y = 0;
+      if (obs.roadblockDeck) obs.roadblockDeck.scale.set(1, 0.12, 1);
       obs.group.visible = true;
       spawnedLanes.push(lane);
     }
@@ -1121,19 +1184,28 @@ export class ObstacleManager {
     return clear;
   }
 
-  private canTrafficShiftTo(movingObs: ObstacleInstance, candidateLane: LaneIndex): boolean {
+  private canDynamicShiftTo(movingObs: ObstacleInstance, candidateLane: LaneIndex): boolean {
     const z = movingObs.group.position.z;
+    if (z > -82) return false;
+
     const laneOccupied: [boolean, boolean, boolean] = [false, false, false];
+    laneOccupied[movingObs.lane] = true;
     let targetBlocked = false;
 
     this.pool.forEachActive((other) => {
       if (other === movingObs) return;
       const dz = Math.abs(other.group.position.z - z);
-      if (dz < 36) {
-        laneOccupied[other.targetLane] = true;
+      if (dz < 24) {
         laneOccupied[other.lane] = true;
+        laneOccupied[other.targetLane] = true;
+        laneOccupied[other.pendingLane] = true;
       }
-      if ((other.lane === candidateLane || other.targetLane === candidateLane) && dz < 46) {
+      if (
+        (other.lane === candidateLane ||
+          other.targetLane === candidateLane ||
+          other.pendingLane === candidateLane) &&
+        dz < 30
+      ) {
         targetBlocked = true;
       }
     });
@@ -1144,51 +1216,175 @@ export class ObstacleManager {
     return openCount >= 1;
   }
 
-  public update(dt: number, worldSpeed: number, distance = 0): void {
+  private pickAdjacentCandidate(currentLane: LaneIndex): LaneIndex {
+    if (currentLane === 1) {
+      return Math.random() < 0.5 ? 0 : 2;
+    }
+    return 1;
+  }
+
+  public update(
+    dt: number,
+    worldSpeed: number,
+    distance = 0,
+    difficultyLevel = this.lastDifficultyLevel,
+  ): void {
     this.elapsed = (this.elapsed + dt) % (Math.PI * 200);
+    this.lastDifficultyLevel = Math.max(1, difficultyLevel);
     const pulse = Math.sin(this.elapsed * 5.2);
     this.warningAmberMat.emissiveIntensity = 1.65 + pulse * 0.25;
     this.dangerRedMat.emissiveIntensity = 1.78 - pulse * 0.22;
 
-    const enableTrafficWeave = distance >= 1200;
-    const weaveChance = distance >= 2500 ? 0.55 : 0.42;
+    const enableTrafficWeave = distance >= 180;
+    const weaveChance = distance >= 2500 ? 0.62 : distance >= 900 ? 0.5 : 0.36;
+    const droneSwoopChance = this.lastDifficultyLevel >= 3 ? 0.68 : 0.48;
+    const gateSlideChance = this.lastDifficultyLevel >= 2 ? 0.44 : 0;
+    const hazardPatrolChance = this.lastDifficultyLevel >= 3 ? 0.4 : 0;
+    const blinkerOn = Math.floor(this.elapsed * 14) % 2 === 0;
 
     this.pool.forEachActive((obs) => {
       obs.prevX = obs.group.position.x;
       obs.prevZ = obs.group.position.z;
       const effectiveSpeed = Math.max(12, worldSpeed + obs.relativeSpeed);
       obs.group.position.z += effectiveSpeed * dt;
+      const z = obs.group.position.z;
 
-      if (
-        enableTrafficWeave &&
-        obs.kind === 'traffic' &&
-        !obs.hasShiftedLane &&
-        obs.group.position.z >= -170 &&
-        obs.group.position.z <= -115
-      ) {
-        obs.hasShiftedLane = true;
-        if (Math.random() < weaveChance) {
-          const candidate: LaneIndex =
-            obs.lane === 1 ? (Math.random() < 0.5 ? 0 : 2) : 1;
-          if (this.canTrafficShiftTo(obs, candidate)) {
-            obs.targetLane = candidate;
+      if (!obs.hasShiftedLane && z >= -195 && z <= -105) {
+        if (obs.kind === 'traffic' && enableTrafficWeave) {
+          obs.hasShiftedLane = true;
+          if (Math.random() < weaveChance) {
+            const candidate = this.pickAdjacentCandidate(obs.lane);
+            if (this.canDynamicShiftTo(obs, candidate)) {
+              obs.pendingLane = candidate;
+              obs.telegraphTimer = 0.42;
+              obs.motionMode = 'weave';
+            }
+          }
+        } else if (obs.kind === 'evil_drone') {
+          obs.hasShiftedLane = true;
+          if (Math.random() < droneSwoopChance) {
+            const candidate = this.pickAdjacentCandidate(obs.lane);
+            if (this.canDynamicShiftTo(obs, candidate)) {
+              obs.pendingLane = candidate;
+              obs.telegraphTimer = 0.36;
+              obs.motionMode = 'swoop';
+            }
+          }
+        } else if (obs.kind === 'laser_gate' && gateSlideChance > 0) {
+          obs.hasShiftedLane = true;
+          if (Math.random() < gateSlideChance) {
+            const candidate = this.pickAdjacentCandidate(obs.lane);
+            if (this.canDynamicShiftTo(obs, candidate)) {
+              obs.pendingLane = candidate;
+              obs.telegraphTimer = 0.34;
+              obs.motionMode = 'slide';
+            }
+          }
+        } else if (obs.kind === 'hazard_zone' && hazardPatrolChance > 0) {
+          obs.hasShiftedLane = true;
+          if (Math.random() < hazardPatrolChance) {
+            const candidate = this.pickAdjacentCandidate(obs.lane);
+            if (this.canDynamicShiftTo(obs, candidate)) {
+              obs.pendingLane = candidate;
+              obs.telegraphTimer = 0.38;
+              obs.motionMode = 'patrol';
+            }
+          }
+        }
+      }
+
+      if (obs.telegraphTimer > 0) {
+        obs.telegraphTimer -= dt;
+        if (obs.telegraphTimer <= 0) {
+          obs.telegraphTimer = 0;
+          if (this.canDynamicShiftTo(obs, obs.pendingLane)) {
+            obs.targetLane = obs.pendingLane;
+            if (obs.kind === 'evil_drone') {
+              obs.relativeSpeed =
+                this.lastDifficultyLevel >= 3
+                  ? 4 + Math.min(6, (this.lastDifficultyLevel - 2) * 0.65)
+                  : 2.5;
+            }
+          } else {
+            obs.pendingLane = obs.lane;
+            obs.motionMode = 'none';
           }
         }
       }
 
       if (obs.kind === 'traffic') {
+        const telegraphDir = obs.telegraphTimer > 0 ? obs.pendingLane - obs.lane : 0;
+        const activeDir = obs.targetLane - obs.lane;
+        const signalDir = telegraphDir !== 0 ? telegraphDir : activeDir;
+        if (obs.signalLeft) obs.signalLeft.visible = signalDir < 0 && blinkerOn;
+        if (obs.signalRight) obs.signalRight.visible = signalDir > 0 && blinkerOn;
+
         const targetX = LaneSystem.getLaneX(obs.targetLane);
-        const nextX = damp(obs.group.position.x, targetX, 5.4, dt);
+        const nextX = damp(obs.group.position.x, targetX, 5.6, dt);
         obs.group.position.x = nextX;
         obs.group.rotation.z = clamp(-(targetX - nextX) * 0.045, -0.14, 0.14);
         if (Math.abs(targetX - nextX) < 0.08) {
           obs.lane = obs.targetLane;
         }
+      } else if (obs.kind === 'evil_drone') {
+        const targetX = LaneSystem.getLaneX(obs.targetLane);
+        const nextX = damp(obs.group.position.x, targetX, 7.2, dt);
+        obs.group.position.x = nextX;
+        const bank =
+          obs.telegraphTimer > 0
+            ? -(obs.pendingLane - obs.lane) * 0.16
+            : clamp(-(targetX - nextX) * 0.09, -0.24, 0.24);
+        obs.group.rotation.z = damp(obs.group.rotation.z, bank, 10, dt);
+        if (Math.abs(targetX - nextX) < 0.08) {
+          obs.lane = obs.targetLane;
+        }
+        if (obs.droneCore) {
+          obs.droneCore.rotation.y = (obs.droneCore.rotation.y + dt * 4.5) % (Math.PI * 2);
+          obs.droneCore.rotation.x = (obs.droneCore.rotation.x + dt * 2.2) % (Math.PI * 2);
+          const coreScale =
+            obs.telegraphTimer > 0 ? 1.38 : 1.0 + Math.sin(this.elapsed * 9 + obs.phase) * 0.12;
+          obs.droneCore.scale.setScalar(coreScale);
+        }
+      } else if (obs.kind === 'laser_gate') {
+        const targetX = LaneSystem.getLaneX(obs.targetLane);
+        const nextX = damp(obs.group.position.x, targetX, 5.0, dt);
+        obs.group.position.x = nextX;
+        if (Math.abs(targetX - nextX) < 0.08) {
+          obs.lane = obs.targetLane;
+        }
+        for (let b = 0; b < obs.laserBeams.length; b++) {
+          const baseBeamY = b === 0 ? 0.58 : b === 1 ? 1.24 : 1.9;
+          const beam = obs.laserBeams[b];
+          beam.position.y = baseBeamY + Math.sin(this.elapsed * 6.4 + obs.phase + b * 1.4) * 0.14;
+          const beamRadiusScale =
+            obs.telegraphTimer > 0
+              ? 1.28
+              : 0.9 + Math.sin(this.elapsed * 10 + b) * 0.12;
+          beam.scale.set(1, beamRadiusScale, beamRadiusScale);
+        }
+      } else if (obs.kind === 'hazard_zone') {
+        const targetX = LaneSystem.getLaneX(obs.targetLane);
+        const nextX = damp(obs.group.position.x, targetX, 3.8, dt);
+        obs.group.position.x = nextX;
+        if (Math.abs(targetX - nextX) < 0.08) {
+          obs.lane = obs.targetLane;
+        }
+        if (obs.hazardCage) {
+          obs.hazardCage.rotation.y = (obs.hazardCage.rotation.y + dt * 1.65) % (Math.PI * 2);
+          const pulseScale = obs.telegraphTimer > 0 ? 1.08 : 1.0 + Math.sin(this.elapsed * 7 + obs.phase) * 0.03;
+          obs.hazardCage.scale.set(pulseScale, 1, pulseScale);
+        }
+      } else if (obs.kind === 'roadblock' && obs.roadblockDeck) {
+        if (z >= -265 && obs.deployProgress < 1) {
+          obs.deployProgress = Math.min(1, obs.deployProgress + dt * 2.5);
+          const eased = 1 - Math.pow(1 - obs.deployProgress, 3);
+          obs.roadblockDeck.scale.set(1, 0.12 + 0.88 * eased, 1);
+        }
       }
 
       if (obs.hoverTarget) {
         obs.hoverTarget.position.y =
-          obs.baseY + Math.sin(this.elapsed * 9.5 + obs.phase) * 0.012;
+          obs.baseY + Math.sin(this.elapsed * 9.5 + obs.phase) * 0.014;
       }
 
       if (obs.trafficWheels.length > 0) {
@@ -1198,7 +1394,7 @@ export class ObstacleManager {
         }
       }
 
-      if (obs.group.position.z > DESPAWN_Z) {
+      if (z > DESPAWN_Z) {
         obs.active = false;
         obs.group.visible = false;
       }
@@ -1220,26 +1416,34 @@ export class ObstacleManager {
   public describeObstacle(kind: ObstacleType): string {
     switch (kind) {
       case 'traffic':
-        return 'Traffic Car Collision';
+        return 'Traffic Collision';
       case 'barrier':
-        return 'Plasma Energy Barrier';
+        return 'Energy Barrier';
       case 'laser_gate':
-        return 'High-Voltage Laser Gate';
+        return 'Laser Gate';
       case 'roadblock':
-        return 'Armored Cyber Barricade';
+        return 'Roadblock';
       case 'hazard_zone':
-        return 'Electrified Hazard Strip';
+        return 'EMP Hazard';
       case 'evil_drone':
-        return 'Evil Reaper Interceptor';
+        return 'Interceptor Drone';
     }
   }
 
   public reset(): void {
     this.elapsed = 0;
+    this.lastDifficultyLevel = 1;
     this.pool.forEachAll((obs) => {
       obs.active = false;
       obs.hasShiftedLane = false;
+      obs.telegraphTimer = 0;
+      obs.motionMode = 'none';
+      obs.deployProgress = 1;
       obs.group.rotation.z = 0;
+      if (obs.signalLeft) obs.signalLeft.visible = false;
+      if (obs.signalRight) obs.signalRight.visible = false;
+      if (obs.droneCore) obs.droneCore.scale.set(1, 1, 1);
+      if (obs.roadblockDeck) obs.roadblockDeck.scale.set(1, 1, 1);
       obs.group.visible = false;
     });
   }

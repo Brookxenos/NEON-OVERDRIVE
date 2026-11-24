@@ -92,7 +92,7 @@ export class GameHUD {
               <div class="hud-boost-labels">
                 <span style="display:inline-flex;align-items:center;gap:4px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#cbd5e1">
                   <span style="color:#22d3ee;display:inline-flex">${ICON_ZAP}</span>
-                  <span data-role="boost-status">Boost Energy</span>
+                  <span data-role="boost-status">Boost</span>
                 </span>
                 <span class="font-mono-num" style="color:#67e8f9;font-weight:700" data-role="boost-pct">100%</span>
               </div>
@@ -206,10 +206,13 @@ export class GameHUD {
     let goalText = 'Garage: All Cars Unlocked';
     let goalReady = false;
     if (snapshot.nextCarGoal) {
-      goalReady = snapshot.totalCoins >= snapshot.nextCarGoal.cost;
+      const liveDist = Math.max(snapshot.bestDistance, snapshot.distance);
+      goalReady =
+        snapshot.totalCoins >= snapshot.nextCarGoal.cost &&
+        liveDist >= snapshot.nextCarGoal.minBestDistance;
       goalText = goalReady
-        ? `Goal Reached: ${snapshot.nextCarGoal.name} Ready!`
-        : `Next Car: ${snapshot.nextCarGoal.name} (${snapshot.totalCoins}/${snapshot.nextCarGoal.cost})`;
+        ? `Ready to Unlock: ${snapshot.nextCarGoal.name}`
+        : `Next: ${snapshot.nextCarGoal.name} · ${snapshot.totalCoins.toLocaleString()}/${snapshot.nextCarGoal.cost.toLocaleString()} Coins · ${liveDist.toLocaleString()}/${snapshot.nextCarGoal.minBestDistance.toLocaleString()}m`;
     }
     if (goalText !== this.lastGoalText) {
       this.lastGoalText = goalText;
@@ -235,7 +238,7 @@ export class GameHUD {
     if (snapshot.isBoosting !== this.lastIsBoosting || pct !== this.lastBoostPct) {
       if (snapshot.isBoosting !== this.lastIsBoosting) {
         this.lastIsBoosting = snapshot.isBoosting;
-        this.boostStatusEl.textContent = snapshot.isBoosting ? 'Overdrive Active' : 'Boost Energy';
+        this.boostStatusEl.textContent = snapshot.isBoosting ? 'Boosting' : 'Boost';
         this.boostFillEl.classList.toggle('is-boosting', snapshot.isBoosting);
         this.touchBoostBtn.classList.toggle('is-active', snapshot.isBoosting);
       }

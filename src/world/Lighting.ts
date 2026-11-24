@@ -18,11 +18,11 @@ export class Lighting {
   private readonly expressFillColor = new THREE.Color(0x818cf8);
 
   constructor(isSoftwareGl: boolean) {
-    // Bright golden-peach sky light & soft periwinkle-lavender bounce (eliminates dark doom shadows)
+    // Soft golden-peach sky dome & periwinkle bounce to preserve shadow detail
     this.hemi = new THREE.HemisphereLight(0xffe1b8, 0x8578a8, 1.25);
     this.group.add(this.hemi);
 
-    // Warm golden-hour sun angled from front-right horizon (matching reference sunset art)
+    // Warm golden-hour directional sun angled from the front-right horizon
     this.sunsetKey = new THREE.DirectionalLight(0xffd49e, 2.35);
     this.sunsetKey.position.set(28, 16, -24);
     this.sunsetKey.castShadow = !isSoftwareGl;

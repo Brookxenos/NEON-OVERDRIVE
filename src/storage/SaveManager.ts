@@ -14,7 +14,7 @@ export interface SaveData {
 
 const STATS_STORAGE_KEY = 'neon_overdrive_save_v1';
 const SETTINGS_STORAGE_KEY = 'neon_overdrive_settings_v1';
-const CURRENT_PROGRESSION_VERSION = 2;
+const CURRENT_PROGRESSION_VERSION = 3;
 
 const DEFAULT_SAVE_DATA: SaveData = {
   bestScore: 0,

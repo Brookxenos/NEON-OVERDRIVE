@@ -28,11 +28,11 @@ export class GameOverScreen {
     this.element.innerHTML = `
       <div class="animate-modal-enter modal-card modal-card-wide modal-card-danger">
         <div class="modal-header">
-          <p class="modal-kicker modal-kicker-danger" data-role="cause">Hull Integrity Lost</p>
-          <h2 class="font-display modal-title">Run Terminated</h2>
-          <div class="new-record-badge hidden" data-role="record-badge">
+          <p class="modal-kicker modal-kicker-danger" data-role="cause">Collision</p>
+          <h2 class="font-display modal-title">Race Over</h2>
+          <div class="new-record-line hidden" data-role="record-badge">
             ${ICON_TROPHY}
-            <span>New Best Score Record</span>
+            <span>New Best Score</span>
           </div>
         </div>
 
@@ -80,7 +80,7 @@ export class GameOverScreen {
   }
 
   public update(snapshot: GameSnapshot): void {
-    this.causeEl.textContent = snapshot.crashCause || 'Hull Integrity Lost';
+    this.causeEl.textContent = snapshot.crashCause || 'Collision';
     this.recordBadgeEl.classList.toggle('hidden', !snapshot.isNewRecord);
     this.scoreEl.textContent = snapshot.score.toLocaleString();
     this.bestScoreEl.textContent = snapshot.bestScore.toLocaleString();
@@ -88,19 +88,32 @@ export class GameOverScreen {
     this.peakSpeedEl.textContent = `${snapshot.peakSpeedKmh} KM/H`;
 
     const goal = snapshot.nextCarGoal;
-    const unlockReady = Boolean(goal && snapshot.totalCoins >= goal.cost);
+    const unlockReady = Boolean(
+      goal &&
+        snapshot.totalCoins >= goal.cost &&
+        snapshot.bestDistance >= goal.minBestDistance,
+    );
     this.garageBtn.classList.toggle('is-unlock-highlight', unlockReady);
     this.garageBtn.innerHTML = unlockReady
-      ? `${ICON_GARAGE}<span>Unlock!</span>`
+      ? `${ICON_GARAGE}<span>Unlock</span>`
       : `${ICON_GARAGE}<span>Cars</span>`;
 
     if (goal) {
-      const pct = Math.min(100, Math.round((snapshot.totalCoins / Math.max(1, goal.cost)) * 100));
+      const coinRatio = Math.min(1, snapshot.totalCoins / Math.max(1, goal.cost));
+      const distRatio = Math.min(
+        1,
+        snapshot.bestDistance / Math.max(1, goal.minBestDistance),
+      );
+      const pct = Math.round(((coinRatio + distRatio) * 0.5) * 100);
       this.goalBoxEl.innerHTML = `
         <div class="garage-goal-top">
-          <span>Run: <strong style="color:#fcd34d">+${snapshot.runCoins} Coins</strong> · Total: <strong style="color:#ffffff">${snapshot.totalCoins}</strong></span>
+          <span>Run: <strong style="color:#fcd34d">+${snapshot.runCoins} Coins</strong> · Wallet: <strong style="color:#ffffff">${snapshot.totalCoins.toLocaleString()}</strong></span>
           <span class="font-mono-num" style="color:${unlockReady ? '#4ade80' : '#fcd34d'}">
-            ${unlockReady ? `${goal.name} Ready!` : `${goal.name}: ${snapshot.totalCoins}/${goal.cost}`}
+            ${
+              unlockReady
+                ? `${goal.name} Ready`
+                : `${goal.name}: ${snapshot.totalCoins.toLocaleString()}/${goal.cost.toLocaleString()} · ${snapshot.bestDistance.toLocaleString()}/${goal.minBestDistance.toLocaleString()}m`
+            }
           </span>
         </div>
         <div class="goal-progress-track">
@@ -110,7 +123,7 @@ export class GameOverScreen {
     } else {
       this.goalBoxEl.innerHTML = `
         <div class="garage-goal-top">
-          <span>Run: <strong style="color:#fcd34d">+${snapshot.runCoins} Coins</strong> · Total: <strong style="color:#ffffff">${snapshot.totalCoins}</strong></span>
+          <span>Run: <strong style="color:#fcd34d">+${snapshot.runCoins} Coins</strong> · Wallet: <strong style="color:#ffffff">${snapshot.totalCoins.toLocaleString()}</strong></span>
           <span style="color:#4ade80;font-weight:700">All Cars Unlocked</span>
         </div>
       `;

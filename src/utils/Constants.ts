@@ -40,7 +40,7 @@ export const MAX_MULTIPLIER = 8;
 
 export const ORB_COIN_VALUE = 1;
 export const CELL_COIN_VALUE = 1;
-export const GOLD_COIN_VALUE = 3;
+export const GOLD_COIN_VALUE = 2;
 
 export const COLORS = {
   bgVoid: 0xf2a582,

@@ -157,8 +157,8 @@ export class GarageModal {
             <p class="modal-kicker">3D Car Showroom · <span data-role="car-count">${CAR_CATALOG.length} Cars</span></p>
             <h2 class="font-display modal-title" style="font-size:21px">Garage & Unlocks</h2>
           </div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div class="wallet-pill">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="wallet-readout">
               <span style="color:#fbbf24;display:inline-flex">${ICON_COIN}</span>
               <span class="font-mono-num" data-role="wallet-coins">0</span>
             </div>
@@ -310,26 +310,34 @@ export class GarageModal {
         : `${visibleCars.length} of ${CAR_CATALOG.length} Cars`;
 
     if (snapshot.nextCarGoal) {
-      const pct = Math.min(
-        100,
-        Math.round((snapshot.totalCoins / Math.max(1, snapshot.nextCarGoal.cost)) * 100),
+      const coinsMet = snapshot.totalCoins >= snapshot.nextCarGoal.cost;
+      const distMet = snapshot.bestDistance >= snapshot.nextCarGoal.minBestDistance;
+      const readyToUnlock = coinsMet && distMet;
+      const coinRatio = Math.min(1, snapshot.totalCoins / Math.max(1, snapshot.nextCarGoal.cost));
+      const distRatio = Math.min(
+        1,
+        snapshot.bestDistance / Math.max(1, snapshot.nextCarGoal.minBestDistance),
       );
-      const remaining = Math.max(0, snapshot.nextCarGoal.cost - snapshot.totalCoins);
+      const pct = Math.round(((coinRatio + distRatio) * 0.5) * 100);
       this.goalBannerEl.innerHTML = `
         <div class="garage-goal-top">
-          <span>Next Goal: <strong style="color:#fef08a">${snapshot.nextCarGoal.name}</strong></span>
-          <span class="font-mono-num" style="color:${remaining === 0 ? '#4ade80' : '#fcd34d'}">
-            ${remaining === 0 ? 'Ready to Unlock!' : `${snapshot.totalCoins} / ${snapshot.nextCarGoal.cost} Coins`}
+          <span>Next: <strong style="color:#fef08a">${snapshot.nextCarGoal.name}</strong></span>
+          <span class="font-mono-num" style="color:${readyToUnlock ? '#4ade80' : '#cbd5e1'}">
+            ${
+              readyToUnlock
+                ? 'Ready to Unlock'
+                : `<span style="color:${coinsMet ? '#4ade80' : '#fcd34d'}">${snapshot.totalCoins.toLocaleString()}/${snapshot.nextCarGoal.cost.toLocaleString()} Coins</span> · <span style="color:${distMet ? '#4ade80' : '#67e8f9'}">${snapshot.bestDistance.toLocaleString()}/${snapshot.nextCarGoal.minBestDistance.toLocaleString()}m</span>`
+            }
           </span>
         </div>
         <div class="goal-progress-track">
-          <div class="goal-progress-fill ${remaining === 0 ? 'is-ready' : ''}" style="width:${pct}%"></div>
+          <div class="goal-progress-fill ${readyToUnlock ? 'is-ready' : ''}" style="width:${pct}%"></div>
         </div>
       `;
     } else {
       this.goalBannerEl.innerHTML = `
         <div class="garage-goal-top">
-          <span style="color:#4ade80;font-weight:700">All ${CAR_CATALOG.length} Arcade Cars Unlocked</span>
+          <span style="color:#4ade80;font-weight:700">All ${CAR_CATALOG.length} Cars Unlocked</span>
           <span class="font-mono-num" style="color:#67e8f9">${CAR_CATALOG.length} / ${CAR_CATALOG.length}</span>
         </div>
       `;
@@ -344,13 +352,21 @@ export class GarageModal {
     this.stageBadgeEl.innerHTML = `
       <div class="garage-stage-title-row">
         <span class="font-display" style="font-size:17px;color:#ffffff">${previewCar.name}</span>
-        <span class="garage-series-tag">${previewCar.series}</span>
-        ${previewBonus > 0 ? `<span class="font-mono-num garage-speed-tag">+${previewBonus} KM/H</span>` : ''}
-        <span class="garage-stage-pill ${previewEquipped ? 'is-equipped' : previewUnlocked ? 'is-owned' : 'is-locked'}">
-          ${previewEquipped ? 'Equipped' : previewUnlocked ? 'Unlocked' : `Locked · ${previewCar.costCoins} Coins`}
+        <span class="garage-meta-sep" aria-hidden="true">·</span>
+        <span class="garage-meta-text">${previewCar.series}</span>
+        ${previewBonus > 0 ? `<span class="garage-meta-sep" aria-hidden="true">·</span><span class="font-mono-num garage-speed-text">+${previewBonus} KM/H</span>` : ''}
+        <span class="garage-meta-sep" aria-hidden="true">·</span>
+        <span class="garage-stage-status ${previewEquipped ? 'is-equipped' : previewUnlocked ? 'is-owned' : 'is-locked'}">
+          ${
+            previewEquipped
+              ? 'Equipped'
+              : previewUnlocked
+                ? 'Unlocked'
+                : `${previewCar.costCoins.toLocaleString()} Coins · ${previewCar.minBestDistance.toLocaleString()}m Best`
+          }
         </span>
       </div>
-      <div style="font-size:12px;color:#cbd5e1;margin-top:2px">${previewCar.tagline}</div>
+      <div style="font-size:12px;color:#cbd5e1;margin-top:3px">${previewCar.tagline}</div>
     `;
 
     this.listEl.innerHTML = visibleCars
@@ -359,20 +375,25 @@ export class GarageModal {
         const isSelected = snapshot.selectedCarId === car.id;
         const isPreviewing = snapshot.previewCarId === car.id;
         const canAfford = snapshot.totalCoins >= car.costCoins;
+        const meetsDistance = snapshot.bestDistance >= car.minBestDistance;
+        const canUnlock = canAfford && meetsDistance;
         const bonusKmh = Math.round(car.speedBonus * SPEED_TO_KMH);
-        const pct = isUnlocked
-          ? 100
-          : Math.min(100, Math.round((snapshot.totalCoins / Math.max(1, car.costCoins)) * 100));
+        const coinRatio = Math.min(1, snapshot.totalCoins / Math.max(1, car.costCoins));
+        const distRatio = Math.min(
+          1,
+          car.minBestDistance <= 0 ? 1 : snapshot.bestDistance / car.minBestDistance,
+        );
+        const pct = isUnlocked ? 100 : Math.round(((coinRatio + distRatio) * 0.5) * 100);
 
         let actionsHtml = '';
         if (isSelected) {
           actionsHtml = `<button type="button" class="garage-action-btn is-equipped" data-car-action="preview" data-car-id="${car.id}">${ICON_CHECK}<span>Equipped</span></button>`;
         } else if (isUnlocked) {
           actionsHtml = `<button type="button" class="garage-action-btn is-select" data-car-action="select" data-car-id="${car.id}">Drive</button>`;
-        } else if (canAfford) {
+        } else if (canUnlock) {
           actionsHtml = `
           <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
-            <button type="button" class="garage-action-btn is-unlock-ready" data-car-action="unlock" data-car-id="${car.id}">${ICON_COIN}<span>Unlock · ${car.costCoins}</span></button>
+            <button type="button" class="garage-action-btn is-unlock-ready" data-car-action="unlock" data-car-id="${car.id}">${ICON_COIN}<span>Unlock · ${car.costCoins.toLocaleString()}</span></button>
           </div>
         `;
         } else {
@@ -390,16 +411,20 @@ export class GarageModal {
           <div class="garage-car-info">
             <div class="garage-car-title-row">
               <span class="font-display garage-car-name">${car.name}</span>
-              <span class="garage-series-tag">${car.series}</span>
-              ${bonusKmh > 0 ? `<span class="font-mono-num garage-speed-tag">+${bonusKmh} KM/H</span>` : '<span class="garage-speed-tag">Starter</span>'}
+              <span class="garage-meta-sep" aria-hidden="true">·</span>
+              <span class="garage-meta-text">${car.series}</span>
+              <span class="garage-meta-sep" aria-hidden="true">·</span>
+              ${bonusKmh > 0 ? `<span class="font-mono-num garage-speed-text">+${bonusKmh} KM/H</span>` : '<span class="garage-speed-text">Starter</span>'}
             </div>
             <div class="garage-car-tagline">${car.tagline}</div>
             ${
               !isUnlocked
                 ? `<div class="garage-locked-meta">
-                    <span class="font-mono-num" style="color:${canAfford ? '#4ade80' : '#fcd34d'}">${snapshot.totalCoins} / ${car.costCoins} Coins</span>
+                    <span class="font-mono-num" style="color:${canAfford ? '#4ade80' : '#fcd34d'}">${snapshot.totalCoins.toLocaleString()}/${car.costCoins.toLocaleString()} Coins</span>
+                    <span class="garage-meta-sep" aria-hidden="true">·</span>
+                    <span class="font-mono-num" style="color:${meetsDistance ? '#4ade80' : '#67e8f9'}">${snapshot.bestDistance.toLocaleString()}/${car.minBestDistance.toLocaleString()}m Best</span>
                    </div>
-                   <div class="goal-progress-track" style="margin-top:4px;height:5px"><div class="goal-progress-fill ${canAfford ? 'is-ready' : ''}" style="width:${pct}%"></div></div>`
+                   <div class="goal-progress-track" style="margin-top:4px;height:4px"><div class="goal-progress-fill ${canUnlock ? 'is-ready' : ''}" style="width:${pct}%"></div></div>`
                 : ''
             }
           </div>

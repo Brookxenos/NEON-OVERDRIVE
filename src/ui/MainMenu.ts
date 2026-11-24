@@ -106,17 +106,26 @@ export class MainMenu {
 
     const activeCar = getCarSpec(snapshot.selectedCarId);
     const goal = snapshot.nextCarGoal;
-    const unlockReady = Boolean(goal && snapshot.totalCoins >= goal.cost);
+    const unlockReady = Boolean(
+      goal &&
+        snapshot.totalCoins >= goal.cost &&
+        snapshot.bestDistance >= goal.minBestDistance,
+    );
     this.garageBtn.classList.toggle('is-unlock-highlight', unlockReady);
     this.garageBtn.innerHTML = unlockReady
-      ? `${ICON_GARAGE}<span>Unlock Car!</span>`
+      ? `${ICON_GARAGE}<span>Unlock Car</span>`
       : `${ICON_GARAGE}<span>Cars (${snapshot.unlockedCars.length}/${CAR_CATALOG.length})</span>`;
 
     if (goal) {
-      const pct = Math.min(100, Math.round((snapshot.totalCoins / Math.max(1, goal.cost)) * 100));
+      const coinRatio = Math.min(1, snapshot.totalCoins / Math.max(1, goal.cost));
+      const distRatio = Math.min(
+        1,
+        snapshot.bestDistance / Math.max(1, goal.minBestDistance),
+      );
+      const pct = Math.round(((coinRatio + distRatio) * 0.5) * 100);
       const statusText = unlockReady
-        ? `Ready to unlock ${goal.name}!`
-        : `Goal: ${goal.name} · ${snapshot.totalCoins}/${goal.cost} Coins`;
+        ? `Ready to unlock ${goal.name}`
+        : `${goal.name} · ${snapshot.totalCoins.toLocaleString()}/${goal.cost.toLocaleString()} Coins · ${snapshot.bestDistance.toLocaleString()}/${goal.minBestDistance.toLocaleString()} m`;
       this.carGoalCard.innerHTML = `
         <div class="menu-goal-row">
           <span>Car: <strong style="color:#ffffff">${activeCar.name}</strong></span>

@@ -23,8 +23,8 @@ export class PauseMenu {
     this.element.innerHTML = `
       <div class="animate-modal-enter modal-card">
         <div class="modal-header">
-          <p class="modal-kicker">Race Paused</p>
-          <h2 class="font-display modal-title">System Standby</h2>
+          <p class="modal-kicker">NEON OVERDRIVE</p>
+          <h2 class="font-display modal-title">Paused</h2>
           <div class="modal-submeta">
             <span>Score <strong class="font-mono-num" style="color:#fff" data-role="score">0</strong></span>
             <span style="color:#475569" aria-hidden="true">·</span>

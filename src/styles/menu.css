@@ -333,19 +333,15 @@
   margin-top: 4px;
 }
 
-.new-record-badge {
-  margin-top: 12px;
+.new-record-line {
+  margin-top: 10px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 12px;
-  border-radius: 8px;
-  background: rgba(245, 158, 11, 0.18);
-  border: 1px solid rgba(251, 191, 36, 0.5);
   color: #fcd34d;
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
@@ -542,6 +538,8 @@
 .garage-filter-btn {
   height: 26px;
   padding: 0 9px;
+  flex-shrink: 0;
+  white-space: nowrap;
   border-radius: 7px;
   background: rgba(15, 23, 42, 0.9);
   border: 1px solid rgba(148, 163, 184, 0.24);
@@ -578,7 +576,7 @@
   border: 1px solid var(--border-cyan);
   border-radius: 12px;
   padding: 10px 14px;
-  max-width: 360px;
+  max-width: 390px;
   pointer-events: auto;
 }
 
@@ -586,34 +584,26 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
-.garage-stage-pill {
+.garage-stage-status {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  border-radius: 6px;
-  padding: 2px 7px;
 }
 
-.garage-stage-pill.is-equipped {
-  background: rgba(34, 211, 238, 0.18);
+.garage-stage-status.is-equipped {
   color: #67e8f9;
-  border: 1px solid rgba(34, 211, 238, 0.45);
 }
 
-.garage-stage-pill.is-owned {
-  background: rgba(34, 197, 94, 0.18);
+.garage-stage-status.is-owned {
   color: #86efac;
-  border: 1px solid rgba(34, 197, 94, 0.45);
 }
 
-.garage-stage-pill.is-locked {
-  background: rgba(245, 158, 11, 0.16);
+.garage-stage-status.is-locked {
   color: #fcd34d;
-  border: 1px solid rgba(251, 191, 36, 0.45);
 }
 
 .garage-cam-bar {
@@ -630,6 +620,8 @@
 .garage-cam-btn {
   height: 32px;
   padding: 0 12px;
+  flex-shrink: 0;
+  white-space: nowrap;
   border-radius: 8px;
   background: transparent;
   color: #cbd5e1;
@@ -648,29 +640,25 @@
   color: #020617;
 }
 
-.wallet-pill {
-  height: 36px;
-  padding: 0 11px;
-  border-radius: 10px;
-  background: rgba(245, 158, 11, 0.14);
-  border: 1px solid rgba(251, 191, 36, 0.45);
-  color: #fde047;
+.wallet-readout {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  color: #fde047;
+  font-size: 13px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .garage-goal-banner {
-  background: var(--surface-dark);
-  border: 1px solid var(--border-subtle);
-  border-radius: 12px;
-  padding: 9px 12px;
+  background: rgba(15, 23, 42, 0.55);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 8px;
+  padding: 8px 10px;
   margin-bottom: 9px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
 }
 
 .garage-goal-top {
@@ -713,25 +701,26 @@
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
-  border-radius: 11px;
-  background: var(--surface-dark);
-  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.46);
+  border-left: 3px solid transparent;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
   cursor: pointer;
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .garage-car-card:hover {
-  border-color: rgba(148, 163, 184, 0.5);
+  background: rgba(30, 41, 59, 0.58);
 }
 
 .garage-car-card.is-previewing {
-  border-color: rgba(251, 191, 36, 0.72);
-  background: rgba(30, 41, 59, 0.85);
+  border-left-color: #fbbf24;
+  background: rgba(30, 41, 59, 0.8);
 }
 
 .garage-car-card.is-selected {
-  border-color: rgba(34, 211, 238, 0.72);
-  background: rgba(8, 47, 73, 0.38);
+  border-left-color: #22d3ee;
+  background: rgba(8, 47, 73, 0.4);
 }
 
 .garage-car-visual {
@@ -789,8 +778,8 @@
 
 .garage-car-title-row {
   display: flex;
-  align-items: center;
-  gap: 7px;
+  align-items: baseline;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
@@ -800,28 +789,25 @@
   color: #ffffff;
 }
 
-.garage-series-tag {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: #fde68a;
-  background: rgba(245, 158, 11, 0.14);
-  border: 1px solid rgba(251, 191, 36, 0.32);
-  border-radius: 6px;
-  padding: 2px 6px;
+.garage-meta-sep {
+  color: #475569;
+  font-size: 11px;
 }
 
-.garage-speed-tag {
+.garage-meta-text {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #fcd34d;
+}
+
+.garage-speed-text {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: #67e8f9;
-  background: rgba(6, 182, 212, 0.14);
-  border: 1px solid rgba(34, 211, 238, 0.3);
-  border-radius: 6px;
-  padding: 2px 6px;
 }
 
 .garage-car-tagline {
@@ -831,6 +817,10 @@
 }
 
 .garage-locked-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
   font-size: 11px;
   margin-top: 4px;
 }

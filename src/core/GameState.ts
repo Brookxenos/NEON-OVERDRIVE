@@ -15,6 +15,7 @@ export interface NextCarGoal {
   id: CarId;
   name: string;
   cost: number;
+  minBestDistance: number;
 }
 
 export interface GameSnapshot {
@@ -73,7 +74,12 @@ export class GameState {
       previewCarId: selectedCarId,
       unlockedCars: [...unlockedCars],
       nextCarGoal: nextLocked
-        ? { id: nextLocked.id, name: nextLocked.name, cost: nextLocked.costCoins }
+        ? {
+            id: nextLocked.id,
+            name: nextLocked.name,
+            cost: nextLocked.costCoins,
+            minBestDistance: nextLocked.minBestDistance,
+          }
         : null,
       difficultyLevel: 1,
       bestScore,

@@ -233,7 +233,7 @@ function createBuildingWindowTexture(
   canvas.height = 512;
   const ctx = canvas.getContext('2d')!;
 
-  // Warm sunlit pastel coastal stucco facade (Miami Beach / Leonida sunset palette)
+  // Warm sunlit pastel coastal stucco facade
   const wallGrad = ctx.createLinearGradient(0, 0, 0, 512);
   wallGrad.addColorStop(0, wallTopHex);
   wallGrad.addColorStop(0.65, wallBottomHex);
@@ -370,7 +370,7 @@ function createSkyBackdropTexture(): THREE.CanvasTexture {
   canvas.height = 512;
   const ctx = canvas.getContext('2d')!;
 
-  // Bright coastal golden-hour sunset matching the attached Miami/Leonida artwork
+  // Bright coastal golden-hour sunset sky gradient
   const skyGrad = ctx.createLinearGradient(0, 0, 0, 512);
   skyGrad.addColorStop(0, '#6b6fb8');
   skyGrad.addColorStop(0.22, '#a774b4');
@@ -383,7 +383,7 @@ function createSkyBackdropTexture(): THREE.CanvasTexture {
   ctx.fillStyle = skyGrad;
   ctx.fillRect(0, 0, 1024, 512);
 
-  // Bright golden setting sun in the front-right sky (matching Image 1)
+  // Warm setting sun in the front-right sky
   const sunX = 684;
   const sunY = 216;
   const sunHalo = ctx.createRadialGradient(sunX, sunY, 10, sunX, sunY, 190);
@@ -417,7 +417,7 @@ function createSkyBackdropTexture(): THREE.CanvasTexture {
     ctx.fill();
   }
 
-  // Distant silhouette plane + faint contrail (like Image 1)
+  // Distant aircraft silhouette and faint contrail
   ctx.strokeStyle = 'rgba(255, 240, 225, 0.24)';
   ctx.lineWidth = 1.2;
   ctx.beginPath();

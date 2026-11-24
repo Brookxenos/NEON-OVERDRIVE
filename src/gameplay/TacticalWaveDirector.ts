@@ -166,7 +166,7 @@ export class TacticalWaveDirector {
           const isLast = idx === sequence.length - 1;
           this.queue.push({
             safeLane: lane,
-            blockCount: idx === 0 ? 1 : 2,
+            blockCount: idx % 2 === 0 ? 1 : 2,
             obstacleKind: 'traffic',
             relativeSpeedOverride: convoySpeed,
             spacingScale: isLast ? 1.0 : 0.92,
@@ -324,7 +324,7 @@ export class TacticalWaveDirector {
           const isLast = idx === sequence.length - 1;
           this.queue.push({
             safeLane: lane,
-            blockCount: idx === 0 ? 1 : 2,
+            blockCount: kinds[idx] === 'evil_drone' ? 1 : 2,
             obstacleKind: kinds[idx],
             spacingScale: isLast ? 0.94 : 0.84,
             preferRewardInSafeLane: true,
@@ -462,7 +462,7 @@ export class TacticalWaveDirector {
         const kind: ObstacleType = difficultyLevel >= 2 ? 'laser_gate' : 'barrier';
         sequence.forEach((lane, idx) => {
           const isLast = idx === sequence.length - 1;
-          const blockCount: 1 | 2 = difficultyLevel >= 2 || idx >= 1 ? 2 : 1;
+          const blockCount: 1 | 2 = idx % 2 === 0 ? 1 : 2;
           this.queue.push({
             safeLane: lane,
             blockCount,
@@ -481,7 +481,7 @@ export class TacticalWaveDirector {
           const isLast = idx === lanesOrder.length - 1;
           this.queue.push({
             safeLane: lane,
-            blockCount: difficultyLevel >= 2 || idx >= 1 ? 2 : 1,
+            blockCount: idx === 1 ? 2 : 1,
             obstacleKind: 'traffic',
             relativeSpeedOverride: convoySpeed,
             spacingScale: isLast ? 0.94 : 0.84,
@@ -527,7 +527,7 @@ export class TacticalWaveDirector {
           const isLast = idx === lanesOrder.length - 1;
           this.queue.push({
             safeLane: lane,
-            blockCount: 2,
+            blockCount: idx % 2 === 0 ? 1 : 2,
             obstacleKind: 'hazard_zone',
             spacingScale: isLast ? 1.0 : 0.88,
             preferRewardInSafeLane: true,
@@ -605,7 +605,7 @@ export class TacticalWaveDirector {
           const isLast = idx === lanesOrder.length - 1;
           this.queue.push({
             safeLane: lane,
-            blockCount: 2,
+            blockCount: idx % 2 === 1 ? 1 : 2,
             obstacleKind: idx % 2 === 0 ? 'hazard_zone' : 'laser_gate',
             spacingScale: isLast ? 1.0 : 0.86,
             preferRewardInSafeLane: true,
@@ -659,7 +659,7 @@ export class TacticalWaveDirector {
           const isLast = idx === lanesOrder.length - 1;
           this.queue.push({
             safeLane: lane,
-            blockCount: 2,
+            blockCount: kinds[idx] === 'evil_drone' ? 1 : 2,
             obstacleKind: kinds[idx],
             spacingScale: isLast ? 0.94 : 0.82,
             preferRewardInSafeLane: true,
@@ -681,7 +681,7 @@ export class TacticalWaveDirector {
           const isLast = idx === lanesOrder.length - 1;
           this.queue.push({
             safeLane: lane,
-            blockCount: 2,
+            blockCount: kinds[idx] === 'evil_drone' ? 1 : 2,
             obstacleKind: kinds[idx],
             spacingScale: isLast ? 0.96 : 0.82,
             preferRewardInSafeLane: true,

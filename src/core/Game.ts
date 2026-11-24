@@ -152,7 +152,7 @@ export class Game {
         const triggered = this.boostSystem.setManualHeld(active);
         if (triggered) {
           this.audioManager.playBoostActivate();
-          this.state.pushBanner('OVERDRIVE ENGAGED', 'cyan');
+          this.state.pushBanner('BOOST', 'cyan');
         }
       },
       onThrottleChange: (active: boolean) => this.carController.setThrottle(active),
@@ -300,7 +300,10 @@ export class Game {
       return this.selectCar(carId);
     }
     const spec = getCarSpec(carId);
-    if (this.saveData.coins < spec.costCoins) {
+    if (
+      this.saveData.coins < spec.costCoins ||
+      this.saveData.bestDistance < spec.minBestDistance
+    ) {
       return false;
     }
 
@@ -343,7 +346,12 @@ export class Game {
       previewCarId: this.previewedCarId,
       unlockedCars: [...this.saveData.unlockedCars],
       nextCarGoal: nextLocked
-        ? { id: nextLocked.id, name: nextLocked.name, cost: nextLocked.costCoins }
+        ? {
+            id: nextLocked.id,
+            name: nextLocked.name,
+            cost: nextLocked.costCoins,
+            minBestDistance: nextLocked.minBestDistance,
+          }
         : null,
     });
   }
@@ -362,7 +370,11 @@ export class Game {
     this.saveFlushTimer = 0;
     const nextGoal = getNextLockedCar(this.saveData.unlockedCars);
     this.announcedGoalId =
-      nextGoal && this.saveData.coins >= nextGoal.costCoins ? nextGoal.id : null;
+      nextGoal &&
+      this.saveData.coins >= nextGoal.costCoins &&
+      this.saveData.bestDistance >= nextGoal.minBestDistance
+        ? nextGoal.id
+        : null;
 
     this.boostSystem.reset();
     this.scoreManager.reset();
@@ -512,14 +524,14 @@ export class Game {
 
     if (!this.passed500m && exactDistance >= 500) {
       this.passed500m = true;
-      this.state.pushBanner('500M CLEAR · SPEED SURGE', 'cyan');
+      this.state.pushBanner('500M · SPEED UP', 'cyan');
     }
 
     if (!this.passed2500m && exactDistance >= 2500) {
       this.passed2500m = true;
       this.boostSystem.addEnergy(100);
       this.audioManager.playMilestoneFanfare();
-      this.state.pushBanner('2,500M EXPRESS ZONE · +50% SCORE & LIVE TRAFFIC', 'amber');
+      this.state.pushBanner('2,500M EXPRESS · 1.5X SCORE', 'amber');
     }
 
     if (difficultyLevel > this.lastAnnouncedLevel) {
@@ -533,31 +545,31 @@ export class Game {
       ) {
         const tierMsg =
           difficultyLevel === 2
-            ? 'TIER 2 · TRAFFIC INTENSIFIES'
+            ? 'TIER 2 · LIVE TRAFFIC'
             : difficultyLevel === 3
               ? 'TIER 3 · TIGHT CORRIDORS'
               : difficultyLevel === 4
-                ? 'TIER 4 · SLALOM LOCKDOWN'
+                ? 'TIER 4 · SLALOM'
                 : difficultyLevel === 5
-                  ? 'TIER 5 · GAUNTLET CROSSFIRE'
+                  ? 'TIER 5 · CROSSFIRE'
                   : difficultyLevel === 8
-                    ? 'TIER 8 · PHANTOM ZIG-ZAG'
+                    ? 'TIER 8 · ZIG-ZAG'
                     : difficultyLevel === 10
-                      ? 'TIER 10 · VELOCITY CHOKE'
+                      ? 'TIER 10 · HIGH SPEED'
                       : difficultyLevel === 12
-                        ? 'TIER 12 · OVERDRIVE BLITZ'
+                        ? 'TIER 12 · OVERDRIVE'
                         : difficultyLevel === 15
-                          ? 'TIER 15 · RUSH HOUR CONVOY'
+                          ? 'TIER 15 · RUSH HOUR'
                           : difficultyLevel === 18
-                            ? 'TIER 18 · APEX HELLSTORM'
-                            : `TIER ${difficultyLevel} · VELOCITY SURGE`;
+                            ? 'TIER 18 · FINAL TIER'
+                            : `TIER ${difficultyLevel} · SPEED UP`;
         this.state.pushBanner(tierMsg, difficultyLevel >= 4 ? 'magenta' : 'amber');
       }
     }
 
     if (this.boostSystem.update(dt)) {
       this.audioManager.playBoostActivate();
-      this.state.pushBanner('OVERDRIVE ENGAGED', 'cyan');
+      this.state.pushBanner('BOOST', 'cyan');
     }
 
     if (this.scoreFeverTimer > 0) {
@@ -591,7 +603,7 @@ export class Game {
     );
     const currPlayerX = this.carController.getX();
 
-    this.obstacleManager.update(dt, this.currentSpeed, exactDistance);
+    this.obstacleManager.update(dt, this.currentSpeed, exactDistance, difficultyLevel);
     this.collectibleManager.update(dt, this.currentSpeed);
 
     this.collisionSystem.evaluate(
@@ -695,7 +707,7 @@ export class Game {
 
     const stepsCrossed = milestoneStep - this.lastScoreMilestone;
     this.lastScoreMilestone = milestoneStep;
-    const bonusCoins = 15 * stepsCrossed;
+    const bonusCoins = 8 * stepsCrossed;
 
     this.saveData.coins += bonusCoins;
     this.scoreManager.addBonusCoins(bonusCoins);
@@ -705,7 +717,7 @@ export class Game {
 
     this.audioManager.playMilestoneFanfare();
     this.state.pushBanner(
-      `${(milestoneStep * 10).toLocaleString()}K FEVER · 2X SCORE +${bonusCoins} COINS!`,
+      `${(milestoneStep * 10).toLocaleString()}K · 2X SCORE +${bonusCoins} COINS`,
       'amber',
     );
     this.checkCarUnlockGoal();
@@ -713,13 +725,15 @@ export class Game {
 
   private checkCarUnlockGoal(): void {
     const nextGoal = getNextLockedCar(this.saveData.unlockedCars);
+    const liveBestDist = Math.max(this.saveData.bestDistance, this.scoreManager.getDistance());
     if (
       nextGoal &&
       this.saveData.coins >= nextGoal.costCoins &&
+      liveBestDist >= nextGoal.minBestDistance &&
       this.announcedGoalId !== nextGoal.id
     ) {
       this.announcedGoalId = nextGoal.id;
-      this.state.pushBanner(`CAR UNLOCK READY: ${nextGoal.name.toUpperCase()}`, 'amber');
+      this.state.pushBanner(`CAR READY: ${nextGoal.name.toUpperCase()}`, 'amber');
     }
   }
 
