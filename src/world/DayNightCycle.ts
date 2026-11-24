@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 
-export const DAY_NIGHT_CYCLE_SECONDS = 480;
+export const INITIAL_PHASE_SECONDS = 90;
+export const SUBSEQUENT_PHASE_SECONDS = 150;
+export const FIRST_CYCLE_SECONDS = INITIAL_PHASE_SECONDS * 4;
+export const SUBSEQUENT_CYCLE_SECONDS = SUBSEQUENT_PHASE_SECONDS * 4;
 
 export interface DayNightSample {
   readonly hemiSky: THREE.Color;
@@ -213,8 +216,14 @@ export function createDayNightSample(): DayNightSample {
 }
 
 export function sampleDayNightCycle(raceDurationSeconds: number, out: DayNightSample): void {
-  const safeDuration = Math.max(0, raceDurationSeconds);
-  const phase = (safeDuration % DAY_NIGHT_CYCLE_SECONDS) / DAY_NIGHT_CYCLE_SECONDS;
+  const safeDuration = Number.isFinite(raceDurationSeconds)
+    ? Math.max(0, raceDurationSeconds)
+    : 0;
+  const phase =
+    safeDuration < FIRST_CYCLE_SECONDS
+      ? safeDuration / FIRST_CYCLE_SECONDS
+      : ((safeDuration - FIRST_CYCLE_SECONDS) % SUBSEQUENT_CYCLE_SECONDS) /
+        SUBSEQUENT_CYCLE_SECONDS;
 
   let prev = CYCLE_KEYFRAMES[CYCLE_KEYFRAMES.length - 1];
   let next = CYCLE_KEYFRAMES[0];
