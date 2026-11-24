@@ -424,7 +424,6 @@ export class Game {
   };
 
   private seedOpeningHighway(): string {
-    // Populate starter rewards and a randomized 5-wave tactical opening formation on every start/restart
     this.collectibleManager.spawnRewardInLane(1, -44);
     const openingLabel = this.waveDirector.seedOpeningFormation();
     const openingZPositions = [-92, -144, -196, -248, -300];
@@ -519,7 +518,6 @@ export class Game {
       return;
     }
 
-    // Active racing simulation
     if (this.carController.physics.isCrashed()) {
       this.state.setStatus('gameover');
       this.renderer.render(this.sceneManager.scene, this.sceneManager.cameraController.camera);

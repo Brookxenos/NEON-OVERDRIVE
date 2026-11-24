@@ -130,24 +130,19 @@ function createBuildingTrimArchetype(kind: 'balcony_tower' | 'art_deco_hotel' | 
   const parts: THREE.BufferGeometry[] = [];
 
   if (kind === 'balcony_tower') {
-    // Unit-normalized tower (base 1x1x1 centered at y=0.5, z=0) with wrap-around balcony slabs + roof railing
     for (let floor = 1; floor <= 6; floor++) {
       const y = floor / 7;
       parts.push(makePartBox(1.09, 0.022, 1.09, 0, y, 0));
     }
-    // Roof parapet & penthouse mechanical box
     parts.push(makePartBox(1.05, 0.04, 1.05, 0, 1.01, 0));
     parts.push(makePartBox(0.48, 0.09, 0.44, 0, 1.055, -0.08));
   } else if (kind === 'art_deco_hotel') {
-    // Stepped Art Deco crown + horizontal eyebrow ledges + ground floor street awning
     parts.push(makePartBox(1.06, 0.05, 1.06, 0, 1.0, 0));
     parts.push(makePartBox(0.68, 0.11, 0.72, 0, 1.06, 0));
     parts.push(makePartBox(0.36, 0.09, 0.44, 0, 1.13, 0));
-    // Projecting mid-facade ledges & rooftop rail
     parts.push(makePartBox(1.06, 0.024, 1.06, 0, 0.56, 0));
     parts.push(makePartBox(1.12, 0.032, 1.12, 0, 0.24, 0));
   } else {
-    // Coastal resort plaza with upper setback terrace + street-level colonnade canopy
     parts.push(makePartBox(1.06, 0.05, 1.06, 0, 1.0, 0));
     parts.push(makePartBox(0.76, 0.14, 0.74, 0, 1.07, 0));
     parts.push(makePartBox(1.14, 0.04, 1.14, 0, 0.28, 0));
@@ -227,7 +222,6 @@ export class TrackDecorations {
     );
     this.geometries.push(boxGeo, towerTrimGeo, decoTrimGeo, plazaTrimGeo);
 
-    // Coastal Art Deco buildings flanking the boulevard
     for (let i = 0; i < BUILDING_PAIRS * 2; i++) {
       const side = i % 2 === 0 ? -1 : 1;
       const idx = Math.floor(i / 2);
@@ -262,7 +256,6 @@ export class TrackDecorations {
       trim.position.y = -1.2;
       bGroup.add(trim);
 
-      // Street-facing entrance awning & subtle warm boutique hotel sign fascia
       const awning = new THREE.Mesh(boxGeo, awningMat);
       awning.scale.set(1.3, 0.55, depth * 0.46);
       awning.position.set(-side * (width * 0.5 + 0.55), 3.1, 0);
@@ -283,7 +276,6 @@ export class TrackDecorations {
       this.buildings.push(bGroup);
     }
 
-    // Natural sunset-lit coastal palms (instanced: 2 draw calls for 56 palms)
     const trunkGeo = createPalmTrunkGeometry();
     const crownGeo = createPalmCrownGeometry();
     const trunkMat = new THREE.MeshStandardMaterial({
@@ -319,7 +311,6 @@ export class TrackDecorations {
       this.palmSlots.push({ x, z, scale, rotY, leanX });
     }
 
-    // Coastal broadleaf trees lining the city blocks
     const treeTrunkGeo = createStreetTreeTrunkGeometry();
     const treeCanopyGeo = createStreetTreeCanopyGeometry();
     const treeTrunkMat = new THREE.MeshStandardMaterial({

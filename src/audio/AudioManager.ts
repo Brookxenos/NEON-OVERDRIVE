@@ -1,6 +1,6 @@
 import { GameStatus } from '../core/GameState';
 import { GameSettingsData } from '../settings/GameSettings';
-import { ClassicSoundtrack } from './ClassicSoundtrack';
+import { Soundtrack } from './Soundtrack';
 import { CollectibleSoundType, SoundEffects } from './SoundEffects';
 
 function clampFreq(freq: number): number {
@@ -19,7 +19,6 @@ function createSoftClipCurve(): Float32Array<ArrayBuffer> {
   const curve = new Float32Array(buffer);
   for (let i = 0; i < samples; i++) {
     const x = (i * 2) / (samples - 1) - 1;
-    // Gentle tanh limiter keeping signals cleanly bounded within [-0.96, 0.96]
     curve[i] = Math.tanh(x * 1.15) * 0.96;
   }
   return curve;
@@ -51,7 +50,7 @@ export class AudioManager {
   private stalledClockFrames = 0;
   private noiseBuffer: AudioBuffer | null = null;
   private readonly sfx = new SoundEffects();
-  private readonly soundtrack = new ClassicSoundtrack();
+  private readonly soundtrack = new Soundtrack();
 
   constructor(initialSettings: GameSettingsData) {
     this.settings = { ...initialSettings };
@@ -137,7 +136,6 @@ export class AudioManager {
     this.softClipper.connect(this.masterGain);
     this.masterGain.connect(this.ctx.destination);
 
-    // Strictly bounded [-0.85, 0.85] pink-tinted noise buffer so percussion/wind never clip
     const sampleRate = this.ctx.sampleRate;
     this.noiseBuffer = this.ctx.createBuffer(1, sampleRate * 2, sampleRate);
     const data = this.noiseBuffer.getChannelData(0);
@@ -225,7 +223,6 @@ export class AudioManager {
   public update(dt: number, status: GameStatus, speedNorm: number, isBoosting: boolean): void {
     if (!this.ctx || !this.isUnlocked || this.disposed) return;
 
-    // Automatically heal suspended/interrupted AudioContext mid-game if user is active
     if (this.ctx.state !== 'running') {
       if (status === 'playing' && !document.hidden) {
         this.tryResumeContext();

@@ -20,47 +20,44 @@ interface BodyStation {
 }
 
 function createSculptedCarBodyGeometry(): THREE.BufferGeometry {
-  // Lofted automotive stations from front nose (-Z) to rear tail (+Z)
-  // Ring order is clockwise when viewed from -Z; triangles use (a0, b0, b1) / (a0, b1, a1) for outward normals.
+  // Station cross-sections ordered clockwise from front nose (-Z) to tail (+Z)
   const stations: BodyStation[] = [
     { z: -2.26, halfW: 0.74, fenderW: 0.8, bottomY: 0.12, midY: 0.25, shoulderY: 0.36, crownY: 0.39 },
     { z: -2.04, halfW: 0.86, fenderW: 0.94, bottomY: 0.06, midY: 0.29, shoulderY: 0.45, crownY: 0.49 },
     { z: -1.78, halfW: 0.86, fenderW: 0.94, bottomY: 0.06, midY: 0.34, shoulderY: 0.52, crownY: 0.58 },
-    { z: -1.36, halfW: 0.78, fenderW: 0.79, bottomY: 0.12, midY: 0.42, shoulderY: 0.56, crownY: 0.61 }, // front wheel bay recess
+    { z: -1.36, halfW: 0.78, fenderW: 0.79, bottomY: 0.12, midY: 0.42, shoulderY: 0.56, crownY: 0.61 },
     { z: -0.92, halfW: 0.88, fenderW: 0.95, bottomY: 0.05, midY: 0.34, shoulderY: 0.57, crownY: 0.62 },
-    { z: -0.66, halfW: 0.87, fenderW: 0.94, bottomY: 0.05, midY: 0.32, shoulderY: 0.58, crownY: 0.61 }, // windshield cowl
-    { z: 0.02, halfW: 0.85, fenderW: 0.92, bottomY: 0.05, midY: 0.32, shoulderY: 0.59, crownY: 0.61 },  // door waist
+    { z: -0.66, halfW: 0.87, fenderW: 0.94, bottomY: 0.05, midY: 0.32, shoulderY: 0.58, crownY: 0.61 },
+    { z: 0.02, halfW: 0.85, fenderW: 0.92, bottomY: 0.05, midY: 0.32, shoulderY: 0.59, crownY: 0.61 },
     { z: 0.88, halfW: 0.88, fenderW: 0.96, bottomY: 0.05, midY: 0.34, shoulderY: 0.62, crownY: 0.64 },
-    { z: 1.34, halfW: 0.8, fenderW: 0.81, bottomY: 0.12, midY: 0.44, shoulderY: 0.64, crownY: 0.66 }, // rear wheel bay recess
+    { z: 1.34, halfW: 0.8, fenderW: 0.81, bottomY: 0.12, midY: 0.44, shoulderY: 0.64, crownY: 0.66 },
     { z: 1.82, halfW: 0.88, fenderW: 0.96, bottomY: 0.06, midY: 0.35, shoulderY: 0.61, crownY: 0.63 },
     { z: 2.14, halfW: 0.82, fenderW: 0.88, bottomY: 0.1, midY: 0.33, shoulderY: 0.55, crownY: 0.58 },
     { z: 2.24, halfW: 0.74, fenderW: 0.79, bottomY: 0.15, midY: 0.31, shoulderY: 0.5, crownY: 0.52 },
   ];
 
-  // 10-point closed cross section per station (clockwise looking from -Z toward +Z)
   const ringSize = 10;
   const positions: number[] = [];
   const indices: number[] = [];
 
   for (const s of stations) {
     const pts: Array<[number, number]> = [
-      [-s.halfW * 0.82, s.bottomY],     // 0: bottom-left sill
-      [-s.fenderW, s.midY],             // 1: left mid-fender bulge
-      [-s.halfW * 0.95, s.shoulderY],   // 2: left beltline shoulder
-      [-s.halfW * 0.44, s.crownY - 0.01], // 3: left hood/deck curve
-      [0, s.crownY],                    // 4: center crown ridge
-      [s.halfW * 0.44, s.crownY - 0.01], // 5: right hood/deck curve
-      [s.halfW * 0.95, s.shoulderY],    // 6: right beltline shoulder
-      [s.fenderW, s.midY],              // 7: right mid-fender bulge
-      [s.halfW * 0.82, s.bottomY],      // 8: bottom-right sill
-      [0, s.bottomY],                   // 9: bottom center floorpan
+      [-s.halfW * 0.82, s.bottomY],
+      [-s.fenderW, s.midY],
+      [-s.halfW * 0.95, s.shoulderY],
+      [-s.halfW * 0.44, s.crownY - 0.01],
+      [0, s.crownY],
+      [s.halfW * 0.44, s.crownY - 0.01],
+      [s.halfW * 0.95, s.shoulderY],
+      [s.fenderW, s.midY],
+      [s.halfW * 0.82, s.bottomY],
+      [0, s.bottomY],
     ];
     for (const [px, py] of pts) {
       positions.push(px, py, s.z);
     }
   }
 
-  // Loft outer skin between adjacent stations (outward normals)
   for (let i = 0; i < stations.length - 1; i++) {
     const a = i * ringSize;
     const b = (i + 1) * ringSize;
@@ -75,7 +72,6 @@ function createSculptedCarBodyGeometry(): THREE.BufferGeometry {
     }
   }
 
-  // Cap front nose (station 0, outward normal -Z)
   const frontCenterIdx = positions.length / 3;
   positions.push(0, 0.26, stations[0].z);
   for (let j = 0; j < ringSize; j++) {
@@ -83,7 +79,6 @@ function createSculptedCarBodyGeometry(): THREE.BufferGeometry {
     indices.push(frontCenterIdx, j, jNext);
   }
 
-  // Cap rear tail (last station, outward normal +Z)
   const lastBase = (stations.length - 1) * ringSize;
   const rearCenterIdx = positions.length / 3;
   positions.push(0, 0.34, stations[stations.length - 1].z);
@@ -100,12 +95,11 @@ function createSculptedCarBodyGeometry(): THREE.BufferGeometry {
 }
 
 function createSculptedCabinGeometry(): THREE.BufferGeometry {
-  // Tapered automotive glass greenhouse with raked windshield & fastback rear glass
   const stations = [
-    { z: -0.82, baseW: 0.78, topW: 0.68, baseY: 0.56, topY: 0.6 }, // windshield base
-    { z: -0.26, baseW: 0.75, topW: 0.58, baseY: 0.58, topY: 1.01 }, // windshield header
-    { z: 0.48, baseW: 0.75, topW: 0.57, baseY: 0.6, topY: 1.0 },   // roof trailing edge
-    { z: 1.46, baseW: 0.77, topW: 0.66, baseY: 0.61, topY: 0.65 }, // rear glass base
+    { z: -0.82, baseW: 0.78, topW: 0.68, baseY: 0.56, topY: 0.6 },
+    { z: -0.26, baseW: 0.75, topW: 0.58, baseY: 0.58, topY: 1.01 },
+    { z: 0.48, baseW: 0.75, topW: 0.57, baseY: 0.6, topY: 1.0 },
+    { z: 1.46, baseW: 0.77, topW: 0.66, baseY: 0.61, topY: 0.65 },
   ];
 
   const ringSize = 6;
@@ -244,7 +238,6 @@ export class PlayerCar {
     this.group.add(this.bodyGroup);
     this.bodyGroup.add(this.closedBodyGroup);
 
-    // Matte-satin automotive paint with near-zero environment reflection so the rear stays sharp
     this.paintMat = new THREE.MeshStandardMaterial({
       color: initialSpec.primaryColor,
       metalness: 0.08,
@@ -354,7 +347,6 @@ export class PlayerCar {
       this.headlightBeamMat,
     );
 
-    // 1. Sculpted lofted car bodywork
     const bodyGeo = createSculptedCarBodyGeometry();
     this.geometries.push(bodyGeo);
     const bodyMesh = new THREE.Mesh(bodyGeo, this.paintMat);
@@ -362,7 +354,6 @@ export class PlayerCar {
     bodyMesh.receiveShadow = true;
     this.closedBodyGroup.add(bodyMesh);
 
-    // 2. Sculpted tapered glass greenhouse + painted roof cap
     const cabinGeo = createSculptedCabinGeometry();
     const roofCapGeo = new THREE.BoxGeometry(1.1, 0.045, 0.78);
     this.geometries.push(cabinGeo, roofCapGeo);
@@ -376,7 +367,6 @@ export class PlayerCar {
     roofCap.castShadow = true;
     this.closedBodyGroup.add(roofCap);
 
-    // 3. Recessed wheel wells + painted flared fender lips concentric with axles
     const wellBoxGeo = createWheelWellDrumGeometry();
     const fenderLipGeo = createFenderArchLinerGeometry();
     this.geometries.push(wellBoxGeo, fenderLipGeo);
@@ -394,7 +384,6 @@ export class PlayerCar {
       }
     }
 
-    // 4. Lower rocker skirts (between axles), front grille, front chin splitter, side moldings & door handles
     const skirtGeo = new THREE.BoxGeometry(1.86, 0.09, 1.72);
     const frontGrilleGeo = new THREE.BoxGeometry(1.06, 0.19, 0.08);
     const grilleFrameGeo = new THREE.BoxGeometry(1.14, 0.23, 0.06);
@@ -436,7 +425,6 @@ export class PlayerCar {
     frontChin.position.set(0, 0.09, -2.21);
     this.closedBodyGroup.add(frontChin);
 
-    // 5. Realistic racing stripes contoured along sculpted hood, roof, and rear deck
     const hoodStripeGeo = new THREE.BoxGeometry(0.16, 0.02, 1.24);
     const roofStripeGeo = new THREE.BoxGeometry(0.16, 0.02, 0.78);
     const deckStripeGeo = new THREE.BoxGeometry(0.16, 0.02, 0.66);
@@ -458,7 +446,6 @@ export class PlayerCar {
       this.closedBodyGroup.add(deckStripe);
     }
 
-    // 6. Sculpted side-view mirrors on stalks
     const mirrorHousingGeo = new THREE.BoxGeometry(0.19, 0.09, 0.13);
     const mirrorStalkGeo = new THREE.BoxGeometry(0.1, 0.04, 0.06);
     this.geometries.push(mirrorHousingGeo, mirrorStalkGeo);
@@ -473,7 +460,6 @@ export class PlayerCar {
       this.closedBodyGroup.add(mirror);
     }
 
-    // 7. Detailed multi-element headlights (recessed housing + projector lens + DRL brow + amber corner)
     const headHousingGeo = new THREE.BoxGeometry(0.36, 0.13, 0.12);
     const projectorGeo = new THREE.CylinderGeometry(0.045, 0.045, 0.08, 14);
     projectorGeo.rotateX(Math.PI / 2);
@@ -511,7 +497,6 @@ export class PlayerCar {
       this.closedBodyGroup.add(beam);
     }
 
-    // 8. Detailed rear fascia: smoked taillight housings, LED tubes, license plate pocket, diffuser strakes, hollow exhausts
     const tailHousingGeo = new THREE.BoxGeometry(1.56, 0.16, 0.08);
     const tailLedGeo = new THREE.BoxGeometry(0.46, 0.045, 0.05);
     const reverseStripGeo = new THREE.BoxGeometry(0.18, 0.03, 0.05);
@@ -565,7 +550,6 @@ export class PlayerCar {
       this.closedBodyGroup.add(strake);
     }
 
-    // Hollow dual exhaust tailpipes + boost-only flame cones
     const pipeOuterGeo = new THREE.CylinderGeometry(0.085, 0.092, 0.28, 16);
     pipeOuterGeo.rotateX(Math.PI / 2);
     const pipeInnerGeo = new THREE.CylinderGeometry(0.064, 0.064, 0.06, 14);
@@ -601,7 +585,6 @@ export class PlayerCar {
       this.thrusterInnerCones.push(innerCone);
     }
 
-    // 9. Build distinct closed-body kits
     this.styleGroups = {
       muscle_blower: this.buildMuscleBlowerKit(),
       drift_widebody: this.buildDriftWidebodyKit(),
@@ -617,7 +600,6 @@ export class PlayerCar {
       this.closedBodyGroup.add(kit);
     }
 
-    // 10. Grounded realistic wheels with profiled tires, 10-spoke alloys & brake calipers
     this.buildWheels(initialSpec.wheelRadius);
 
     const shadowGeo = new THREE.PlaneGeometry(2.85, 4.95);
@@ -702,7 +684,6 @@ export class PlayerCar {
       const steerPivot = new THREE.Group();
       steerPivot.position.set(pos.x, wheelRadius, pos.z);
 
-      // Fixed brake caliper attached to knuckle so it stays upright while wheel spins
       const caliper = new THREE.Mesh(caliperGeo, this.caliperMat);
       caliper.position.set(pos.side * -0.04, 0.07, 0.11);
       steerPivot.add(caliper);
@@ -727,7 +708,6 @@ export class PlayerCar {
       brakeDisc.position.x = pos.side * -0.02;
       spinGroup.add(brakeDisc);
 
-      // 5 twin-spoke alloy layout (10 spokes total)
       for (let s = 0; s < 5; s++) {
         const baseAngle = (s * Math.PI * 2) / 5;
         for (const pairOffset of [-0.14, 0.14]) {

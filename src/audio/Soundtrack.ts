@@ -6,7 +6,7 @@ interface HarmonicBar {
   hook: readonly number[];
 }
 
-interface BeastRapTrack {
+interface BeatTrack {
   id: string;
   bpm: number;
   swing: number;
@@ -15,20 +15,16 @@ interface BeastRapTrack {
   clapSteps: readonly number[];
   hatSteps: readonly number[];
   hatRollSteps: readonly number[];
-  bass808Pattern: readonly number[];
+  bassPattern: readonly number[];
   brassStabSteps: readonly number[];
   hookSteps: readonly number[];
   useGlideLead?: boolean;
   bars: readonly HarmonicBar[];
 }
 
-// 4 heavy Rap & Beast Beat tracks — pounding 808 sub slides, hard kicks & trap claps,
-// brass stabs, and bold rap hooks harmonized in A Minor / C Major to lock cleanly
-// with the car engine turbine and game SFX without any sleepy calm tracks.
-const RAP_BEAST_TRACKS: readonly BeastRapTrack[] = [
-  // 1. Beast Mode 808 (132 BPM half-time Trap/Rap Beat · Am -> F -> Dm -> E)
+const BEAT_TRACKS: readonly BeatTrack[] = [
   {
-    id: 'beast_mode_808',
+    id: 'highway_808',
     bpm: 132,
     swing: 0.02,
     halfTime: true,
@@ -36,7 +32,7 @@ const RAP_BEAST_TRACKS: readonly BeastRapTrack[] = [
     clapSteps: [8],
     hatSteps: [0, 2, 4, 6, 8, 10, 12, 14],
     hatRollSteps: [7, 13, 15],
-    bass808Pattern: [1, 0, 0, 1, 0, 0, 1.5, 0, 0, 0, 1, 0, 0, 0, 1.25, 0],
+    bassPattern: [1, 0, 0, 1, 0, 0, 1.5, 0, 0, 0, 1, 0, 0, 0, 1.25, 0],
     brassStabSteps: [0, 10],
     hookSteps: [0, 3, 6, 8, 10, 14],
     bars: [
@@ -46,16 +42,15 @@ const RAP_BEAST_TRACKS: readonly BeastRapTrack[] = [
       { root: 41.2, brassStab: [82.41, 164.81, 246.94, 329.63], hook: [659.25, 587.33, 523.25, 493.88, 523.25, 659.25] },
     ],
   },
-  // 2. Kingpin Boom Bap (98 BPM Heavy Hip-Hop Beast Anthem · Am -> G -> F -> E)
   {
-    id: 'kingpin_boom_bap',
+    id: 'boulevard_boom_bap',
     bpm: 98,
     swing: 0.1,
     kickSteps: [0, 2, 7, 10, 11],
     clapSteps: [4, 12],
     hatSteps: [0, 2, 4, 6, 8, 10, 12, 14],
     hatRollSteps: [15],
-    bass808Pattern: [1, 0, 1.5, 0, 0, 0, 0, 1, 0, 0, 1.25, 1.5, 0, 0, 1, 0],
+    bassPattern: [1, 0, 1.5, 0, 0, 0, 0, 1, 0, 0, 1.25, 1.5, 0, 0, 1, 0],
     brassStabSteps: [0, 6, 12],
     hookSteps: [0, 4, 7, 10, 12, 14],
     bars: [
@@ -65,16 +60,15 @@ const RAP_BEAST_TRACKS: readonly BeastRapTrack[] = [
       { root: 41.2, brassStab: [82.41, 164.81, 246.94, 329.63], hook: [659.25, 587.33, 493.88, 523.25, 587.33, 659.25] },
     ],
   },
-  // 3. West Side Beast (104 BPM Heavy G-Funk / Hip-Hop Beast · Dm -> Am -> F -> E)
   {
-    id: 'west_side_beast',
+    id: 'west_coast_cruise',
     bpm: 104,
     swing: 0.09,
     kickSteps: [0, 6, 8, 11, 14],
     clapSteps: [4, 12],
     hatSteps: [0, 2, 4, 6, 8, 10, 12, 14],
     hatRollSteps: [14, 15],
-    bass808Pattern: [1, 0, 0, 0, 0, 0, 1.5, 0, 1, 0, 0, 1.25, 0, 0, 1.5, 0],
+    bassPattern: [1, 0, 0, 0, 0, 0, 1.5, 0, 1, 0, 0, 1.25, 0, 0, 1.5, 0],
     brassStabSteps: [0, 8],
     hookSteps: [0, 3, 6, 10, 12, 14],
     useGlideLead: true,
@@ -85,16 +79,15 @@ const RAP_BEAST_TRACKS: readonly BeastRapTrack[] = [
       { root: 41.2, brassStab: [82.41, 164.81, 246.94, 329.63], hook: [783.99, 659.25, 587.33, 493.88, 587.33, 659.25] },
     ],
   },
-  // 4. Overdrive Anthem Rap (122 BPM Fast Racing Beast Rap · Am -> C -> Dm -> F)
   {
-    id: 'overdrive_anthem_rap',
+    id: 'overdrive_anthem',
     bpm: 122,
     swing: 0.04,
     kickSteps: [0, 3, 4, 8, 10, 14],
     clapSteps: [4, 12],
     hatSteps: [0, 2, 4, 6, 8, 10, 12, 14],
     hatRollSteps: [7, 11, 15],
-    bass808Pattern: [1, 0, 2, 1, 0, 0, 1.5, 0, 1, 0, 2, 0, 1, 0, 1.5, 0],
+    bassPattern: [1, 0, 2, 1, 0, 0, 1.5, 0, 1, 0, 2, 0, 1, 0, 1.5, 0],
     brassStabSteps: [0, 6, 12],
     hookSteps: [0, 2, 6, 8, 12, 14],
     bars: [
@@ -119,7 +112,7 @@ function clampFreq(freq: number): number {
   return Math.max(28, Math.min(12000, freq));
 }
 
-function schedulePunchEnvelope(
+function scheduleEnvelope(
   gainParam: AudioParam,
   startTime: number,
   peak: number,
@@ -139,7 +132,7 @@ function schedulePunchEnvelope(
   gainParam.linearRampToValueAtTime(0, safeZero);
 }
 
-export class ClassicSoundtrack {
+export class Soundtrack {
   private ctx: AudioContext | null = null;
   private outputNode: AudioNode | null = null;
   private delaySend: AudioNode | null = null;
@@ -148,7 +141,7 @@ export class ClassicSoundtrack {
   private trackIndex = 0;
   private cycleStep = 0;
   private nextStepTime = 0;
-  private smoothedBpm = RAP_BEAST_TRACKS[0].bpm;
+  private smoothedBpm = BEAT_TRACKS[0].bpm;
   private readonly trackedVoices: TrackedMusicVoice[] = [];
   private lastGlideFreq = 659.25;
   private lastBassFreq = 55;
@@ -197,8 +190,8 @@ export class ClassicSoundtrack {
 
   public selectNextTrack(): void {
     this.sweepStaleVoices();
-    this.trackIndex = (this.trackIndex + 1) % RAP_BEAST_TRACKS.length;
-    const track = RAP_BEAST_TRACKS[this.trackIndex];
+    this.trackIndex = (this.trackIndex + 1) % BEAT_TRACKS.length;
+    const track = BEAT_TRACKS[this.trackIndex];
     this.cycleStep = 0;
     this.smoothedBpm = track.bpm;
     this.lastGlideFreq = track.bars[0].hook[0];
@@ -209,7 +202,7 @@ export class ClassicSoundtrack {
   }
 
   public getCurrentTrackId(): string {
-    return RAP_BEAST_TRACKS[this.trackIndex].id;
+    return BEAT_TRACKS[this.trackIndex].id;
   }
 
   public resetClock(): void {
@@ -228,7 +221,7 @@ export class ClassicSoundtrack {
     const now = this.ctx.currentTime;
     this.sweepStaleVoices(now);
 
-    const track = RAP_BEAST_TRACKS[this.trackIndex];
+    const track = BEAT_TRACKS[this.trackIndex];
     const safeSpeed = Number.isFinite(speedNorm) ? Math.max(0, Math.min(1.5, speedNorm)) : 0;
     const targetBpm =
       status === 'playing'
@@ -286,7 +279,7 @@ export class ClassicSoundtrack {
         try {
           cleanup();
         } catch {
-          // Ignore cleanup errors
+          // Node may already be disconnected
         }
       },
     };
@@ -296,7 +289,7 @@ export class ClassicSoundtrack {
 
   private triggerStep(
     time: number,
-    track: BeastRapTrack,
+    track: BeatTrack,
     step: number,
     status: GameStatus,
     speedNorm: number,
@@ -312,15 +305,15 @@ export class ClassicSoundtrack {
       track.brassStabSteps.includes(barStep) &&
       this.trackedVoices.length <= MAX_ACTIVE_MUSIC_VOICES - 4
     ) {
-      this.playBeastBrassStab(time, bar.brassStab, barStep === 0, status, isBoosting);
+      this.playBrassStab(time, bar.brassStab, barStep === 0, status, isBoosting);
     }
 
-    this.play808BeastBass(time, track, barStep, bar.root, status, speedNorm, isBoosting);
-    this.playBeastDrums(time, track, barStep, status, isBoosting);
-    this.playRapHookLead(time, track, bar, barStep, status, isBoosting);
+    this.playSubBass(time, track, barStep, bar.root, status, speedNorm, isBoosting);
+    this.playDrums(time, track, barStep, status, isBoosting);
+    this.playLeadHook(time, track, bar, barStep, status, isBoosting);
   }
 
-  private playBeastBrassStab(
+  private playBrassStab(
     time: number,
     chord: readonly number[],
     isDownbeat: boolean,
@@ -339,7 +332,6 @@ export class ClassicSoundtrack {
       const filter = this.ctx.createBiquadFilter();
       const env = this.ctx.createGain();
 
-      // Punchy sawtooth + square brass hit
       osc.type = i === 0 ? 'sawtooth' : i % 2 === 1 ? 'sawtooth' : 'square';
       osc.frequency.setValueAtTime(freq, time);
       osc.detune.setValueAtTime(i % 2 === 0 ? -7 : 7, time);
@@ -350,7 +342,7 @@ export class ClassicSoundtrack {
       filter.frequency.setValueAtTime(peakCutoff, time);
       filter.frequency.exponentialRampToValueAtTime(340, stopAt);
 
-      schedulePunchEnvelope(env.gain, time, level, 0.008, stopAt - 0.06, stopAt);
+      scheduleEnvelope(env.gain, time, level, 0.008, stopAt - 0.06, stopAt);
 
       osc.connect(filter);
       filter.connect(env);
@@ -368,9 +360,9 @@ export class ClassicSoundtrack {
     }
   }
 
-  private play808BeastBass(
+  private playSubBass(
     time: number,
-    track: BeastRapTrack,
+    track: BeatTrack,
     barStep: number,
     rootFreq: number,
     status: GameStatus,
@@ -379,7 +371,7 @@ export class ClassicSoundtrack {
   ): void {
     if (!this.ctx || !this.outputNode || this.trackedVoices.length >= MAX_ACTIVE_MUSIC_VOICES - 1) return;
 
-    const ratio = track.bass808Pattern[barStep] ?? 0;
+    const ratio = track.bassPattern[barStep] ?? 0;
     if (ratio === 0) return;
 
     const targetFreq = clampFreq(rootFreq * ratio);
@@ -387,7 +379,6 @@ export class ClassicSoundtrack {
     const dur = track.halfTime ? 0.42 : 0.28;
     const stopAt = time + dur;
 
-    // Layer 1: Deep booming 808 sub slide
     const subOsc = this.ctx.createOscillator();
     const subEnv = this.ctx.createGain();
     subOsc.type = 'sine';
@@ -396,7 +387,7 @@ export class ClassicSoundtrack {
     this.lastBassFreq = targetFreq;
 
     const subPeak = (status === 'playing' ? 0.34 : 0.24) * (isDownbeat ? 1.05 : 0.88);
-    schedulePunchEnvelope(subEnv.gain, time, subPeak, 0.005, stopAt - 0.04, stopAt);
+    scheduleEnvelope(subEnv.gain, time, subPeak, 0.005, stopAt - 0.04, stopAt);
     subOsc.connect(subEnv);
     subEnv.connect(this.outputNode);
 
@@ -407,7 +398,6 @@ export class ClassicSoundtrack {
     subOsc.start(time);
     subOsc.stop(stopAt);
 
-    // Layer 2: Gritty sawtooth harmonic top bite so 808 slams cleanly
     const biteOsc = this.ctx.createOscillator();
     const biteFilter = this.ctx.createBiquadFilter();
     const biteEnv = this.ctx.createGain();
@@ -421,7 +411,7 @@ export class ClassicSoundtrack {
     biteFilter.frequency.exponentialRampToValueAtTime(160, time + dur * 0.8);
 
     const bitePeak = status === 'playing' ? 0.14 : 0.09;
-    schedulePunchEnvelope(biteEnv.gain, time, bitePeak, 0.005, time + dur * 0.72, stopAt);
+    scheduleEnvelope(biteEnv.gain, time, bitePeak, 0.005, time + dur * 0.72, stopAt);
     biteOsc.connect(biteFilter);
     biteFilter.connect(biteEnv);
     biteEnv.connect(this.outputNode);
@@ -435,9 +425,9 @@ export class ClassicSoundtrack {
     biteOsc.stop(stopAt);
   }
 
-  private playBeastDrums(
+  private playDrums(
     time: number,
-    track: BeastRapTrack,
+    track: BeatTrack,
     barStep: number,
     status: GameStatus,
     isBoosting: boolean,
@@ -446,7 +436,6 @@ export class ClassicSoundtrack {
     const isPlaying = status === 'playing';
     const drumMul = isPlaying ? 1.0 : 0.65;
 
-    // Hard Rap Kick
     if (track.kickSteps.includes(barStep) && this.trackedVoices.length < MAX_ACTIVE_MUSIC_VOICES) {
       const kickOsc = this.ctx.createOscillator();
       const kickEnv = this.ctx.createGain();
@@ -454,7 +443,7 @@ export class ClassicSoundtrack {
       kickOsc.frequency.setValueAtTime(158, time);
       kickOsc.frequency.exponentialRampToValueAtTime(42, time + 0.09);
       const kickStop = time + 0.18;
-      schedulePunchEnvelope(kickEnv.gain, time, 0.36 * drumMul, 0.003, time + 0.15, kickStop);
+      scheduleEnvelope(kickEnv.gain, time, 0.36 * drumMul, 0.003, time + 0.15, kickStop);
       kickOsc.connect(kickEnv);
       kickEnv.connect(this.outputNode);
       this.trackVoice(kickOsc, kickStop, () => {
@@ -465,7 +454,6 @@ export class ClassicSoundtrack {
       kickOsc.stop(kickStop);
     }
 
-    // Hard Rap Clap + Snare Crack
     if (
       track.clapSteps.includes(barStep) &&
       this.noiseBuffer &&
@@ -477,7 +465,7 @@ export class ClassicSoundtrack {
       bodyOsc.frequency.setValueAtTime(215, time);
       bodyOsc.frequency.exponentialRampToValueAtTime(102, time + 0.065);
       const bodyStop = time + 0.11;
-      schedulePunchEnvelope(bodyEnv.gain, time, 0.16 * drumMul, 0.003, time + 0.085, bodyStop);
+      scheduleEnvelope(bodyEnv.gain, time, 0.16 * drumMul, 0.003, time + 0.085, bodyStop);
       bodyOsc.connect(bodyEnv);
       bodyEnv.connect(this.outputNode);
       this.trackVoice(bodyOsc, bodyStop, () => {
@@ -495,7 +483,7 @@ export class ClassicSoundtrack {
       filter.Q.value = 0.85;
       const env = this.ctx.createGain();
       const clapStop = time + 0.17;
-      schedulePunchEnvelope(env.gain, time, 0.22 * drumMul, 0.003, time + 0.145, clapStop);
+      scheduleEnvelope(env.gain, time, 0.22 * drumMul, 0.003, time + 0.145, clapStop);
       clapNoise.connect(filter);
       filter.connect(env);
       env.connect(this.outputNode);
@@ -508,7 +496,6 @@ export class ClassicSoundtrack {
       clapNoise.stop(clapStop);
     }
 
-    // Crisp Trap Hats & Rapid Rolls during active racing
     const isRoll = track.hatRollSteps.includes(barStep);
     const hitHat =
       track.hatSteps.includes(barStep) || (isPlaying && (isRoll || (isBoosting && barStep % 2 === 1)));
@@ -526,7 +513,7 @@ export class ClassicSoundtrack {
         filter.frequency.value = isRoll ? 7200 : 6200;
         const env = this.ctx.createGain();
         const hatPeak = (barStep % 4 === 2 ? 0.07 : 0.048) * drumMul;
-        schedulePunchEnvelope(env.gain, subTime, hatPeak, 0.003, subTime + 0.036, hatStop);
+        scheduleEnvelope(env.gain, subTime, hatPeak, 0.003, subTime + 0.036, hatStop);
         hat.connect(filter);
         filter.connect(env);
         env.connect(this.outputNode);
@@ -541,9 +528,9 @@ export class ClassicSoundtrack {
     }
   }
 
-  private playRapHookLead(
+  private playLeadHook(
     time: number,
-    track: BeastRapTrack,
+    track: BeatTrack,
     bar: HarmonicBar,
     barStep: number,
     status: GameStatus,
@@ -576,7 +563,7 @@ export class ClassicSoundtrack {
     filter.frequency.exponentialRampToValueAtTime(750, stopAt);
 
     const peak = status === 'playing' ? (track.useGlideLead ? 0.068 : 0.058) : 0.04;
-    schedulePunchEnvelope(env.gain, time, peak, 0.008, stopAt - 0.04, stopAt);
+    scheduleEnvelope(env.gain, time, peak, 0.008, stopAt - 0.04, stopAt);
 
     osc.connect(filter);
     filter.connect(env);

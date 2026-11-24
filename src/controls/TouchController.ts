@@ -39,7 +39,6 @@ export class TouchController {
     if (Math.abs(dx) > 34 && Math.abs(dx) > Math.abs(dy)) {
       event.preventDefault();
       this.events.onLaneShift(dx > 0 ? 1 : -1);
-      // Reset horizontal anchor so a single fast thumb slide can cross two lanes
       this.startX = touch.clientX;
       this.startY = touch.clientY;
     } else if (!this.swipeConsumed && dy < -34 && Math.abs(dy) > Math.abs(dx)) {

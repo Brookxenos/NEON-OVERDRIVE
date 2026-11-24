@@ -11,7 +11,7 @@ export type ObstacleType =
   | 'roadblock'
   | 'laser_gate'
   | 'hazard_zone'
-  | 'evil_drone'
+  | 'interceptor_drone'
   | 'sweeper_beam'
   | 'shock_pylon';
 
@@ -242,7 +242,7 @@ function createTrafficTireGeometry(radius: number, width: number): THREE.LatheGe
   return geo;
 }
 
-function createEvilWingGeometry(): THREE.ExtrudeGeometry {
+function createDroneWingGeometry(): THREE.ExtrudeGeometry {
   const shape = new THREE.Shape();
   shape.moveTo(0, 0);
   shape.lineTo(1.12, 0.24);
@@ -264,7 +264,7 @@ function createEvilWingGeometry(): THREE.ExtrudeGeometry {
   return geo;
 }
 
-function createEvilHullGeometry(): THREE.ExtrudeGeometry {
+function createDroneHullGeometry(): THREE.ExtrudeGeometry {
   const shape = new THREE.Shape();
   shape.moveTo(-0.62, 0.12);
   shape.lineTo(0.62, 0.12);
@@ -298,7 +298,6 @@ export class ObstacleManager {
   private lastDifficultyLevel = 1;
 
   constructor(textures: TextureBundle) {
-    // High-visibility cream-champagne frame & vivid warning emissives so every obstacle reads clearly from afar
     const chassisSteelMat = new THREE.MeshStandardMaterial({
       color: 0xfff3e0,
       emissive: 0x7c2d12,
@@ -404,7 +403,7 @@ export class ObstacleManager {
     const trafficHeadlampMat = new THREE.MeshBasicMaterial({
       color: 0xfef9c3,
     });
-    const evilObsidianMat = new THREE.MeshStandardMaterial({
+    const obsidianMat = new THREE.MeshStandardMaterial({
       color: 0x16111e,
       emissive: 0x2a0814,
       emissiveIntensity: 0.42,
@@ -412,7 +411,7 @@ export class ObstacleManager {
       roughness: 0.28,
       envMapIntensity: 0.45,
     });
-    const evilSteelMat = new THREE.MeshStandardMaterial({
+    const gunmetalMat = new THREE.MeshStandardMaterial({
       color: 0x2d2438,
       emissive: 0x450a1e,
       emissiveIntensity: 0.3,
@@ -420,13 +419,13 @@ export class ObstacleManager {
       roughness: 0.42,
       envMapIntensity: 0.35,
     });
-    const evilCrimsonMat = new THREE.MeshStandardMaterial({
+    const crimsonGlowMat = new THREE.MeshStandardMaterial({
       color: 0xff1f4b,
       emissive: 0xe11d48,
       emissiveIntensity: 2.1,
       roughness: 0.15,
     });
-    const evilFloorWarningMat = new THREE.MeshBasicMaterial({
+    const crimsonFloorWarningMat = new THREE.MeshBasicMaterial({
       color: 0xf43f5e,
       transparent: true,
       opacity: 0.72,
@@ -450,18 +449,16 @@ export class ObstacleManager {
       trafficTrimMat,
       trafficPlateMat,
       trafficHeadlampMat,
-      evilObsidianMat,
-      evilSteelMat,
-      evilCrimsonMat,
-      evilFloorWarningMat,
+      obsidianMat,
+      gunmetalMat,
+      crimsonGlowMat,
+      crimsonFloorWarningMat,
       ...trafficCarMats,
     );
 
-    // Shared smooth geometries across obstacle instances
     const floorStripGeo = new THREE.PlaneGeometry(2.8, 0.78);
     floorStripGeo.rotateX(-Math.PI / 2);
 
-    // 1. Barrier (High-Contrast Energy Shield Gate)
     const barrierSillGeo = new THREE.CapsuleGeometry(0.18, 2.55, 6, 16);
     barrierSillGeo.rotateZ(Math.PI / 2);
     const barrierPylonGeo = createSidePylonGeometry();
@@ -471,7 +468,6 @@ export class ObstacleManager {
     const barrierShieldGeo = new THREE.PlaneGeometry(2.42, 1.08);
     const barrierHeaderGeo = new THREE.BoxGeometry(2.74, 0.22, 0.28);
 
-    // 2. Traffic (Sculpted Automotive Traffic Car)
     const rivalHullGeo = createTrafficBodyGeometry();
     const rivalCanopyGeo = createTrafficCabinGeometry();
     const rivalRoofGeo = new THREE.BoxGeometry(1.16, 0.05, 0.82);
@@ -496,20 +492,17 @@ export class ObstacleManager {
     const rivalShadowGeo = new THREE.PlaneGeometry(2.55, 4.65);
     rivalShadowGeo.rotateX(-Math.PI / 2);
 
-    // 3. Roadblock (High-Visibility Striped Highway Barricade)
     const jerseyGeo = createJerseyBarrierGeometry(2.78);
     const roadblockStripeGeo = new THREE.BoxGeometry(2.74, 0.42, 1.12);
     const roadblockTopRailGeo = new THREE.BoxGeometry(2.68, 0.2, 0.26);
     const beaconDomeGeo = new THREE.SphereGeometry(0.23, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.7);
 
-    // 4. Laser Gate (Thick High-Contrast Safety Arch)
     const laserPostGeo = new THREE.CapsuleGeometry(0.2, 2.08, 8, 16);
     const laserCollarGeo = new THREE.CylinderGeometry(0.28, 0.3, 0.28, 16);
     const laserArchGeo = new THREE.TorusGeometry(1.36, 0.17, 10, 24, Math.PI);
     const laserBeamGeo = new THREE.CylinderGeometry(0.125, 0.125, 2.66, 16);
     laserBeamGeo.rotateZ(Math.PI / 2);
 
-    // 5. Hazard Zone (Tall EMP Pylon Cage with Overhead X-Beams)
     const hazardRingGeo = new THREE.CylinderGeometry(1.32, 1.46, 0.34, 24);
     const hazardTopBandGeo = new THREE.TorusGeometry(1.28, 0.09, 10, 28);
     hazardTopBandGeo.rotateX(Math.PI / 2);
@@ -519,16 +512,14 @@ export class ObstacleManager {
     const hazardCrossBarGeo = new THREE.CylinderGeometry(0.085, 0.085, 3.25, 12);
     hazardCrossBarGeo.rotateX(Math.PI / 2);
 
-    // 6. Evil Reaper Interceptor (Armored Obsidian Drone with Crimson Blades & Visor)
-    const evilHullGeo = createEvilHullGeometry();
-    const evilWingGeo = createEvilWingGeometry();
-    const evilHornGeo = new THREE.ConeGeometry(0.11, 0.68, 8);
-    const evilVisorGeo = new THREE.BoxGeometry(0.86, 0.14, 0.16);
-    const evilCoreGeo = new THREE.OctahedronGeometry(0.28, 0);
-    const evilCrestGeo = new THREE.BoxGeometry(0.16, 0.24, 1.45);
-    const evilSkidGeo = new THREE.BoxGeometry(0.14, 0.12, 1.82);
+    const droneHullGeo = createDroneHullGeometry();
+    const droneWingGeo = createDroneWingGeometry();
+    const droneBladeGeo = new THREE.ConeGeometry(0.11, 0.68, 8);
+    const droneVisorGeo = new THREE.BoxGeometry(0.86, 0.14, 0.16);
+    const droneCoreGeo = new THREE.OctahedronGeometry(0.28, 0);
+    const droneCrestGeo = new THREE.BoxGeometry(0.16, 0.24, 1.45);
+    const droneSkidGeo = new THREE.BoxGeometry(0.14, 0.12, 1.82);
 
-    // 7. Laser Sweeper Carriage (1,500m+ Mobile Turret with Rotating Plasma Emitters)
     const sweeperBaseGeo = new THREE.BoxGeometry(2.38, 0.26, 1.12);
     const sweeperTrimGeo = new THREE.BoxGeometry(2.44, 0.14, 0.28);
     const sweeperTurretGeo = new THREE.CylinderGeometry(0.42, 0.54, 0.56, 16);
@@ -536,7 +527,6 @@ export class ObstacleManager {
     sweeperRodGeo.rotateZ(Math.PI / 2);
     const sweeperTipGeo = new THREE.SphereGeometry(0.16, 12, 10);
 
-    // 8. Shock Pylon (3,000m+ Dual Tesla Surge Unit with Spinning Gyro Ring)
     const shockHullGeo = new THREE.BoxGeometry(2.12, 0.42, 1.66);
     const shockProwGeo = new THREE.ConeGeometry(0.48, 0.92, 6);
     shockProwGeo.rotateX(-Math.PI / 2);
@@ -586,13 +576,13 @@ export class ObstacleManager {
       hazardPylonGeo,
       hazardTipGeo,
       hazardCrossBarGeo,
-      evilHullGeo,
-      evilWingGeo,
-      evilHornGeo,
-      evilVisorGeo,
-      evilCoreGeo,
-      evilCrestGeo,
-      evilSkidGeo,
+      droneHullGeo,
+      droneWingGeo,
+      droneBladeGeo,
+      droneVisorGeo,
+      droneCoreGeo,
+      droneCrestGeo,
+      droneSkidGeo,
       sweeperBaseGeo,
       sweeperTrimGeo,
       sweeperTurretGeo,
@@ -611,14 +601,13 @@ export class ObstacleManager {
       'roadblock',
       'laser_gate',
       'hazard_zone',
-      'evil_drone',
+      'interceptor_drone',
       'sweeper_beam',
       'shock_pylon',
     ];
 
     const instances: ObstacleInstance[] = [];
 
-    // 18 pooled instances per obstacle kind (144 total) prevents exhaustion during marathon runs
     for (let i = 0; i < kinds.length * 18; i++) {
       const kind = kinds[i % kinds.length];
       const obsGroup = new THREE.Group();
@@ -929,17 +918,17 @@ export class ObstacleManager {
         halfW = 1.28;
         halfZ = 0.62;
       } else if (kind === 'shock_pylon') {
-        const floorMarker = new THREE.Mesh(floorStripGeo, evilFloorWarningMat);
+        const floorMarker = new THREE.Mesh(floorStripGeo, crimsonFloorWarningMat);
         floorMarker.position.set(0, 0.03, 1.12);
         obsGroup.add(floorMarker);
 
-        const hull = new THREE.Mesh(shockHullGeo, evilObsidianMat);
+        const hull = new THREE.Mesh(shockHullGeo, obsidianMat);
         hull.position.y = 0.26;
         hull.castShadow = true;
         obsGroup.add(hull);
 
         for (const px of [-0.62, 0.62]) {
-          const prow = new THREE.Mesh(shockProwGeo, evilCrimsonMat);
+          const prow = new THREE.Mesh(shockProwGeo, crimsonGlowMat);
           prow.position.set(px, 0.28, 0.96);
           obsGroup.add(prow);
 
@@ -956,7 +945,7 @@ export class ObstacleManager {
         const gyro = new THREE.Group();
         gyro.position.set(0, 1.38, -0.1);
 
-        const ring = new THREE.Mesh(shockRotorGeo, evilCrimsonMat);
+        const ring = new THREE.Mesh(shockRotorGeo, crimsonGlowMat);
         gyro.add(ring);
 
         const orb = new THREE.Mesh(shockOrbGeo, this.warningAmberMat);
@@ -967,12 +956,12 @@ export class ObstacleManager {
         halfW = 1.18;
         halfZ = 1.02;
       } else {
-        const floorMarker = new THREE.Mesh(floorStripGeo, evilFloorWarningMat);
+        const floorMarker = new THREE.Mesh(floorStripGeo, crimsonFloorWarningMat);
         floorMarker.position.set(0, 0.03, 1.12);
         obsGroup.add(floorMarker);
 
         for (const sx of [-0.56, 0.56]) {
-          const skid = new THREE.Mesh(evilSkidGeo, evilSteelMat);
+          const skid = new THREE.Mesh(droneSkidGeo, gunmetalMat);
           skid.position.set(sx, 0.06, 0);
           obsGroup.add(skid);
         }
@@ -980,39 +969,39 @@ export class ObstacleManager {
         const droneBody = new THREE.Group();
         droneBody.position.y = 0.24;
 
-        const hull = new THREE.Mesh(evilHullGeo, evilObsidianMat);
+        const hull = new THREE.Mesh(droneHullGeo, obsidianMat);
         hull.castShadow = true;
         droneBody.add(hull);
 
-        const crest = new THREE.Mesh(evilCrestGeo, evilSteelMat);
+        const crest = new THREE.Mesh(droneCrestGeo, gunmetalMat);
         crest.position.set(0, 0.98, 0.08);
         droneBody.add(crest);
 
         for (const side of [-1, 1]) {
-          const wing = new THREE.Mesh(evilWingGeo, evilObsidianMat);
+          const wing = new THREE.Mesh(droneWingGeo, obsidianMat);
           wing.position.set(side * 0.42, 0.4, 0.05);
           wing.scale.x = side;
           wing.castShadow = true;
           droneBody.add(wing);
 
-          const bladeEdge = new THREE.Mesh(evilHornGeo, evilCrimsonMat);
+          const bladeEdge = new THREE.Mesh(droneBladeGeo, crimsonGlowMat);
           bladeEdge.position.set(side * 1.14, 0.9, 0.06);
           bladeEdge.rotation.z = side * -0.32;
           bladeEdge.rotation.x = 0.55;
           droneBody.add(bladeEdge);
 
-          const frontHorn = new THREE.Mesh(evilHornGeo, evilCrimsonMat);
+          const frontHorn = new THREE.Mesh(droneBladeGeo, crimsonGlowMat);
           frontHorn.position.set(side * 0.46, 0.72, 0.92);
           frontHorn.rotation.x = 1.18;
           frontHorn.rotation.z = side * -0.18;
           droneBody.add(frontHorn);
         }
 
-        const visor = new THREE.Mesh(evilVisorGeo, evilCrimsonMat);
+        const visor = new THREE.Mesh(droneVisorGeo, crimsonGlowMat);
         visor.position.set(0, 0.54, 0.91);
         droneBody.add(visor);
 
-        const core = new THREE.Mesh(evilCoreGeo, evilCrimsonMat);
+        const core = new THREE.Mesh(droneCoreGeo, crimsonGlowMat);
         core.position.set(0, 0.54, -0.84);
         droneBody.add(core);
         droneCore = core;
@@ -1066,7 +1055,7 @@ export class ObstacleManager {
         return 2.04;
       case 'hazard_zone':
         return 1.62;
-      case 'evil_drone':
+      case 'interceptor_drone':
         return 1.12;
       case 'shock_pylon':
         return 1.02;
@@ -1187,7 +1176,7 @@ export class ObstacleManager {
     const sweeperUnlocked = distance >= 1500 || difficultyLevel >= 5;
     const shockUnlocked = distance >= 3000 || difficultyLevel >= 8;
 
-    const evilWeight = difficultyLevel >= 2 ? 0.13 + levelBoost * 0.14 : 0.08;
+    const droneWeight = difficultyLevel >= 2 ? 0.13 + levelBoost * 0.14 : 0.08;
     const sweeperWeight = sweeperUnlocked ? 0.13 + levelBoost * 0.06 : 0;
     const shockWeight = shockUnlocked ? 0.12 + levelBoost * 0.06 : 0;
     const trafficWeight = 0.15 + levelBoost * 0.16;
@@ -1196,7 +1185,7 @@ export class ObstacleManager {
     const barrierWeight = Math.max(0.05, 0.2 - levelBoost * 0.15);
     const roadblockWeight = 0.12;
     const total =
-      evilWeight +
+      droneWeight +
       sweeperWeight +
       shockWeight +
       trafficWeight +
@@ -1206,8 +1195,8 @@ export class ObstacleManager {
       roadblockWeight;
     const roll = Math.random() * total;
 
-    let acc = evilWeight;
-    if (roll < acc) return 'evil_drone';
+    let acc = droneWeight;
+    if (roll < acc) return 'interceptor_drone';
     acc += sweeperWeight;
     if (sweeperUnlocked && roll < acc) return 'sweeper_beam';
     acc += shockWeight;
@@ -1406,7 +1395,7 @@ export class ObstacleManager {
               obs.motionMode = 'weave';
             }
           }
-        } else if (obs.kind === 'evil_drone') {
+        } else if (obs.kind === 'interceptor_drone') {
           obs.hasShiftedLane = true;
           if (Math.random() < droneSwoopChance) {
             const candidate = this.pickAdjacentCandidate(obs.lane);
@@ -1465,7 +1454,7 @@ export class ObstacleManager {
           obs.telegraphTimer = 0;
           if (this.canDynamicShiftTo(obs, obs.pendingLane)) {
             obs.targetLane = obs.pendingLane;
-            if (obs.kind === 'evil_drone') {
+            if (obs.kind === 'interceptor_drone') {
               obs.relativeSpeed =
                 this.lastDifficultyLevel >= 3
                   ? 4 + Math.min(6, (this.lastDifficultyLevel - 2) * 0.65)
@@ -1494,7 +1483,7 @@ export class ObstacleManager {
         if (Math.abs(targetX - nextX) < 0.08) {
           obs.lane = obs.targetLane;
         }
-      } else if (obs.kind === 'evil_drone') {
+      } else if (obs.kind === 'interceptor_drone') {
         const targetX = LaneSystem.getLaneX(obs.targetLane);
         const nextX = damp(obs.group.position.x, targetX, 7.2, dt);
         obs.group.position.x = nextX;
@@ -1623,7 +1612,7 @@ export class ObstacleManager {
         return 'Roadblock';
       case 'hazard_zone':
         return 'EMP Hazard';
-      case 'evil_drone':
+      case 'interceptor_drone':
         return 'Interceptor Drone';
       case 'sweeper_beam':
         return 'Laser Sweeper';

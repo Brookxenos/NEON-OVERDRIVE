@@ -7,7 +7,7 @@ A browser-based 3D coastal sunset highway racing arcade game built with **TypeSc
 - **Sunset Coastal Highway**: Endless pooled road segments, Art Deco skyline blocks, beachfront palms, billboard landmarks, golden-hour sky dome, and 360° city horizon framing.
 - **25 Unlockable Cars & 3D Garage**: Nine custom-sculpted vehicle chassis classes with interactive Front, Side, Rear, and 360° showroom camera angles, dual Coin + Best Distance unlock requirements, and per-car top-speed bonuses.
 - **Dynamic Obstacles & Deep-Run Zones**: Smooth 3-lane switching, throttle/brake control, manual boost and track boost pads, 8 dynamic obstacle types (adding Laser Sweepers at 1,500m+ and Shock Pylons at 3,000m+), deep-run Express (`2,500m`), Overclock (`5,000m`), and Apex (`8,000m`) score zones, near-miss bonuses, and combo multipliers.
-- **Procedural Rap & Beast Soundtrack**: Rotating multi-track Web Audio beat sequencer (four distinct 16-step beat arrangements switching each run), speed-reactive engine audio, and balanced arcade sound effects.
+- **Procedural Soundtrack**: Rotating multi-track Web Audio beat sequencer (four 16-step arrangements switching each run), speed-reactive engine audio, and balanced arcade sound effects.
 - **Controls & Persistence**: Keyboard steering (`A`/`D` or `←`/`→`), throttle/brake (`W`/`S` or `↑`/`↓`), boost (`Space`), pause (`Esc`/`P`), mobile swipe + touch buttons, and `localStorage` persistence for records, unlocks, and settings.
 
 ## Getting Started
@@ -53,6 +53,6 @@ Outputs the optimized production bundle to `dist/`.
 - `src/gameplay/`: Dynamic obstacle and collectible pools (`ObstacleManager`, `CollectibleManager`), wave formations (`TacticalWaveDirector`), swept 2D collision & near-miss detection (`CollisionSystem`), boost gauge (`BoostSystem`), combo scoring (`ScoreManager`), and speed progression (`DifficultyManager`).
 - `src/controls/`: Decoupled keyboard (`KeyboardController`) and mobile touch (`TouchController`) input handlers.
 - `src/effects/`: Pooled instanced 3D particles (`ParticleSystem`), speed streaks (`SpeedEffects`), and effect coordinator (`VisualEffects`).
-- `src/audio/`: Procedural music sequencer (`ClassicSoundtrack`, `AudioManager`) and sound effects synthesizer (`SoundEffects`).
+- `src/audio/`: Procedural music sequencer (`Soundtrack`, `AudioManager`) and sound effects synthesizer (`SoundEffects`).
 - `src/ui/`: Modular DOM screens (`MainMenu`, `GameHUD`, `PauseMenu`, `GameOverScreen`, `SettingsMenu`, `GarageModal`, `UIManager`).
 - `src/settings/` & `src/storage/`: Persistent configuration (`GameSettings`) and `localStorage` save data (`SaveManager`).

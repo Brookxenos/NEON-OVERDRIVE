@@ -22,11 +22,9 @@ export class Lighting {
   private readonly apexFillColor = new THREE.Color(0x38bdf8);
 
   constructor(isSoftwareGl: boolean) {
-    // Soft golden-peach sky dome & periwinkle bounce to preserve shadow detail
     this.hemi = new THREE.HemisphereLight(0xffe1b8, 0x8578a8, 1.25);
     this.group.add(this.hemi);
 
-    // Warm golden-hour directional sun angled from the front-right horizon
     this.sunsetKey = new THREE.DirectionalLight(0xffd49e, 2.35);
     this.sunsetKey.position.set(28, 16, -24);
     this.sunsetKey.castShadow = !isSoftwareGl;
@@ -41,7 +39,6 @@ export class Lighting {
     this.sunsetKey.shadow.normalBias = 0.02;
     this.group.add(this.sunsetKey);
 
-    // Cool pastel lavender-blue sky fill on opposite side for realistic sunlit vs shaded building faces
     this.skyFill = new THREE.DirectionalLight(0xa5b4fc, 0.72);
     this.skyFill.position.set(-24, 15, -10);
     this.group.add(this.skyFill);

@@ -8,8 +8,6 @@ export class DifficultyManager {
   }
 
   public getBaseSpeed(distance: number, elapsedRunSeconds = 0): number {
-    // Brisk opening warmup 0..500m (34 -> 42 m/s = 122 -> 151 km/h),
-    // then aggressive mid-to-late ramp past 500m up to BASE_MAX_SPEED (108 m/s = 389 km/h)
     const progDist = Math.max(0, distance) + Math.max(0, elapsedRunSeconds) * 4;
     const warmup = Math.min(progDist, 500) / 500;
     const earlySpeed = BASE_START_SPEED + 8 * Math.pow(warmup, 1.1);
@@ -24,11 +22,10 @@ export class DifficultyManager {
     currentSpeed = BASE_START_SPEED,
     laneShiftSteps = 1,
   ): number {
-    // Tighter tactical wave cadence with fair cross-lane reaction allowance
     const levelOffset = Math.max(0, difficultyLevel - 1);
     const tierProgress = 1 - Math.exp(-levelOffset / 8);
-    const baseMinTime = 0.78 - tierProgress * 0.42; // 0.78s early -> 0.36s late
-    const baseMaxTime = 1.0 - tierProgress * 0.52; // 1.00s early -> 0.48s late
+    const baseMinTime = 0.78 - tierProgress * 0.42;
+    const baseMaxTime = 1.0 - tierProgress * 0.52;
     const shiftTimeBonus = laneShiftSteps >= 2 ? 0.17 : 0;
     const minSpacing = Math.max(24, currentSpeed * (baseMinTime + shiftTimeBonus) + 5);
     const maxSpacing = Math.max(minSpacing + 5, currentSpeed * (baseMaxTime + shiftTimeBonus) + 8);

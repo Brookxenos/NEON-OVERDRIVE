@@ -87,7 +87,6 @@ export class CameraController {
       this.camera.updateProjectionMatrix();
     }
 
-    // Center above the bottom Garage dock on mobile portrait, or offset right on desktop
     const offsetX = isNarrowScreen ? 0 : -1.05;
     const targetY = isNarrowScreen ? 0.1 : 0.58;
     this.lookTarget.set(playerX + offsetX, targetY, 0);

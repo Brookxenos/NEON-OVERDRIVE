@@ -114,7 +114,6 @@ export class CarPhysics {
       this.phase = (this.phase + dt * (isBoosting ? 9.5 : 5.5)) % (Math.PI * 200);
     }
 
-    // Squat rear on boost/throttle, dive nose on brake
     const targetPitch = isBoosting ? 0.036 : isThrottling ? 0.02 : isBraking ? -0.04 : 0;
     this.pitch = damp(this.pitch, targetPitch, 10, dt);
     this.yaw = -this.roll * 0.45;
@@ -125,7 +124,6 @@ export class CarPhysics {
       dt,
     );
 
-    // Crisp subtle road-surface suspension ripple (keeps tires grounded while body breathes)
     this.suspensionOffset =
       Math.sin(this.phase * 2.1) * (isBoosting ? 0.014 : 0.008);
 

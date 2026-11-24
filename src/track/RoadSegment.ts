@@ -178,28 +178,24 @@ export class RoadSegment {
   public static createSharedGeometries(): RoadSegmentGeometries {
     const deckGeo = new THREE.BoxGeometry(ROAD_WIDTH, 0.65, SEGMENT_LENGTH);
 
-    // Merge left + right curbs
     const curbParts = [-1, 1].map((side) =>
       makeTransformedBox(0.72, 0.62, SEGMENT_LENGTH, side * (ROAD_WIDTH * 0.5 + 0.36), 0.04, 0),
     );
     const curbsGeo = mergeGeometries(curbParts);
     curbParts.forEach((g) => g.dispose());
 
-    // Merge coastal boulevard sidewalks flanking the road
     const walkParts = [-1, 1].map((side) =>
       makeTransformedBox(4.8, 0.45, SEGMENT_LENGTH, side * (ROAD_WIDTH * 0.5 + 3.1), -0.06, 0),
     );
     const sidewalksGeo = mergeGeometries(walkParts);
     walkParts.forEach((g) => g.dispose());
 
-    // Merge left + right curb neon/accent strips
     const railParts = [-1, 1].map((side) =>
       makeTransformedBox(0.12, 0.1, SEGMENT_LENGTH, side * (ROAD_WIDTH * 0.5 + 0.04), 0.36, 0),
     );
     const topRailsGeo = mergeGeometries(railParts);
     railParts.forEach((g) => g.dispose());
 
-    // Merge all lane dashes and reflective studs per segment (12 -> 1 draw call each)
     const dashParts: THREE.BufferGeometry[] = [];
     const studParts: THREE.BufferGeometry[] = [];
     for (const dividerX of [-LANE_WIDTH * 0.5, LANE_WIDTH * 0.5]) {
@@ -213,7 +209,6 @@ export class RoadSegment {
     dashParts.forEach((g) => g.dispose());
     studParts.forEach((g) => g.dispose());
 
-    // Merge coastal boulevard streetlight poles + curved arms + heads
     const lightParts: THREE.BufferGeometry[] = [];
     const headParts: THREE.BufferGeometry[] = [];
     for (const side of [-1, 1]) {
@@ -231,7 +226,6 @@ export class RoadSegment {
     lightParts.forEach((g) => g.dispose());
     headParts.forEach((g) => g.dispose());
 
-    // Merge highway gantry pillars + top truss
     const gantryParts: THREE.BufferGeometry[] = [
       makeTransformedBox(0.56, 7.6, 0.68, -(ROAD_WIDTH * 0.5 + 1.5), 3.6, 0),
       makeTransformedBox(0.56, 7.6, 0.68, ROAD_WIDTH * 0.5 + 1.5, 3.6, 0),
@@ -327,7 +321,6 @@ export class RoadSegment {
       signFace.position.set(0, 7.15, 0.45);
       this.group.add(signFace);
 
-      // Flanking 3-lamp traffic signal pods on the overhead traffic light bar
       const signalMats = [mats.signalRedMat, mats.amberLampMat, mats.signalGreenMat];
       for (const sideX of [-4.15, 4.15]) {
         const housing = new THREE.Mesh(geos.signalHousingGeo, mats.gantrySteelMat);

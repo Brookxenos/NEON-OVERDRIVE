@@ -23,7 +23,7 @@ export class GameHUD {
   private readonly coinsEl: HTMLElement;
   private readonly tierEl: HTMLElement;
   private readonly goalHintEl: HTMLElement;
-  private readonly techStatusEl: HTMLElement;
+  private readonly zoneBadgeEl: HTMLElement;
   private readonly speedEl: HTMLElement;
   private readonly distanceEl: HTMLElement;
   private readonly boostStatusEl: HTMLElement;
@@ -44,7 +44,7 @@ export class GameHUD {
   private lastTier = -1;
   private lastGoalText = '';
   private lastGoalReady: boolean | null = null;
-  private lastTechText = '';
+  private lastZoneText = '';
   private lastSpeed = -1;
   private lastDistText = '';
   private lastIsBoosting: boolean | null = null;
@@ -140,7 +140,7 @@ export class GameHUD {
     this.coinsEl = this.element.querySelector('[data-role="coins"]')!;
     this.tierEl = this.element.querySelector('[data-role="tier"]')!;
     this.goalHintEl = this.element.querySelector('[data-role="goal-hint"]')!;
-    this.techStatusEl = this.element.querySelector('[data-role="tech-status"]')!;
+    this.zoneBadgeEl = this.element.querySelector('[data-role="tech-status"]')!;
     this.speedEl = this.element.querySelector('[data-role="speed"]')!;
     this.distanceEl = this.element.querySelector('[data-role="distance"]')!;
     this.boostStatusEl = this.element.querySelector('[data-role="boost-status"]')!;
@@ -227,11 +227,11 @@ export class GameHUD {
       this.goalHintEl.classList.toggle('is-ready', goalReady);
     }
 
-    const techText = snapshot.zoneLabel;
-    if (techText !== this.lastTechText) {
-      this.lastTechText = techText;
-      this.techStatusEl.textContent = techText;
-      this.techStatusEl.classList.toggle('hidden', techText.length === 0);
+    const zoneText = snapshot.zoneLabel;
+    if (zoneText !== this.lastZoneText) {
+      this.lastZoneText = zoneText;
+      this.zoneBadgeEl.textContent = zoneText;
+      this.zoneBadgeEl.classList.toggle('hidden', zoneText.length === 0);
     }
 
     if (snapshot.speedKmh !== this.lastSpeed) {

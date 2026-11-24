@@ -43,8 +43,8 @@ type FormationId =
   | 'emp_laser_combo'
   | 'fortress_corridor'
   | 'gauntlet_crossfire'
-  | 'evil_gauntlet'
-  | 'evil_crossfire'
+  | 'interceptor_gauntlet'
+  | 'interceptor_crossfire'
   | 'phantom_zig_zag'
   | 'velocity_choke'
   | 'overdrive_blitz'
@@ -317,23 +317,23 @@ export class TacticalWaveDirector {
       case 'reaper_ambush': {
         const sequence: LaneIndex[] = [1, flank, oppFlank, 1, flank];
         const kinds: ObstacleType[] = [
-          'evil_drone',
+          'interceptor_drone',
           'barrier',
-          'evil_drone',
+          'interceptor_drone',
           'laser_gate',
-          'evil_drone',
+          'interceptor_drone',
         ];
         sequence.forEach((lane, idx) => {
           const isLast = idx === sequence.length - 1;
           this.queue.push({
             safeLane: lane,
-            blockCount: kinds[idx] === 'evil_drone' ? 1 : 2,
+            blockCount: kinds[idx] === 'interceptor_drone' ? 1 : 2,
             obstacleKind: kinds[idx],
             spacingScale: isLast ? 0.94 : 0.84,
             preferRewardInSafeLane: true,
           });
         });
-        this.lastFormation = 'evil_gauntlet';
+        this.lastFormation = 'interceptor_gauntlet';
         break;
       }
     }
@@ -409,11 +409,11 @@ export class TacticalWaveDirector {
         'double_squeeze',
         'emp_laser_combo',
         'twin_convoy_cut',
-        'evil_gauntlet',
+        'interceptor_gauntlet',
       );
     }
     if (difficultyLevel >= 2 && allowTwoLaneJump) available.push('apex_sweep');
-    if (difficultyLevel >= 3) available.push('gauntlet_crossfire', 'evil_crossfire');
+    if (difficultyLevel >= 3) available.push('gauntlet_crossfire', 'interceptor_crossfire');
     if (difficultyLevel >= 5) {
       available.push('sweeper_gauntlet', 'sweeper_gauntlet');
       if (allowTwoLaneJump) available.push('phantom_zig_zag', 'phantom_zig_zag');
@@ -657,19 +657,19 @@ export class TacticalWaveDirector {
         break;
       }
 
-      case 'evil_gauntlet': {
+      case 'interceptor_gauntlet': {
         const lanesOrder: LaneIndex[] = [flank, 1, oppFlank, 1];
         const kinds: ObstacleType[] = [
-          'evil_drone',
+          'interceptor_drone',
           'laser_gate',
-          'evil_drone',
+          'interceptor_drone',
           'roadblock',
         ];
         lanesOrder.forEach((lane, idx) => {
           const isLast = idx === lanesOrder.length - 1;
           this.queue.push({
             safeLane: lane,
-            blockCount: kinds[idx] === 'evil_drone' ? 1 : 2,
+            blockCount: kinds[idx] === 'interceptor_drone' ? 1 : 2,
             obstacleKind: kinds[idx],
             spacingScale: isLast ? 0.94 : 0.82,
             preferRewardInSafeLane: true,
@@ -678,20 +678,20 @@ export class TacticalWaveDirector {
         break;
       }
 
-      case 'evil_crossfire': {
+      case 'interceptor_crossfire': {
         const lanesOrder: LaneIndex[] = [1, flank, 1, oppFlank, flank];
         const kinds: ObstacleType[] = [
-          'evil_drone',
+          'interceptor_drone',
           'hazard_zone',
-          'evil_drone',
+          'interceptor_drone',
           'laser_gate',
-          'evil_drone',
+          'interceptor_drone',
         ];
         lanesOrder.forEach((lane, idx) => {
           const isLast = idx === lanesOrder.length - 1;
           this.queue.push({
             safeLane: lane,
-            blockCount: kinds[idx] === 'evil_drone' ? 1 : 2,
+            blockCount: kinds[idx] === 'interceptor_drone' ? 1 : 2,
             obstacleKind: kinds[idx],
             spacingScale: isLast ? 0.96 : 0.82,
             preferRewardInSafeLane: true,
@@ -703,10 +703,10 @@ export class TacticalWaveDirector {
       case 'phantom_zig_zag': {
         const lanesOrder: LaneIndex[] = [flank, oppFlank, 1, flank, oppFlank];
         const kinds: ObstacleType[] = [
-          'evil_drone',
+          'interceptor_drone',
           'roadblock',
           'hazard_zone',
-          'evil_drone',
+          'interceptor_drone',
           'roadblock',
         ];
         lanesOrder.forEach((lane, idx) => {
@@ -797,10 +797,10 @@ export class TacticalWaveDirector {
         const lanesOrder: LaneIndex[] = [flank, 1, oppFlank, flank, 1, oppFlank];
         const kinds: ObstacleType[] = [
           'traffic',
-          'evil_drone',
+          'interceptor_drone',
           'traffic',
           'laser_gate',
-          'evil_drone',
+          'interceptor_drone',
           'traffic',
         ];
         lanesOrder.forEach((lane, idx) => {
@@ -847,7 +847,7 @@ export class TacticalWaveDirector {
         const lanesOrder: LaneIndex[] = [flank, 1, oppFlank, 1, oppFlank];
         const kinds: ObstacleType[] = [
           'shock_pylon',
-          'evil_drone',
+          'interceptor_drone',
           'shock_pylon',
           'hazard_zone',
           'shock_pylon',
@@ -857,7 +857,7 @@ export class TacticalWaveDirector {
           const kind = kinds[idx];
           this.queue.push({
             safeLane: lane,
-            blockCount: kind === 'shock_pylon' || kind === 'evil_drone' ? 1 : 2,
+            blockCount: kind === 'shock_pylon' || kind === 'interceptor_drone' ? 1 : 2,
             obstacleKind: kind,
             spacingScale: isLast ? 0.98 : 0.86,
             preferRewardInSafeLane: true,
@@ -875,7 +875,7 @@ export class TacticalWaveDirector {
           'traffic',
           'sweeper_beam',
           'shock_pylon',
-          'evil_drone',
+          'interceptor_drone',
         ];
         lanesOrder.forEach((lane, idx) => {
           const isLast = idx === lanesOrder.length - 1;

@@ -14,7 +14,6 @@ export class Environment {
   private shimmerOffset = 0;
 
   constructor(textures: TextureBundle) {
-    // Warm golden-pink coastal sky dome
     const skyGeo = new THREE.SphereGeometry(520, 28, 18);
     const skyMat = new THREE.MeshBasicMaterial({
       map: textures.skyBackdrop,
@@ -25,7 +24,6 @@ export class Environment {
     this.materials.push(skyMat);
     this.group.add(new THREE.Mesh(skyGeo, skyMat));
 
-    // Sun-warmed coastal ground terrain flanking both front (-Z) and rear (+Z) boulevard views
     const groundGeo = new THREE.PlaneGeometry(860, 960, 1, 1);
     groundGeo.rotateX(-Math.PI / 2);
     const groundMat = new THREE.MeshStandardMaterial({
@@ -41,7 +39,6 @@ export class Environment {
     ground.position.set(0, -1.2, 0);
     this.group.add(ground);
 
-    // Subtle sunlit bay / roadside grass verge sheen moving smoothly with speed
     const shimmerGeo = new THREE.PlaneGeometry(520, 920, 1, 1);
     shimmerGeo.rotateX(-Math.PI / 2);
     this.shimmerMat = new THREE.MeshBasicMaterial({
@@ -105,11 +102,9 @@ export class Environment {
       const d = 14 + (Math.abs(i * 5) % 8);
       const xPos = i * 19;
 
-      // Front horizon (-Z)
       const zPosFront = -360 - (Math.abs(i) % 3) * 28;
       addTower(xPos, zPosFront, w, h, d, Math.abs(i) % 2 === 0);
 
-      // Symmetrical Rear horizon (+Z) so Rear and 360° garage camera views match the Front city vista
       const zPosRear = 360 + ((Math.abs(i) + 1) % 3) * 28;
       const hRear = 24 + Math.abs(Math.sin((i + 3) * 1.47)) * 62;
       addTower(xPos, zPosRear, w, hRear, d, (Math.abs(i) + 1) % 2 === 0);

@@ -48,12 +48,10 @@ function createRoadAlbedoTexture(maxAnisotropy: number): THREE.CanvasTexture {
     ctx.fillRect(x, y, 2, 2);
   }
 
-  // Subtle asphalt expansion joints
   ctx.fillStyle = 'rgba(20, 18, 28, 0.48)';
   ctx.fillRect(0, 0, 512, 3);
   ctx.fillRect(0, 256, 512, 3);
 
-  // Subtle tire-wear tracks along the three lanes
   const laneCenters = [104, 256, 408];
   for (const lx of laneCenters) {
     const grad = ctx.createLinearGradient(lx - 48, 0, lx + 48, 0);
@@ -64,7 +62,6 @@ function createRoadAlbedoTexture(maxAnisotropy: number): THREE.CanvasTexture {
     ctx.fillRect(lx - 48, 0, 96, 512);
   }
 
-  // Realistic yellow left shoulder stripe & crisp white right shoulder stripe
   ctx.fillStyle = 'rgba(245, 158, 11, 0.84)';
   ctx.fillRect(10, 0, 5, 512);
   ctx.fillStyle = 'rgba(241, 245, 249, 0.78)';
@@ -212,7 +209,6 @@ function createHazardStripesTexture(maxAnisotropy: number): THREE.CanvasTexture 
     ctx.fill();
   }
 
-  // Crisp top/bottom high-visibility cream warning edge lines
   ctx.fillStyle = '#fef9c3';
   ctx.fillRect(0, 0, 256, 16);
   ctx.fillRect(0, 240, 256, 16);
@@ -233,7 +229,6 @@ function createBuildingWindowTexture(
   canvas.height = 512;
   const ctx = canvas.getContext('2d')!;
 
-  // Warm sunlit pastel coastal stucco facade
   const wallGrad = ctx.createLinearGradient(0, 0, 0, 512);
   wallGrad.addColorStop(0, wallTopHex);
   wallGrad.addColorStop(0.65, wallBottomHex);
@@ -241,23 +236,19 @@ function createBuildingWindowTexture(
   ctx.fillStyle = wallGrad;
   ctx.fillRect(0, 0, 256, 512);
 
-  // Subtle vertical architectural ribs / piers
   ctx.fillStyle = 'rgba(255, 248, 236, 0.22)';
   for (let x = 0; x < 256; x += 64) {
     ctx.fillRect(x, 0, 5, 512);
   }
 
   if (isBalconyTower) {
-    // High-rise condo/hotel horizontal floor slabs, shaded balcony soffits & sky-tinted glass bays
     for (let y = 10; y < 500; y += 32) {
-      // Sunlit balcony slab & glass railing line
       ctx.fillStyle = 'rgba(255, 243, 224, 0.65)';
       ctx.fillRect(0, y + 22, 256, 5);
       ctx.fillStyle = 'rgba(84, 72, 112, 0.35)';
       ctx.fillRect(0, y + 27, 256, 3);
 
       for (let x = 10; x < 246; x += 28) {
-        // Window / sliding balcony door frame
         ctx.fillStyle = '#fff5ea';
         ctx.fillRect(x - 1, y - 1, 22, 22);
 
@@ -267,7 +258,6 @@ function createBuildingWindowTexture(
         ctx.fillStyle = glassGrad;
         ctx.fillRect(x, y, 20, 20);
 
-        // Occasional warm sunlit interior lamp or sunset reflection
         if (Math.random() < 0.32) {
           ctx.fillStyle = warmInteriorHex;
           ctx.globalAlpha = 0.45 + Math.random() * 0.25;
@@ -280,7 +270,6 @@ function createBuildingWindowTexture(
       }
     }
   } else {
-    // Classic Art Deco boutique hotel with framed multi-pane windows & horizontal speedlines
     ctx.fillStyle = 'rgba(130, 108, 140, 0.22)';
     for (let y = 0; y < 512; y += 36) {
       ctx.fillRect(0, y, 256, 3);
@@ -288,7 +277,6 @@ function createBuildingWindowTexture(
 
     for (let y = 12; y < 496; y += 36) {
       for (let x = 14; x < 242; x += 26) {
-        // Crisp cream Art Deco window trim
         ctx.fillStyle = '#fff6eb';
         ctx.fillRect(x - 2, y - 2, 18, 24);
 
@@ -298,7 +286,6 @@ function createBuildingWindowTexture(
         ctx.fillStyle = glassGrad;
         ctx.fillRect(x, y, 14, 20);
 
-        // Window mullion crossbar
         ctx.fillStyle = 'rgba(255, 246, 235, 0.55)';
         ctx.fillRect(x, y + 9, 14, 1.5);
 
@@ -312,7 +299,6 @@ function createBuildingWindowTexture(
     }
   }
 
-  // Clean sunlit roof cornice edge
   ctx.fillStyle = 'rgba(255, 244, 226, 0.65)';
   ctx.fillRect(0, 0, 256, 6);
 
@@ -370,7 +356,6 @@ function createSkyBackdropTexture(): THREE.CanvasTexture {
   canvas.height = 512;
   const ctx = canvas.getContext('2d')!;
 
-  // Bright coastal golden-hour sunset sky gradient
   const skyGrad = ctx.createLinearGradient(0, 0, 0, 512);
   skyGrad.addColorStop(0, '#6b6fb8');
   skyGrad.addColorStop(0.22, '#a774b4');
@@ -383,7 +368,6 @@ function createSkyBackdropTexture(): THREE.CanvasTexture {
   ctx.fillStyle = skyGrad;
   ctx.fillRect(0, 0, 1024, 512);
 
-  // Warm setting sun in the front-right sky
   const sunX = 684;
   const sunY = 216;
   const sunHalo = ctx.createRadialGradient(sunX, sunY, 10, sunX, sunY, 190);
@@ -399,7 +383,6 @@ function createSkyBackdropTexture(): THREE.CanvasTexture {
   ctx.arc(sunX, sunY, 20, 0, Math.PI * 2);
   ctx.fill();
 
-  // Soft pastel sunset cirrus clouds across upper & mid sky
   for (let i = 0; i < 20; i++) {
     const cx = Math.random() * 1024;
     const cy = 110 + Math.random() * 125;
@@ -417,7 +400,6 @@ function createSkyBackdropTexture(): THREE.CanvasTexture {
     ctx.fill();
   }
 
-  // Distant aircraft silhouette and faint contrail
   ctx.strokeStyle = 'rgba(255, 240, 225, 0.24)';
   ctx.lineWidth = 1.2;
   ctx.beginPath();
@@ -446,16 +428,13 @@ function createTheBrookSignTexture(maxAnisotropy: number): THREE.CanvasTexture {
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, 512, 128);
 
-  // Crisp highway sign outer border
   ctx.strokeStyle = '#94a3b8';
   ctx.lineWidth = 4;
   ctx.strokeRect(8, 8, 496, 112);
 
-  // Subtle top accent bar
   ctx.fillStyle = '#0ea5e9';
   ctx.fillRect(14, 14, 484, 4);
 
-  // Subtle traffic-signal indicator dots on left & right of signboard
   const dotColors = ['#fb7185', '#fbbf24', '#34d399'];
   for (let i = 0; i < dotColors.length; i++) {
     const cy = 42 + i * 22;
@@ -469,7 +448,6 @@ function createTheBrookSignTexture(maxAnisotropy: number): THREE.CanvasTexture {
     ctx.fill();
   }
 
-  // Main overhead traffic-bar title: "The Brook"
   ctx.font = '700 54px "Chakra Petch", "Plus Jakarta Sans", sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';

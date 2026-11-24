@@ -16,7 +16,6 @@ export class CarEffects {
     exhaustColor: number,
     particles: ParticleSystem,
   ): void {
-    // Only emit bright exhaust bursts when overdrive boost is active so the car's rear design remains clean
     if (isCrashed || !isBoosting) return;
 
     const emissionRate = 0.028;

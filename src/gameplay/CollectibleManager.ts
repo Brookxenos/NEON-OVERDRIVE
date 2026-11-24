@@ -34,7 +34,6 @@ export class CollectibleManager {
     const orbCoreGeo = new THREE.OctahedronGeometry(0.45, 0);
     const orbRingGeo = new THREE.TorusGeometry(0.66, 0.06, 8, 20);
 
-    // Classic Arcade Gold Coin (upright spinning coin with embossed rim & center star bar)
     const coinDiscGeo = new THREE.CylinderGeometry(0.56, 0.56, 0.14, 24);
     coinDiscGeo.rotateX(Math.PI / 2);
     const coinRimGeo = new THREE.TorusGeometry(0.54, 0.065, 10, 24);
