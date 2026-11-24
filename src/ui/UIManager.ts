@@ -153,7 +153,29 @@ export class UIManager {
       this.render();
     });
 
+    this.game.setUiModalBridge({
+      hasOpenModal: () => this.settingsOpen || this.garageOpen,
+      closeTopModal: () => this.handleEscape(),
+    });
+
     this.render();
+  }
+
+  private handleEscape(): boolean {
+    if (this.settingsOpen) {
+      this.game.playUiSound(false);
+      this.settingsOpen = false;
+      this.render();
+      return true;
+    }
+    if (this.garageOpen) {
+      this.game.playUiSound(false);
+      this.garageOpen = false;
+      this.game.setGarageOpen(false);
+      this.render();
+      return true;
+    }
+    return false;
   }
 
   private detectTouchCapability = (): void => {
@@ -175,6 +197,11 @@ export class UIManager {
   private render(): void {
     const snap = this.latestSnapshot;
     const muted = this.latestSettings.muted;
+
+    if (snap.status === 'playing') {
+      this.settingsOpen = false;
+      this.garageOpen = false;
+    }
 
     if (snap.webglError) {
       this.errorBanner.textContent = snap.webglError;
@@ -209,6 +236,7 @@ export class UIManager {
   }
 
   public dispose(): void {
+    this.game.setUiModalBridge(null);
     window.removeEventListener('resize', this.detectTouchCapability);
     this.unsubState();
     this.unsubSettings();

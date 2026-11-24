@@ -37,6 +37,11 @@ import { GameLoop } from './GameLoop';
 import { GameState } from './GameState';
 import { Renderer } from './Renderer';
 
+export interface UiModalBridge {
+  hasOpenModal: () => boolean;
+  closeTopModal: () => boolean;
+}
+
 export class Game {
   public readonly state: GameState;
   public readonly settings: GameSettings;
@@ -81,6 +86,7 @@ export class Game {
   private announcedGoalId: CarId | null = null;
   private garagePreviewOpen = false;
   private previewedCarId: CarId;
+  private uiModalBridge: UiModalBridge | null = null;
 
   private readonly collisionReport: CollisionReport = {
     crashed: false,
@@ -162,6 +168,13 @@ export class Game {
       onThrottleChange: (active: boolean) => this.carController.setThrottle(active),
       onBrakeChange: (active: boolean) => this.carController.setBrake(active),
       onPauseToggle: () => {
+        if (this.uiModalBridge?.hasOpenModal()) return;
+        const status = this.state.getStatus();
+        if (status === 'playing') this.pause();
+        else if (status === 'paused') this.resume();
+      },
+      onEscape: () => {
+        if (this.uiModalBridge?.closeTopModal()) return;
         const status = this.state.getStatus();
         if (status === 'playing') this.pause();
         else if (status === 'paused') this.resume();
@@ -245,6 +258,10 @@ export class Game {
 
   public setTouchBoost(active: boolean): void {
     this.touchController.setBoostHeld(active);
+  }
+
+  public setUiModalBridge(bridge: UiModalBridge | null): void {
+    this.uiModalBridge = bridge;
   }
 
   public setGarageOpen(open: boolean): void {

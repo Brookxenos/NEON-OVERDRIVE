@@ -4,6 +4,7 @@ export interface InputEvents {
   onThrottleChange: (active: boolean) => void;
   onBrakeChange: (active: boolean) => void;
   onPauseToggle: () => void;
+  onEscape: () => void;
   onInteraction: () => void;
 }
 
@@ -62,6 +63,8 @@ export class KeyboardController {
         }
         break;
       case 'Escape':
+        this.events.onEscape();
+        break;
       case 'KeyP':
         this.events.onPauseToggle();
         break;
