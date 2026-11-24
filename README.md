@@ -60,7 +60,7 @@ A 3D coastal highway arcade racing game built with TypeScript, Three.js, Vite, a
 ├── metadata.json               # App name, description, and capability metadata
 ├── package.json                # Scripts and dependencies
 ├── public/
-│   ├── assets/aistudio/        # 7 local billboard image assets for roadside banners
+│   ├── assets/billboards/      # 7 local billboard image assets for roadside banners
 │   └── favicon.svg             # Vector favicon
 ├── src/
 │   ├── main.ts                 # Bootstrap, DOM mount, WebGL fallback banner
@@ -128,7 +128,7 @@ Serves the compiled `dist/` bundle locally so you can verify production assets b
 
 ## Configuration & Persistence
 
-- **Environment Variables**: `.env.example` contains platform template placeholders (`GEMINI_API_KEY`, `APP_URL`), though the client game itself runs 100% client-side and does not read any API keys or secrets.
+- **Environment Variables**: `.env.example` contains a template placeholder (`APP_URL`), while the game itself runs 100% client-side and does not read any API keys or secrets.
 - **Browser Storage**: Progress and preferences are saved per browser origin in `localStorage`:
   - `neon_overdrive_save_v1`: High score, best distance, run stats, coin wallet, unlocked cars, and equipped car.
   - `neon_overdrive_settings_v1`: Graphics quality (`high` / `balanced`), master volume, music/SFX toggles, mute state, and touch pad mode.
@@ -138,7 +138,7 @@ Serves the compiled `dist/` bundle locally so you can verify production assets b
 Before releasing changes:
 
 1. Run `npm run lint` to confirm zero TypeScript errors.
-2. Run `npm run build` and verify `dist/index.html`, `dist/favicon.svg`, `dist/assets/aistudio/`, and `dist/assets/` are generated cleanly.
+2. Run `npm run build` and verify `dist/index.html`, `dist/favicon.svg`, `dist/assets/billboards/`, and `dist/assets/` are generated cleanly.
 3. Run `npm run preview` and manually verify in desktop and mobile browsers:
    - Main Menu → Garage (preview, camera angles, unlock/equip, filter tabs, reset) → Settings (volume, quality, touch mode)
    - Gameplay controls (`A`/`D` or `←`/`→`, `W`/`S`, `Space`, `Esc`, `P`, mobile swipe/touch pads)
@@ -147,6 +147,6 @@ Before releasing changes:
 
 ## Credits & License
 
-- All 3D vehicle/world geometry, procedural Canvas 2D textures, and Web Audio synthesizer tracks/effects are generated in-code within this repository; roadside billboard artwork resides under `public/assets/aistudio/`.
+- All 3D vehicle/world geometry, procedural Canvas 2D textures, and Web Audio synthesizer tracks/effects are generated in-code within this repository; roadside billboard artwork resides under `public/assets/billboards/`.
 - Built with [Three.js](https://threejs.org/) and [Vite](https://vite.dev/).
 - No `LICENSE` file is currently present in this repository; add an explicit license file before distributing under specific open-source or commercial terms.

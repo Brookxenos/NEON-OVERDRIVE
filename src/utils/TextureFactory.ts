@@ -482,13 +482,13 @@ function createGantrySignTexture(label: string, maxAnisotropy: number): THREE.Ca
 }
 
 export const SIDE_BANNER_IMAGE_PATHS: readonly string[] = [
-  '/assets/aistudio/Gemini_Generated_Image_xuz9lhxuz9lhxuz9_ea03150c.png',
-  '/assets/aistudio/Photo_from_2026-10-29_19-19-24.405529_99733e6a.jpeg',
-  '/assets/aistudio/itachi-uchiha-moon-5120x2880-25777_c56f5d2b.jpg',
-  '/assets/aistudio/astronaut-dark-3840x2160-22768_3df94603.jpg',
-  '/assets/aistudio/moon-mountains-3840x2160-11462_dc1c89ce.jpeg',
-  '/assets/aistudio/grand-theft-auto-vi-3840x2160-27352_613da459.jpg',
-  '/assets/aistudio/grand-theft-auto-vi-3840x2160-27417_2105951f.jpg',
+  '/assets/billboards/grand_canyon_portrait_ea03150c.png',
+  '/assets/billboards/Photo_from_2026-10-29_19-19-24.405529_99733e6a.jpeg',
+  '/assets/billboards/itachi-uchiha-moon-5120x2880-25777_c56f5d2b.jpg',
+  '/assets/billboards/astronaut-dark-3840x2160-22768_3df94603.jpg',
+  '/assets/billboards/moon-mountains-3840x2160-11462_dc1c89ce.jpeg',
+  '/assets/billboards/grand-theft-auto-vi-3840x2160-27352_613da459.jpg',
+  '/assets/billboards/grand-theft-auto-vi-3840x2160-27417_2105951f.jpg',
 ];
 
 function createSideBannerTexture(imagePath: string, maxAnisotropy: number): THREE.CanvasTexture {
