@@ -4,12 +4,12 @@ A 3D coastal highway arcade racing game built with TypeScript, Three.js, Vite, a
 
 ## Features
 
-- **3D Coastal Highway & Day-Night Cycle**: Endless pooled road segments, Art Deco skyline blocks, coastal palms, 360-degree horizon framing, and a continuous day-night cycle transitioning through Day, Sunset, Midnight, and Dawn every 1 minute 30 seconds on the first cycle (6 minutes total), then every 2 minutes 30 seconds on subsequent cycles (10 minutes total).
-- **25 Unlockable Cars & 3D Garage**: Nine distinct vehicle chassis classes (`muscle_blower`, `drift_widebody`, `ourea_electric`, `magnetar_super`, `cerbero_racer`, `chiron_rally`, `spectra_wtype`, `janus_racer`, `chronos_proto`) with category filters, interactive Front, Side, Rear, and 360° Spin showroom cameras, dual Coin + Best Distance unlock requirements, and per-car top-speed bonuses.
+- **3D Coastal Highway & Day-Night Cycle**: Endless pooled road segments, Art Deco skyline blocks, coastal palms, sequential overhead gantry signs (`Iesus Dominus est`, `xenos`, `Ἁγία Μαρία, Μήτηρ Θεοῦ`, `The Brook`), cycling roadside artwork billboards, 360-degree horizon framing, and a continuous day-night cycle transitioning through Day, Sunset, Midnight, and Dawn every 1 minute 30 seconds on the first cycle (6 minutes total), then every 2 minutes 30 seconds on subsequent cycles (10 minutes total).
+- **25 Unlockable Cars & 3D Garage**: Nine distinct vehicle chassis classes (`muscle_blower`, `drift_widebody`, `ourea_electric`, `magnetar_super`, `cerbero_racer`, `chiron_rally`, `spectra_wtype`, `janus_racer`, `chronos_proto`) with category filters, interactive Front, Side, Rear, and 360° Spin showroom cameras, dual Coin (`1,500`–`150,000` Coins) + Best Distance unlock requirements, and per-car top-speed bonuses.
 - **Dynamic Obstacles & Wave Formations**: Opening highway formations and scaling tactical waves featuring 8 obstacle types—Traffic Vehicles (with lane-change blinkers), Energy Barriers, Roadblocks, Laser Gates, EMP Hazards, Interceptor Drones, Laser Sweepers (unlocked at 1,500m / Tier 5), and Shock Pylons (unlocked at 3,000m / Tier 8)—with corridor checks that always preserve at least one clear path.
-- **Risk-Reward Scoring & Deep-Run Zones**: Collect Score Crystals (coins), Energy Orbs, and Boost Cells, hit track Boost Pads, earn Near-Miss bonuses, trigger 10,000-point Fever bursts, and enter Express (`2,500m`, `1.5x`), Overclock (`5,000m`, `2.0x`), and Apex (`8,000m`, `2.5x`) score zones.
+- **Risk-Reward Scoring & Deep-Run Zones**: Collect Gold Coins (`score_crystal`), limited Energy Orbs and Boost Cells, hit track Boost Pads, earn Near-Miss bonuses, trigger 10,000-point Fever bursts, and enter Express (`2,500m`, `1.5x`), Overclock (`5,000m`, `2.0x`), and Apex (`8,000m`, `2.5x`) score zones.
 - **Procedural Web Audio Engine**: Four-track rotating beat sequencer, speed- and boost-reactive engine synthesis, and voice-capped arcade sound effects with master volume, music, SFX, and mute controls.
-- **Responsive Desktop & Mobile Support**: Auto-adapting FOV for portrait and wide screens, keyboard controls, swipe gestures, configurable on-screen touch pads (`Auto`, `Always`, `Off`), automatic pause when switching tabs, and `localStorage` persistence.
+- **Responsive Desktop & Mobile Support**: Auto-adapting FOV for portrait and wide screens, keyboard controls, swipe gestures, configurable on-screen touch pads (`Auto`, `Always`, `Off`), a translucent bottom pause dock that keeps the 3D city visible while paused, automatic pause when switching tabs, and `localStorage` persistence.
 
 ## Screenshots
 
@@ -60,6 +60,7 @@ A 3D coastal highway arcade racing game built with TypeScript, Three.js, Vite, a
 ├── metadata.json               # App name, description, and capability metadata
 ├── package.json                # Scripts and dependencies
 ├── public/
+│   ├── assets/aistudio/        # 7 local billboard image assets for roadside banners
 │   └── favicon.svg             # Vector favicon
 ├── src/
 │   ├── main.ts                 # Bootstrap, DOM mount, WebGL fallback banner
@@ -137,15 +138,15 @@ Serves the compiled `dist/` bundle locally so you can verify production assets b
 Before releasing changes:
 
 1. Run `npm run lint` to confirm zero TypeScript errors.
-2. Run `npm run build` and verify `dist/index.html`, `dist/favicon.svg`, and `dist/assets/` are generated cleanly.
+2. Run `npm run build` and verify `dist/index.html`, `dist/favicon.svg`, `dist/assets/aistudio/`, and `dist/assets/` are generated cleanly.
 3. Run `npm run preview` and manually verify in desktop and mobile browsers:
    - Main Menu → Garage (preview, camera angles, unlock/equip, filter tabs, reset) → Settings (volume, quality, touch mode)
    - Gameplay controls (`A`/`D` or `←`/`→`, `W`/`S`, `Space`, `Esc`, `P`, mobile swipe/touch pads)
-   - Collisions, near misses, pause/resume, tab-switch auto-pause, game over, and restart
+   - Collisions, near misses, pause dock visibility, tab-switch auto-pause, game over, and restart
    - Persistence across page reloads and private/incognito sessions
 
 ## Credits & License
 
-- All 3D vehicle/world geometry, procedural Canvas 2D textures, and Web Audio synthesizer tracks/effects are generated in-code within this repository.
+- All 3D vehicle/world geometry, procedural Canvas 2D textures, and Web Audio synthesizer tracks/effects are generated in-code within this repository; roadside billboard artwork resides under `public/assets/aistudio/`.
 - Built with [Three.js](https://threejs.org/) and [Vite](https://vite.dev/).
 - No `LICENSE` file is currently present in this repository; add an explicit license file before distributing under specific open-source or commercial terms.
