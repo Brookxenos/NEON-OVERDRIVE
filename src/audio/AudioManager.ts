@@ -322,10 +322,6 @@ export class AudioManager {
     if (this.canPlaySfx()) this.sfx.playNearMiss();
   }
 
-  public playShieldBlock(): void {
-    if (this.canPlaySfx()) this.sfx.playShieldBlock();
-  }
-
   public playCrash(): void {
     if (this.canPlaySfx()) this.sfx.playCrash();
   }

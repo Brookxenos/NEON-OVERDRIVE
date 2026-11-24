@@ -1599,15 +1599,6 @@ export class ObstacleManager {
     });
   }
 
-  public shatterObstacle(obs: ObstacleInstance | null): void {
-    if (!obs) return;
-    obs.active = false;
-    obs.hasShiftedLane = false;
-    obs.telegraphTimer = 0;
-    obs.motionMode = 'none';
-    obs.group.visible = false;
-  }
-
   public snapToFraction(fraction: number): void {
     const t = Math.max(0, Math.min(1, fraction));
     this.pool.forEachActive((obs) => {

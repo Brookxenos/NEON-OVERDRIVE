@@ -227,16 +227,11 @@ export class GameHUD {
       this.goalHintEl.classList.toggle('is-ready', goalReady);
     }
 
-    const techParts: string[] = [];
-    if (snapshot.shieldActive) techParts.push('SHIELD READY');
-    if (snapshot.magnetActive) techParts.push('MAGNET');
-    if (snapshot.zoneLabel) techParts.push(snapshot.zoneLabel);
-    const techText = techParts.join(' · ');
+    const techText = snapshot.zoneLabel;
     if (techText !== this.lastTechText) {
       this.lastTechText = techText;
       this.techStatusEl.textContent = techText;
       this.techStatusEl.classList.toggle('hidden', techText.length === 0);
-      this.techStatusEl.classList.toggle('has-shield', snapshot.shieldActive);
     }
 
     if (snapshot.speedKmh !== this.lastSpeed) {

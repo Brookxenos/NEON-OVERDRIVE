@@ -120,10 +120,6 @@
   color: #facc15;
 }
 
-.hud-tech-status.has-shield {
-  color: #22d3ee;
-}
-
 .hud-right-cluster {
   display: flex;
   align-items: flex-start;

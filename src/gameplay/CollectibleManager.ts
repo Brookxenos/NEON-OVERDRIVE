@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { LaneIndex, LaneSystem } from '../track/LaneSystem';
 import { DESPAWN_Z, SPAWN_Z } from '../utils/Constants';
-import { damp } from '../utils/MathUtils';
 import { ObjectPool, Poolable } from '../utils/ObjectPool';
 import { TextureBundle } from '../utils/TextureFactory';
 
@@ -206,26 +205,14 @@ export class CollectibleManager {
     }
   }
 
-  public update(dt: number, worldSpeed: number, playerX = 0, magnetStrength = 0): void {
+  public update(dt: number, worldSpeed: number): void {
     this.elapsed = (this.elapsed + dt) % (Math.PI * 200);
-    const hasMagnet = magnetStrength > 0;
-    const magnetRadius = magnetStrength >= 1 ? 8.0 : 4.8;
-    const magnetRate = magnetStrength >= 1 ? 14 : 9;
 
     this.collectiblePool.forEachActive((col) => {
       col.prevX = col.group.position.x;
       col.prevZ = col.group.position.z;
       const nextZ = col.group.position.z + worldSpeed * dt;
       col.group.position.z = nextZ;
-
-      if (
-        hasMagnet &&
-        nextZ >= -26 &&
-        nextZ <= 1.2 &&
-        Math.abs(col.group.position.x - playerX) <= magnetRadius
-      ) {
-        col.group.position.x = damp(col.group.position.x, playerX, magnetRate, dt);
-      }
 
       col.group.rotation.y =
         (col.group.rotation.y + dt * (col.kind === 'score_crystal' ? 3.8 : 3.0)) %

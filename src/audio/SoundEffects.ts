@@ -44,7 +44,7 @@ export class SoundEffects {
   private lastNearMissAt = -1;
   private lastUiClickAt = -1;
   private lastBoostAt = -1;
-  private lastShieldAt = -1;
+
 
   public attach(
     ctx: AudioContext,
@@ -62,7 +62,6 @@ export class SoundEffects {
     this.lastNearMissAt = -1;
     this.lastUiClickAt = -1;
     this.lastBoostAt = -1;
-    this.lastShieldAt = -1;
   }
 
   public getActiveVoiceCount(): number {
@@ -289,46 +288,6 @@ export class SoundEffects {
     });
     osc.start(now);
     osc.stop(stopAt);
-  }
-
-  public playShieldBlock(): void {
-    if (!this.canSchedule(2) || !this.ctx || !this.outputNode) return;
-    const now = this.ctx.currentTime;
-    if (this.lastShieldAt >= 0 && now - this.lastShieldAt < 0.15) return;
-    this.lastShieldAt = now;
-
-    const thump = this.ctx.createOscillator();
-    const thumpGain = this.ctx.createGain();
-    thump.type = 'triangle';
-    thump.frequency.setValueAtTime(260, now);
-    thump.frequency.exponentialRampToValueAtTime(64, now + 0.24);
-    const thumpStop = now + 0.26;
-    scheduleCleanEnvelope(thumpGain.gain, now, 0.11, 0.005, now + 0.23, thumpStop);
-    thump.connect(thumpGain);
-    thumpGain.connect(this.outputNode);
-    this.trackVoice(thump, thumpStop, () => {
-      thump.disconnect();
-      thumpGain.disconnect();
-    });
-    thump.start(now);
-    thump.stop(thumpStop);
-
-    const shimmer = this.ctx.createOscillator();
-    const shimmerGain = this.ctx.createGain();
-    shimmer.type = 'sine';
-    shimmer.frequency.setValueAtTime(987.77, now);
-    shimmer.frequency.exponentialRampToValueAtTime(329.63, now + 0.22);
-    const shimmerStop = now + 0.24;
-    scheduleCleanEnvelope(shimmerGain.gain, now, 0.055, 0.006, now + 0.21, shimmerStop);
-    shimmer.connect(shimmerGain);
-    shimmerGain.connect(this.outputNode);
-    if (this.delaySend) shimmerGain.connect(this.delaySend);
-    this.trackVoice(shimmer, shimmerStop, () => {
-      shimmer.disconnect();
-      shimmerGain.disconnect();
-    });
-    shimmer.start(now);
-    shimmer.stop(shimmerStop);
   }
 
   public playCrash(): void {
