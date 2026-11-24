@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-export const DAY_NIGHT_CYCLE_SECONDS = 600;
+export const DAY_NIGHT_CYCLE_SECONDS = 480;
 
 export interface DayNightSample {
   readonly hemiSky: THREE.Color;
@@ -56,7 +56,7 @@ const CYCLE_KEYFRAMES: readonly CycleKeyframe[] = [
     nightAmount: 0,
   },
   {
-    phase: 0.4,
+    phase: 0.175,
     hemiSky: new THREE.Color(0xffe1b8),
     hemiGround: new THREE.Color(0x8578a8),
     hemiIntensity: 1.25,
@@ -73,7 +73,7 @@ const CYCLE_KEYFRAMES: readonly CycleKeyframe[] = [
     nightAmount: 0,
   },
   {
-    phase: 0.54,
+    phase: 0.25,
     hemiSky: new THREE.Color(0xffa07a),
     hemiGround: new THREE.Color(0x593d78),
     hemiIntensity: 0.98,
@@ -90,7 +90,24 @@ const CYCLE_KEYFRAMES: readonly CycleKeyframe[] = [
     nightAmount: 0.2,
   },
   {
-    phase: 0.66,
+    phase: 0.425,
+    hemiSky: new THREE.Color(0xffa07a),
+    hemiGround: new THREE.Color(0x593d78),
+    hemiIntensity: 0.98,
+    keyColor: new THREE.Color(0xff844b),
+    keyIntensity: 1.95,
+    keyPosition: new THREE.Vector3(34, 9, -20),
+    fillColor: new THREE.Color(0x818cf8),
+    fillIntensity: 0.68,
+    bgColor: new THREE.Color(0xd46a7e),
+    fogColor: new THREE.Color(0x9e5888),
+    skyTint: new THREE.Color(0xd996a8),
+    shimmerColor: new THREE.Color(0xf472b6),
+    envIntensity: 0.11,
+    nightAmount: 0.2,
+  },
+  {
+    phase: 0.465,
     hemiSky: new THREE.Color(0x6d74b8),
     hemiGround: new THREE.Color(0x2b224a),
     hemiIntensity: 0.68,
@@ -107,7 +124,7 @@ const CYCLE_KEYFRAMES: readonly CycleKeyframe[] = [
     nightAmount: 0.68,
   },
   {
-    phase: 0.78,
+    phase: 0.5,
     hemiSky: new THREE.Color(0x2f437d),
     hemiGround: new THREE.Color(0x110e24),
     hemiIntensity: 0.45,
@@ -124,7 +141,7 @@ const CYCLE_KEYFRAMES: readonly CycleKeyframe[] = [
     nightAmount: 1,
   },
   {
-    phase: 0.86,
+    phase: 0.675,
     hemiSky: new THREE.Color(0x2f437d),
     hemiGround: new THREE.Color(0x110e24),
     hemiIntensity: 0.45,
@@ -141,7 +158,24 @@ const CYCLE_KEYFRAMES: readonly CycleKeyframe[] = [
     nightAmount: 1,
   },
   {
-    phase: 0.94,
+    phase: 0.75,
+    hemiSky: new THREE.Color(0xf7b2c4),
+    hemiGround: new THREE.Color(0x53457d),
+    hemiIntensity: 0.92,
+    keyColor: new THREE.Color(0xffb899),
+    keyIntensity: 1.85,
+    keyPosition: new THREE.Vector3(-30, 11, -22),
+    fillColor: new THREE.Color(0x93c5fd),
+    fillIntensity: 0.7,
+    bgColor: new THREE.Color(0xd88ca0),
+    fogColor: new THREE.Color(0xb87ea2),
+    skyTint: new THREE.Color(0xdeb6c8),
+    shimmerColor: new THREE.Color(0xfbbf24),
+    envIntensity: 0.11,
+    nightAmount: 0.25,
+  },
+  {
+    phase: 0.925,
     hemiSky: new THREE.Color(0xf7b2c4),
     hemiGround: new THREE.Color(0x53457d),
     hemiIntensity: 0.92,
