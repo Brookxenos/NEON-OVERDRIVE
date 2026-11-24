@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { PLAYER_Z } from '../utils/Constants';
 import { sweptAabbIntersects2D } from '../utils/MathUtils';
 import { CollectibleManager, CollectibleType } from './CollectibleManager';
-import { ObstacleManager } from './ObstacleManager';
+import { ObstacleInstance, ObstacleManager } from './ObstacleManager';
 
 export interface CollectedEvent {
   kind: CollectibleType;
@@ -15,6 +15,7 @@ export interface CollisionReport {
   crashTime: number;
   crashCause: string;
   crashPosition: THREE.Vector3;
+  crashedObstacle: ObstacleInstance | null;
   collected: CollectedEvent[];
   hitBoostPad: boolean;
   nearMissCount: number;
@@ -23,6 +24,20 @@ export interface CollisionReport {
 export class CollisionSystem {
   private readonly playerHalfW = 0.95;
   private readonly playerHalfZ = 2.2;
+  private readonly eventSlots: CollectedEvent[] = [];
+
+  private obtainEventSlot(index: number): CollectedEvent {
+    let slot = this.eventSlots[index];
+    if (!slot) {
+      slot = {
+        kind: 'score_crystal',
+        position: new THREE.Vector3(),
+        hitTime: 0,
+      };
+      this.eventSlots[index] = slot;
+    }
+    return slot;
+  }
 
   public evaluate(
     prevPlayerX: number,
@@ -30,62 +45,68 @@ export class CollisionSystem {
     obstacles: ObstacleManager,
     collectibles: CollectibleManager,
     report: CollisionReport,
+    ignoreObstacles = false,
   ): void {
     report.crashed = false;
     report.crashTime = 1;
     report.crashCause = '';
+    report.crashedObstacle = null;
     report.collected.length = 0;
     report.hitBoostPad = false;
     report.nearMissCount = 0;
 
     let earliestCrashTime = Infinity;
 
-    obstacles.forEachActive((obs) => {
-      const ox = obs.group.position.x;
-      const oz = obs.group.position.z;
+    if (!ignoreObstacles) {
+      obstacles.forEachActive((obs) => {
+        const ox = obs.group.position.x;
+        const oz = obs.group.position.z;
 
-      const hitTime = sweptAabbIntersects2D(
-        prevPlayerX,
-        PLAYER_Z,
-        currPlayerX,
-        PLAYER_Z,
-        this.playerHalfW,
-        this.playerHalfZ,
-        obs.prevX,
-        obs.prevZ,
-        ox,
-        oz,
-        obs.halfW,
-        obs.halfZ,
-      );
+        const hitTime = sweptAabbIntersects2D(
+          prevPlayerX,
+          PLAYER_Z,
+          currPlayerX,
+          PLAYER_Z,
+          this.playerHalfW,
+          this.playerHalfZ,
+          obs.prevX,
+          obs.prevZ,
+          ox,
+          oz,
+          obs.halfW,
+          obs.halfZ,
+        );
 
-      if (hitTime !== null) {
-        if (hitTime < earliestCrashTime) {
-          earliestCrashTime = hitTime;
-          report.crashed = true;
-          report.crashTime = hitTime;
-          report.crashCause = obstacles.describeObstacle(obs.kind);
-          const hitX = prevPlayerX + (currPlayerX - prevPlayerX) * hitTime;
-          report.crashPosition.set(hitX, 0.9, PLAYER_Z);
+        if (hitTime !== null) {
+          if (hitTime < earliestCrashTime) {
+            earliestCrashTime = hitTime;
+            report.crashed = true;
+            report.crashTime = hitTime;
+            report.crashCause = obstacles.describeObstacle(obs.kind);
+            report.crashedObstacle = obs;
+            const hitX = prevPlayerX + (currPlayerX - prevPlayerX) * hitTime;
+            report.crashPosition.set(hitX, 0.9, PLAYER_Z);
+          }
+          return;
         }
-        return;
-      }
 
-      if (!report.crashed && !obs.nearMissed) {
-        const dx = Math.abs(currPlayerX - ox);
-        const sumW = this.playerHalfW + obs.halfW;
-        if (
-          oz > PLAYER_Z &&
-          (oz < PLAYER_Z + 4.5 || obs.prevZ <= PLAYER_Z + 4.5) &&
-          dx >= sumW &&
-          dx < sumW + 1.15
-        ) {
-          obs.nearMissed = true;
-          report.nearMissCount += 1;
+        if (!report.crashed && !obs.nearMissed) {
+          const dx = Math.abs(currPlayerX - ox);
+          const sumW = this.playerHalfW + obs.halfW;
+          if (
+            oz > PLAYER_Z &&
+            (oz < PLAYER_Z + 4.5 || obs.prevZ <= PLAYER_Z + 4.5) &&
+            dx >= sumW &&
+            dx < sumW + 1.15
+          ) {
+            obs.nearMissed = true;
+            report.nearMissCount += 1;
+          }
         }
-      }
-    });
+      });
+    }
 
+    let collectedIdx = 0;
     collectibles.forEachActiveCollectible((col) => {
       const hitTime = sweptAabbIntersects2D(
         prevPlayerX,
@@ -104,11 +125,12 @@ export class CollisionSystem {
       if (hitTime !== null && (!report.crashed || hitTime < report.crashTime)) {
         col.active = false;
         col.group.visible = false;
-        report.collected.push({
-          kind: col.kind,
-          position: col.group.position.clone(),
-          hitTime,
-        });
+        const slot = this.obtainEventSlot(collectedIdx);
+        slot.kind = col.kind;
+        slot.position.copy(col.group.position);
+        slot.hitTime = hitTime;
+        report.collected.push(slot);
+        collectedIdx += 1;
       }
     });
 

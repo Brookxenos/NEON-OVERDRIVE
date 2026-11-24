@@ -2,6 +2,11 @@ export type CollectibleSoundType = 'energy_orb' | 'score_crystal' | 'boost_cell'
 
 const MAX_ACTIVE_SFX_VOICES = 16;
 
+interface TrackedSfxVoice {
+  stopTime: number;
+  release: () => void;
+}
+
 function clampFreq(freq: number): number {
   if (!Number.isFinite(freq)) return 440;
   return Math.max(24, Math.min(18000, freq));
@@ -15,13 +20,14 @@ function scheduleCleanEnvelope(
   decayEndTime: number,
   stopTime: number,
 ): void {
+  const safeStart = Number.isFinite(startTime) ? Math.max(0, startTime) : 0;
   const safePeak = Math.max(0.001, Math.min(0.42, peak));
   const safeAttack = Math.max(0.003, attackSec);
-  const safeFadeOutStart = Math.max(startTime + safeAttack + 0.01, decayEndTime);
+  const safeFadeOutStart = Math.max(safeStart + safeAttack + 0.01, decayEndTime);
   const safeZeroTime = Math.max(safeFadeOutStart + 0.006, stopTime - 0.003);
 
-  gainParam.setValueAtTime(0, startTime);
-  gainParam.linearRampToValueAtTime(safePeak, startTime + safeAttack);
+  gainParam.setValueAtTime(0, safeStart);
+  gainParam.linearRampToValueAtTime(safePeak, safeStart + safeAttack);
   gainParam.exponentialRampToValueAtTime(0.0006, safeFadeOutStart);
   gainParam.linearRampToValueAtTime(0, safeZeroTime);
 }
@@ -32,12 +38,13 @@ export class SoundEffects {
   private delaySend: AudioNode | null = null;
   private noiseBuffer: AudioBuffer | null = null;
 
-  private activeVoices = 0;
+  private readonly trackedVoices: TrackedSfxVoice[] = [];
   private lastCollectibleAt = -1;
   private lastLaneShiftAt = -1;
   private lastNearMissAt = -1;
   private lastUiClickAt = -1;
   private lastBoostAt = -1;
+  private lastShieldAt = -1;
 
   public attach(
     ctx: AudioContext,
@@ -45,42 +52,83 @@ export class SoundEffects {
     delaySend: AudioNode,
     noiseBuffer: AudioBuffer,
   ): void {
+    this.releaseAllVoices();
     this.ctx = ctx;
     this.outputNode = outputNode;
     this.delaySend = delaySend;
     this.noiseBuffer = noiseBuffer;
-    this.activeVoices = 0;
     this.lastCollectibleAt = -1;
     this.lastLaneShiftAt = -1;
     this.lastNearMissAt = -1;
     this.lastUiClickAt = -1;
     this.lastBoostAt = -1;
+    this.lastShieldAt = -1;
+  }
+
+  public getActiveVoiceCount(): number {
+    return this.trackedVoices.length;
+  }
+
+  public sweepStaleVoices(now?: number): void {
+    const refTime =
+      now !== undefined && Number.isFinite(now)
+        ? now
+        : this.ctx && Number.isFinite(this.ctx.currentTime)
+          ? this.ctx.currentTime
+          : -1;
+    if (refTime < 0) return;
+
+    for (let i = this.trackedVoices.length - 1; i >= 0; i--) {
+      const entry = this.trackedVoices[i];
+      if (refTime > entry.stopTime + 0.14) {
+        entry.release();
+      }
+    }
+  }
+
+  private releaseAllVoices(): void {
+    for (let i = this.trackedVoices.length - 1; i >= 0; i--) {
+      this.trackedVoices[i].release();
+    }
+    this.trackedVoices.length = 0;
   }
 
   private canSchedule(minHeadroom = 1): boolean {
-    return (
-      this.ctx !== null &&
-      this.outputNode !== null &&
-      this.ctx.state === 'running' &&
-      Number.isFinite(this.ctx.currentTime) &&
-      this.activeVoices + minHeadroom <= MAX_ACTIVE_SFX_VOICES
-    );
+    if (!this.ctx || !this.outputNode || this.ctx.state !== 'running') return false;
+    const now = this.ctx.currentTime;
+    if (!Number.isFinite(now)) return false;
+    this.sweepStaleVoices(now);
+    return this.trackedVoices.length + minHeadroom <= MAX_ACTIVE_SFX_VOICES;
   }
 
-  private trackVoice(node: AudioScheduledSourceNode, cleanup: () => void): void {
-    this.activeVoices += 1;
+  private trackVoice(
+    node: AudioScheduledSourceNode,
+    stopTime: number,
+    cleanup: () => void,
+  ): void {
     let released = false;
-    const release = () => {
-      if (released) return;
-      released = true;
-      this.activeVoices = Math.max(0, this.activeVoices - 1);
-      try {
-        cleanup();
-      } catch {
-        // Ignore disconnect errors
-      }
+    const entry: TrackedSfxVoice = {
+      stopTime,
+      release: () => {
+        if (released) return;
+        released = true;
+        const idx = this.trackedVoices.indexOf(entry);
+        if (idx !== -1) {
+          const lastIdx = this.trackedVoices.length - 1;
+          if (idx !== lastIdx) {
+            this.trackedVoices[idx] = this.trackedVoices[lastIdx];
+          }
+          this.trackedVoices.pop();
+        }
+        try {
+          cleanup();
+        } catch {
+          // Ignore disconnect errors
+        }
+      },
     };
-    node.onended = release;
+    this.trackedVoices.push(entry);
+    node.onended = entry.release;
   }
 
   public playLaneShift(direction: -1 | 1): void {
@@ -96,7 +144,8 @@ export class SoundEffects {
     const endFreq = direction < 0 ? 440.0 : 392.0;
     osc.frequency.setValueAtTime(clampFreq(startFreq), now);
     osc.frequency.exponentialRampToValueAtTime(clampFreq(endFreq), now + 0.07);
-    scheduleCleanEnvelope(gain.gain, now, 0.055, 0.005, now + 0.078, now + 0.09);
+    const stopAt = now + 0.095;
+    scheduleCleanEnvelope(gain.gain, now, 0.05, 0.005, now + 0.078, now + 0.09);
 
     let panner: StereoPannerNode | null = null;
     if (typeof this.ctx.createStereoPanner === 'function') {
@@ -110,14 +159,14 @@ export class SoundEffects {
       gain.connect(this.outputNode);
     }
 
-    this.trackVoice(osc, () => {
+    this.trackVoice(osc, stopAt, () => {
       osc.disconnect();
       gain.disconnect();
       panner?.disconnect();
     });
 
     osc.start(now);
-    osc.stop(now + 0.095);
+    osc.stop(stopAt);
   }
 
   public playBoostActivate(): void {
@@ -131,32 +180,34 @@ export class SoundEffects {
     sub.type = 'sine';
     sub.frequency.setValueAtTime(102, now);
     sub.frequency.exponentialRampToValueAtTime(44, now + 0.22);
-    scheduleCleanEnvelope(subEnv.gain, now, 0.085, 0.01, now + 0.24, now + 0.27);
+    const subStop = now + 0.27;
+    scheduleCleanEnvelope(subEnv.gain, now, 0.035, 0.01, now + 0.24, subStop);
     sub.connect(subEnv);
     subEnv.connect(this.outputNode);
-    this.trackVoice(sub, () => {
+    this.trackVoice(sub, subStop, () => {
       sub.disconnect();
       subEnv.disconnect();
     });
     sub.start(now);
-    sub.stop(now + 0.27);
+    sub.stop(subStop);
 
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(160, now);
     osc.frequency.exponentialRampToValueAtTime(520, now + 0.26);
-    scheduleCleanEnvelope(gain.gain, now, 0.042, 0.012, now + 0.28, now + 0.32);
+    const oscStop = now + 0.32;
+    scheduleCleanEnvelope(gain.gain, now, 0.018, 0.012, now + 0.28, oscStop);
     osc.connect(gain);
     gain.connect(this.outputNode);
-    this.trackVoice(osc, () => {
+    this.trackVoice(osc, oscStop, () => {
       osc.disconnect();
       gain.disconnect();
     });
     osc.start(now);
-    osc.stop(now + 0.32);
+    osc.stop(oscStop);
 
-    if (this.noiseBuffer && this.activeVoices < MAX_ACTIVE_SFX_VOICES) {
+    if (this.noiseBuffer && this.trackedVoices.length < MAX_ACTIVE_SFX_VOICES) {
       const noise = this.ctx.createBufferSource();
       noise.buffer = this.noiseBuffer;
       const filter = this.ctx.createBiquadFilter();
@@ -165,32 +216,35 @@ export class SoundEffects {
       filter.frequency.setValueAtTime(320, now);
       filter.frequency.exponentialRampToValueAtTime(1700, now + 0.28);
       const nGain = this.ctx.createGain();
-      scheduleCleanEnvelope(nGain.gain, now, 0.05, 0.012, now + 0.3, now + 0.34);
+      const nStop = now + 0.34;
+      scheduleCleanEnvelope(nGain.gain, now, 0.02, 0.012, now + 0.3, nStop);
       noise.connect(filter);
       filter.connect(nGain);
       nGain.connect(this.outputNode);
-      this.trackVoice(noise, () => {
+      this.trackVoice(noise, nStop, () => {
         noise.disconnect();
         filter.disconnect();
         nGain.disconnect();
       });
       noise.start(now);
-      noise.stop(now + 0.34);
+      noise.stop(nStop);
     }
   }
 
   public playCollectible(kind: CollectibleSoundType, multiplier: number): void {
     if (!this.canSchedule(2) || !this.ctx || !this.outputNode) return;
     const now = this.ctx.currentTime;
-    if (this.lastCollectibleAt >= 0 && now - this.lastCollectibleAt < 0.05) return;
+    if (this.lastCollectibleAt >= 0 && now - this.lastCollectibleAt < 0.055) return;
     this.lastCollectibleAt = now;
 
-    const pitchScale = 1 + Math.min(Math.max(multiplier - 1, 0), 4) * 0.05;
+    const pitchScale = 1 + Math.min(Math.max(multiplier - 1, 0), 3) * 0.04;
     const base =
       kind === 'score_crystal' ? 659.25 : kind === 'boost_cell' ? 523.25 : 440.0;
+    const peakGain =
+      kind === 'score_crystal' ? 0.013 : kind === 'energy_orb' ? 0.014 : 0.016;
 
     const freqs =
-      this.activeVoices <= MAX_ACTIVE_SFX_VOICES - 2
+      this.trackedVoices.length <= MAX_ACTIVE_SFX_VOICES - 2
         ? [base * pitchScale, base * 1.5 * pitchScale]
         : [base * pitchScale];
 
@@ -199,17 +253,18 @@ export class SoundEffects {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = 'sine';
-      const t = now + idx * 0.028;
+      const t = now + idx * 0.024;
+      const stopAt = t + 0.095;
       osc.frequency.setValueAtTime(clampFreq(f), t);
-      scheduleCleanEnvelope(gain.gain, t, 0.036, 0.006, t + 0.12, t + 0.145);
+      scheduleCleanEnvelope(gain.gain, t, peakGain, 0.005, t + 0.075, stopAt);
       osc.connect(gain);
       gain.connect(this.outputNode);
-      this.trackVoice(osc, () => {
+      this.trackVoice(osc, stopAt, () => {
         osc.disconnect();
         gain.disconnect();
       });
       osc.start(t);
-      osc.stop(t + 0.145);
+      osc.stop(stopAt);
     });
   }
 
@@ -224,35 +279,79 @@ export class SoundEffects {
     osc.type = 'sine';
     osc.frequency.setValueAtTime(880, now);
     osc.frequency.exponentialRampToValueAtTime(220, now + 0.15);
-    scheduleCleanEnvelope(gain.gain, now, 0.055, 0.006, now + 0.155, now + 0.175);
+    const stopAt = now + 0.185;
+    scheduleCleanEnvelope(gain.gain, now, 0.048, 0.006, now + 0.155, now + 0.175);
     osc.connect(gain);
     gain.connect(this.outputNode);
-    this.trackVoice(osc, () => {
+    this.trackVoice(osc, stopAt, () => {
       osc.disconnect();
       gain.disconnect();
     });
     osc.start(now);
-    osc.stop(now + 0.185);
+    osc.stop(stopAt);
+  }
+
+  public playShieldBlock(): void {
+    if (!this.canSchedule(2) || !this.ctx || !this.outputNode) return;
+    const now = this.ctx.currentTime;
+    if (this.lastShieldAt >= 0 && now - this.lastShieldAt < 0.15) return;
+    this.lastShieldAt = now;
+
+    const thump = this.ctx.createOscillator();
+    const thumpGain = this.ctx.createGain();
+    thump.type = 'triangle';
+    thump.frequency.setValueAtTime(260, now);
+    thump.frequency.exponentialRampToValueAtTime(64, now + 0.24);
+    const thumpStop = now + 0.26;
+    scheduleCleanEnvelope(thumpGain.gain, now, 0.11, 0.005, now + 0.23, thumpStop);
+    thump.connect(thumpGain);
+    thumpGain.connect(this.outputNode);
+    this.trackVoice(thump, thumpStop, () => {
+      thump.disconnect();
+      thumpGain.disconnect();
+    });
+    thump.start(now);
+    thump.stop(thumpStop);
+
+    const shimmer = this.ctx.createOscillator();
+    const shimmerGain = this.ctx.createGain();
+    shimmer.type = 'sine';
+    shimmer.frequency.setValueAtTime(987.77, now);
+    shimmer.frequency.exponentialRampToValueAtTime(329.63, now + 0.22);
+    const shimmerStop = now + 0.24;
+    scheduleCleanEnvelope(shimmerGain.gain, now, 0.055, 0.006, now + 0.21, shimmerStop);
+    shimmer.connect(shimmerGain);
+    shimmerGain.connect(this.outputNode);
+    if (this.delaySend) shimmerGain.connect(this.delaySend);
+    this.trackVoice(shimmer, shimmerStop, () => {
+      shimmer.disconnect();
+      shimmerGain.disconnect();
+    });
+    shimmer.start(now);
+    shimmer.stop(shimmerStop);
   }
 
   public playCrash(): void {
     if (!this.ctx || !this.outputNode || this.ctx.state !== 'running') return;
     const now = this.ctx.currentTime;
+    if (!Number.isFinite(now)) return;
+    this.sweepStaleVoices(now);
 
     const sub = this.ctx.createOscillator();
     const subGain = this.ctx.createGain();
     sub.type = 'sawtooth';
     sub.frequency.setValueAtTime(160, now);
     sub.frequency.exponentialRampToValueAtTime(28, now + 0.55);
-    scheduleCleanEnvelope(subGain.gain, now, 0.34, 0.006, now + 0.58, now + 0.62);
+    const subStop = now + 0.62;
+    scheduleCleanEnvelope(subGain.gain, now, 0.34, 0.006, now + 0.58, subStop);
     sub.connect(subGain);
     subGain.connect(this.outputNode);
-    this.trackVoice(sub, () => {
+    this.trackVoice(sub, subStop, () => {
       sub.disconnect();
       subGain.disconnect();
     });
     sub.start(now);
-    sub.stop(now + 0.62);
+    sub.stop(subStop);
 
     if (this.noiseBuffer) {
       const noise = this.ctx.createBufferSource();
@@ -262,18 +361,19 @@ export class SoundEffects {
       filter.frequency.setValueAtTime(3000, now);
       filter.frequency.exponentialRampToValueAtTime(160, now + 0.65);
       const nGain = this.ctx.createGain();
-      scheduleCleanEnvelope(nGain.gain, now, 0.32, 0.008, now + 0.68, now + 0.72);
+      const nStop = now + 0.72;
+      scheduleCleanEnvelope(nGain.gain, now, 0.32, 0.008, now + 0.68, nStop);
       noise.connect(filter);
       filter.connect(nGain);
       nGain.connect(this.outputNode);
       if (this.delaySend) nGain.connect(this.delaySend);
-      this.trackVoice(noise, () => {
+      this.trackVoice(noise, nStop, () => {
         noise.disconnect();
         filter.disconnect();
         nGain.disconnect();
       });
       noise.start(now);
-      noise.stop(now + 0.72);
+      noise.stop(nStop);
     }
   }
 
@@ -288,15 +388,16 @@ export class SoundEffects {
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(confirm ? 560 : 420, now);
     osc.frequency.exponentialRampToValueAtTime(confirm ? 880 : 540, now + 0.065);
-    scheduleCleanEnvelope(gain.gain, now, 0.095, 0.004, now + 0.075, now + 0.09);
+    const stopAt = now + 0.09;
+    scheduleCleanEnvelope(gain.gain, now, 0.085, 0.004, now + 0.075, stopAt);
     osc.connect(gain);
     gain.connect(this.outputNode);
-    this.trackVoice(osc, () => {
+    this.trackVoice(osc, stopAt, () => {
       osc.disconnect();
       gain.disconnect();
     });
     osc.start(now);
-    osc.stop(now + 0.09);
+    osc.stop(stopAt);
   }
 
   public playMilestoneFanfare(): void {
@@ -309,11 +410,12 @@ export class SoundEffects {
       const gain = this.ctx.createGain();
       osc.type = 'triangle';
       const t = now + idx * 0.065;
+      const stopAt = t + 0.34;
       osc.frequency.setValueAtTime(clampFreq(freq), t);
       scheduleCleanEnvelope(
         gain.gain,
         t,
-        idx === notes.length - 1 ? 0.09 : 0.075,
+        idx === notes.length - 1 ? 0.05 : 0.042,
         0.012,
         t + 0.3,
         t + 0.33,
@@ -321,12 +423,20 @@ export class SoundEffects {
       osc.connect(gain);
       gain.connect(this.outputNode);
       if (this.delaySend) gain.connect(this.delaySend);
-      this.trackVoice(osc, () => {
+      this.trackVoice(osc, stopAt, () => {
         osc.disconnect();
         gain.disconnect();
       });
       osc.start(t);
-      osc.stop(t + 0.34);
+      osc.stop(stopAt);
     });
+  }
+
+  public dispose(): void {
+    this.releaseAllVoices();
+    this.ctx = null;
+    this.outputNode = null;
+    this.delaySend = null;
+    this.noiseBuffer = null;
   }
 }

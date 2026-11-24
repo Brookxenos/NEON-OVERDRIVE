@@ -23,6 +23,7 @@ export class GameHUD {
   private readonly coinsEl: HTMLElement;
   private readonly tierEl: HTMLElement;
   private readonly goalHintEl: HTMLElement;
+  private readonly techStatusEl: HTMLElement;
   private readonly speedEl: HTMLElement;
   private readonly distanceEl: HTMLElement;
   private readonly boostStatusEl: HTMLElement;
@@ -43,6 +44,7 @@ export class GameHUD {
   private lastTier = -1;
   private lastGoalText = '';
   private lastGoalReady: boolean | null = null;
+  private lastTechText = '';
   private lastSpeed = -1;
   private lastDistText = '';
   private lastIsBoosting: boolean | null = null;
@@ -70,6 +72,7 @@ export class GameHUD {
             <span>Tier <strong class="font-mono-num" style="color:#d8b4fe" data-role="tier">1</strong></span>
           </div>
           <div class="hud-goal-hint" data-role="goal-hint"></div>
+          <div class="hud-tech-status hidden" data-role="tech-status"></div>
         </div>
 
         <div class="hud-banner-slot" data-role="banner-slot"></div>
@@ -137,6 +140,7 @@ export class GameHUD {
     this.coinsEl = this.element.querySelector('[data-role="coins"]')!;
     this.tierEl = this.element.querySelector('[data-role="tier"]')!;
     this.goalHintEl = this.element.querySelector('[data-role="goal-hint"]')!;
+    this.techStatusEl = this.element.querySelector('[data-role="tech-status"]')!;
     this.speedEl = this.element.querySelector('[data-role="speed"]')!;
     this.distanceEl = this.element.querySelector('[data-role="distance"]')!;
     this.boostStatusEl = this.element.querySelector('[data-role="boost-status"]')!;
@@ -221,6 +225,18 @@ export class GameHUD {
     if (goalReady !== this.lastGoalReady) {
       this.lastGoalReady = goalReady;
       this.goalHintEl.classList.toggle('is-ready', goalReady);
+    }
+
+    const techParts: string[] = [];
+    if (snapshot.shieldActive) techParts.push('SHIELD READY');
+    if (snapshot.magnetActive) techParts.push('MAGNET');
+    if (snapshot.zoneLabel) techParts.push(snapshot.zoneLabel);
+    const techText = techParts.join(' · ');
+    if (techText !== this.lastTechText) {
+      this.lastTechText = techText;
+      this.techStatusEl.textContent = techText;
+      this.techStatusEl.classList.toggle('hidden', techText.length === 0);
+      this.techStatusEl.classList.toggle('has-shield', snapshot.shieldActive);
     }
 
     if (snapshot.speedKmh !== this.lastSpeed) {

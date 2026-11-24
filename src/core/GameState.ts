@@ -39,6 +39,9 @@ export interface GameSnapshot {
   isNewRecord: boolean;
   peakSpeedKmh: number;
   crashCause: string;
+  shieldActive: boolean;
+  magnetActive: boolean;
+  zoneLabel: string;
   eventBanner: GameEventBanner | null;
   webglError: string | null;
 }
@@ -87,6 +90,9 @@ export class GameState {
       isNewRecord: false,
       peakSpeedKmh: Math.round(BASE_START_SPEED * SPEED_TO_KMH),
       crashCause: '',
+      shieldActive: false,
+      magnetActive: false,
+      zoneLabel: '',
       eventBanner: null,
       webglError: null,
     };

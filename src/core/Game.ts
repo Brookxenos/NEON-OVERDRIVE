@@ -68,7 +68,15 @@ export class Game {
   private runElapsedSeconds = 0;
   private lastAnnouncedLevel = 1;
   private passed500m = false;
+  private passed1500m = false;
   private passed2500m = false;
+  private passed3000m = false;
+  private passed5000m = false;
+  private passed8000m = false;
+  private shieldCharges = 0;
+  private invulnerableTimer = 0;
+  private boostCellsCollected = 0;
+  private nextShieldDist = 2000;
   private lastScoreMilestone = 0;
   private scoreFeverTimer = 0;
   private hudSyncTimer = 0;
@@ -83,6 +91,7 @@ export class Game {
     crashTime: 1,
     crashCause: '',
     crashPosition: new THREE.Vector3(),
+    crashedObstacle: null,
     collected: [],
     hitBoostPad: false,
     nearMissCount: 0,
@@ -362,7 +371,15 @@ export class Game {
     this.runElapsedSeconds = 0;
     this.lastAnnouncedLevel = 1;
     this.passed500m = false;
+    this.passed1500m = false;
     this.passed2500m = false;
+    this.passed3000m = false;
+    this.passed5000m = false;
+    this.passed8000m = false;
+    this.shieldCharges = 0;
+    this.invulnerableTimer = 0;
+    this.boostCellsCollected = 0;
+    this.nextShieldDist = 2000;
     this.lastScoreMilestone = 0;
     this.scoreFeverTimer = 0;
     this.waveDirector.reset();
@@ -403,6 +420,9 @@ export class Game {
       isNewRecord: false,
       peakSpeedKmh: this.scoreManager.getPeakSpeedKmh(),
       crashCause: '',
+      shieldActive: false,
+      magnetActive: false,
+      zoneLabel: '',
       eventBanner: null,
     });
   }
@@ -430,6 +450,7 @@ export class Game {
     difficultyLevel: number,
     spawnZ = SPAWN_Z,
   ): { laneShiftSteps: number; spacingScale: number } {
+    const exactDistance = this.scoreManager.getExactDistance();
     const lanes = LaneSystem.getAllLanes();
     const clearLanes = lanes.filter((l) =>
       this.obstacleManager.isLaneClearForSafeCorridor(l, this.currentSpeed, difficultyLevel, spawnZ),
@@ -447,6 +468,7 @@ export class Game {
       spawnZ,
       plan.obstacleKind,
       plan.relativeSpeedOverride,
+      exactDistance,
     );
 
     const openLanes = lanes.filter((l) => !spawnedBlocked.includes(l));
@@ -454,12 +476,23 @@ export class Game {
       plan.preferRewardInSafeLane && openLanes.includes(plan.safeLane)
         ? plan.safeLane
         : openLanes[Math.floor(Math.random() * openLanes.length)];
-    const isExpressZone = this.scoreManager.getExactDistance() >= 2500;
+    const isExpressZone = exactDistance >= 2500;
     this.collectibleManager.spawnRewardInLane(rewardLane, spawnZ, isExpressZone);
     return { laneShiftSteps: plan.laneShiftSteps, spacingScale: plan.spacingScale };
   }
 
-  private updateFrame = (dt: number): void => {
+  private grantShield(reasonBanner: string): void {
+    if (this.shieldCharges < 1) {
+      this.shieldCharges = 1;
+      this.audioManager.playMilestoneFanfare();
+      this.state.pushBanner(reasonBanner, 'cyan');
+    } else {
+      this.boostSystem.addEnergy(50);
+    }
+  }
+
+  private updateFrame = (rawDt: number): void => {
+    const dt = Number.isFinite(rawDt) ? Math.min(Math.max(rawDt, 0), 0.05) : 0.016;
     this.state.tickBanner(dt);
     const status = this.state.getStatus();
 
@@ -516,7 +549,16 @@ export class Game {
 
     this.runElapsedSeconds += dt;
     const exactDistance = this.scoreManager.getExactDistance();
-    const isExpressZone = exactDistance >= 2500;
+    const zoneScoreMultiplier =
+      exactDistance >= 8000 ? 2.5 : exactDistance >= 5000 ? 2.0 : exactDistance >= 2500 ? 1.5 : 1.0;
+    const zoneLabel =
+      exactDistance >= 8000
+        ? 'APEX 2.5X'
+        : exactDistance >= 5000
+          ? 'OVERCLOCK 2X'
+          : exactDistance >= 2500
+            ? 'EXPRESS 1.5X'
+            : '';
     const difficultyLevel = this.difficultyManager.getLevel(
       exactDistance,
       this.runElapsedSeconds,
@@ -527,11 +569,42 @@ export class Game {
       this.state.pushBanner('500M · SPEED UP', 'cyan');
     }
 
+    if (!this.passed1500m && exactDistance >= 1500) {
+      this.passed1500m = true;
+      this.state.pushBanner('1,500M · LASER SWEEPERS & MAGNET ACTIVE', 'magenta');
+    }
+
+    if (exactDistance >= this.nextShieldDist) {
+      while (exactDistance >= this.nextShieldDist) {
+        this.nextShieldDist += 2000;
+      }
+      this.grantShield(`${Math.round(this.nextShieldDist - 2000).toLocaleString()}M · ENERGY SHIELD READY`);
+    }
+
     if (!this.passed2500m && exactDistance >= 2500) {
       this.passed2500m = true;
       this.boostSystem.addEnergy(100);
       this.audioManager.playMilestoneFanfare();
       this.state.pushBanner('2,500M EXPRESS · 1.5X SCORE', 'amber');
+    }
+
+    if (!this.passed3000m && exactDistance >= 3000) {
+      this.passed3000m = true;
+      this.state.pushBanner('3,000M · SHOCK PYLONS DEPLOYED', 'magenta');
+    }
+
+    if (!this.passed5000m && exactDistance >= 5000) {
+      this.passed5000m = true;
+      this.boostSystem.addEnergy(100);
+      this.audioManager.playMilestoneFanfare();
+      this.state.pushBanner('5,000M OVERCLOCK · 2.0X SCORE', 'amber');
+    }
+
+    if (!this.passed8000m && exactDistance >= 8000) {
+      this.passed8000m = true;
+      this.boostSystem.addEnergy(100);
+      this.audioManager.playMilestoneFanfare();
+      this.state.pushBanner('8,000M APEX ZONE · 2.5X SCORE', 'amber');
     }
 
     if (difficultyLevel > this.lastAnnouncedLevel) {
@@ -551,9 +624,9 @@ export class Game {
               : difficultyLevel === 4
                 ? 'TIER 4 · SLALOM'
                 : difficultyLevel === 5
-                  ? 'TIER 5 · CROSSFIRE'
+                  ? 'TIER 5 · LASER SWEEPERS'
                   : difficultyLevel === 8
-                    ? 'TIER 8 · ZIG-ZAG'
+                    ? 'TIER 8 · SHOCK PYLONS'
                     : difficultyLevel === 10
                       ? 'TIER 10 · HIGH SPEED'
                       : difficultyLevel === 12
@@ -575,11 +648,24 @@ export class Game {
     if (this.scoreFeverTimer > 0) {
       this.scoreFeverTimer = Math.max(0, this.scoreFeverTimer - dt);
     }
+    if (this.invulnerableTimer > 0) {
+      this.invulnerableTimer = Math.max(0, this.invulnerableTimer - dt);
+    }
     const isFeverActive = this.scoreFeverTimer > 0;
 
     const isManualBoost = this.boostSystem.isManualBoosting();
     const isPadBoost = this.boostSystem.isPadBoosting();
     const isAnyBoost = this.boostSystem.isAnyBoostActive();
+
+    const magnetStrength =
+      exactDistance >= 4000
+        ? isAnyBoost || isFeverActive
+          ? 1.5
+          : 0.65
+        : exactDistance >= 1500 && (isAnyBoost || isFeverActive)
+          ? 1.0
+          : 0;
+    const isMagnetActive = magnetStrength > 0;
 
     let targetSpeed =
       this.difficultyManager.getBaseSpeed(exactDistance, this.runElapsedSeconds) +
@@ -592,6 +678,9 @@ export class Game {
 
     const speedLambda = targetSpeed >= this.currentSpeed ? 4.2 : 3.2;
     this.currentSpeed = damp(this.currentSpeed, targetSpeed, speedLambda, dt);
+    if (!Number.isFinite(this.currentSpeed)) {
+      this.currentSpeed = BASE_START_SPEED;
+    }
 
     const prevPlayerX = this.carController.getX();
     this.carController.update(
@@ -600,11 +689,14 @@ export class Game {
       isAnyBoost,
       false,
       this.visualEffects.particles,
+      this.shieldCharges > 0,
+      isMagnetActive,
+      this.invulnerableTimer,
     );
     const currPlayerX = this.carController.getX();
 
     this.obstacleManager.update(dt, this.currentSpeed, exactDistance, difficultyLevel);
-    this.collectibleManager.update(dt, this.currentSpeed);
+    this.collectibleManager.update(dt, this.currentSpeed, currPlayerX, magnetStrength);
 
     this.collisionSystem.evaluate(
       prevPlayerX,
@@ -612,27 +704,40 @@ export class Game {
       this.obstacleManager,
       this.collectibleManager,
       this.collisionReport,
+      this.invulnerableTimer > 0,
     );
 
     if (this.collisionReport.crashed) {
-      const crashFrac = clamp(this.collisionReport.crashTime, 0, 1);
-      this.obstacleManager.snapToFraction(crashFrac);
-      this.trackManager.update(dt * crashFrac, this.currentSpeed, isAnyBoost);
-      this.sceneManager.update(dt * crashFrac, this.currentSpeed, isAnyBoost, exactDistance);
-      this.scoreManager.updateRun(
-        dt * crashFrac,
-        this.currentSpeed,
-        isAnyBoost,
-        isExpressZone,
-        isFeverActive,
-      );
-      this.processCollisionEvents(isExpressZone, isFeverActive);
-      this.visualEffects.update(dt, 0, false);
-      this.renderer.render(this.sceneManager.scene, this.sceneManager.cameraController.camera);
-      return;
+      if (this.shieldCharges > 0) {
+        this.shieldCharges = 0;
+        this.invulnerableTimer = 1.25;
+        this.obstacleManager.shatterObstacle(this.collisionReport.crashedObstacle);
+        this.collisionReport.crashed = false;
+        this.collisionReport.crashedObstacle = null;
+        this.visualEffects.emitCollectibleBurst(this.collisionReport.crashPosition, 0x22d3ee, 28, 12);
+        this.sceneManager.cameraController.triggerShake(0.55);
+        this.audioManager.playShieldBlock();
+        this.state.pushBanner('SHIELD ABSORBED IMPACT', 'cyan');
+      } else {
+        const crashFrac = clamp(this.collisionReport.crashTime, 0, 1);
+        this.obstacleManager.snapToFraction(crashFrac);
+        this.trackManager.update(dt * crashFrac, this.currentSpeed, isAnyBoost);
+        this.sceneManager.update(dt * crashFrac, this.currentSpeed, isAnyBoost, exactDistance);
+        this.scoreManager.updateRun(
+          dt * crashFrac,
+          this.currentSpeed,
+          isAnyBoost,
+          zoneScoreMultiplier,
+          isFeverActive,
+        );
+        this.processCollisionEvents(zoneScoreMultiplier, isFeverActive, exactDistance);
+        this.visualEffects.update(dt, 0, false);
+        this.renderer.render(this.sceneManager.scene, this.sceneManager.cameraController.camera);
+        return;
+      }
     }
 
-    this.scoreManager.updateRun(dt, this.currentSpeed, isAnyBoost, isExpressZone, isFeverActive);
+    this.scoreManager.updateRun(dt, this.currentSpeed, isAnyBoost, zoneScoreMultiplier, isFeverActive);
     this.trackManager.update(dt, this.currentSpeed, isAnyBoost);
     this.sceneManager.update(dt, this.currentSpeed, isAnyBoost, exactDistance);
     this.visualEffects.update(dt, this.currentSpeed, isAnyBoost);
@@ -663,9 +768,9 @@ export class Game {
       );
     }
 
-    this.processCollisionEvents(isExpressZone, isFeverActive);
+    this.processCollisionEvents(zoneScoreMultiplier, isFeverActive, exactDistance);
     if (this.state.getStatus() === 'playing') {
-      this.checkScoreMilestone();
+      this.checkScoreMilestone(exactDistance);
     }
 
     if (this.state.getStatus() === 'playing') {
@@ -686,7 +791,7 @@ export class Game {
       this.hudSyncTimer += dt;
       if (this.hudSyncTimer >= 0.042) {
         this.hudSyncTimer = 0;
-        this.syncHudState(difficultyLevel, isAnyBoost);
+        this.syncHudState(difficultyLevel, isAnyBoost, isMagnetActive, zoneLabel);
       }
 
       if (this.saveDirty) {
@@ -700,7 +805,7 @@ export class Game {
     this.renderer.render(this.sceneManager.scene, this.sceneManager.cameraController.camera);
   };
 
-  private checkScoreMilestone(): void {
+  private checkScoreMilestone(exactDistance: number): void {
     const score = this.scoreManager.getScore();
     const milestoneStep = Math.floor(score / 10000);
     if (milestoneStep <= this.lastScoreMilestone) return;
@@ -715,11 +820,19 @@ export class Game {
     this.boostSystem.addEnergy(100);
     this.scoreFeverTimer = 8.0;
 
+    if (exactDistance >= 1500 && this.shieldCharges < 1) {
+      this.shieldCharges = 1;
+      this.state.pushBanner(
+        `${(milestoneStep * 10).toLocaleString()}K · SHIELD +${bonusCoins} COINS`,
+        'cyan',
+      );
+    } else {
+      this.state.pushBanner(
+        `${(milestoneStep * 10).toLocaleString()}K · 2X SCORE +${bonusCoins} COINS`,
+        'amber',
+      );
+    }
     this.audioManager.playMilestoneFanfare();
-    this.state.pushBanner(
-      `${(milestoneStep * 10).toLocaleString()}K · 2X SCORE +${bonusCoins} COINS`,
-      'amber',
-    );
     this.checkCarUnlockGoal();
   }
 
@@ -737,12 +850,16 @@ export class Game {
     }
   }
 
-  private processCollisionEvents(isExpressZone: boolean, isFeverActive: boolean): void {
+  private processCollisionEvents(
+    zoneScoreMultiplier: number,
+    isFeverActive: boolean,
+    exactDistance: number,
+  ): void {
     let coinsChanged = false;
     for (const item of this.collisionReport.collected) {
       const reward = this.scoreManager.registerCollectible(
         item.kind,
-        isExpressZone,
+        zoneScoreMultiplier,
         isFeverActive,
       );
       if (reward.coins > 0) {
@@ -754,6 +871,10 @@ export class Game {
         this.boostSystem.addEnergy(16);
       } else if (item.kind === 'boost_cell') {
         this.boostSystem.addEnergy(38);
+        this.boostCellsCollected += 1;
+        if (exactDistance >= 1000 && this.boostCellsCollected % 5 === 0 && this.shieldCharges < 1) {
+          this.grantShield('5 CELLS · ENERGY SHIELD READY');
+        }
       }
       this.audioManager.playCollectible(item.kind, this.scoreManager.getMultiplier());
     }
@@ -785,6 +906,8 @@ export class Game {
     if (this.state.getStatus() !== 'playing') return;
 
     this.currentSpeed = 0;
+    this.shieldCharges = 0;
+    this.invulnerableTimer = 0;
     this.carController.triggerCrash(crashPosition.x);
     this.sceneManager.cameraController.triggerShake(1.15);
     this.visualEffects.emitCrashExplosion(crashPosition);
@@ -812,6 +935,8 @@ export class Game {
       speedKmh: 0,
       boostMeter: this.boostSystem.getMeter(),
       isBoosting: false,
+      shieldActive: false,
+      magnetActive: false,
       multiplier: this.scoreManager.getMultiplier(),
       orbsCollected: this.scoreManager.getOrbsCollected(),
       runCoins: this.scoreManager.getRunCoins(),
@@ -835,7 +960,12 @@ export class Game {
     this.saveManager.writeSaveData(this.saveData);
   };
 
-  private syncHudState(difficultyLevel: number, isBoosting: boolean): void {
+  private syncHudState(
+    difficultyLevel: number,
+    isBoosting: boolean,
+    magnetActive: boolean,
+    zoneLabel: string,
+  ): void {
     const currentScore = this.scoreManager.getScore();
     const currentDist = this.scoreManager.getDistance();
     this.syncProgressionState();
@@ -845,6 +975,9 @@ export class Game {
       speedKmh: Math.round(this.currentSpeed * SPEED_TO_KMH),
       boostMeter: this.boostSystem.getMeter(),
       isBoosting,
+      shieldActive: this.shieldCharges > 0,
+      magnetActive,
+      zoneLabel,
       multiplier: this.scoreManager.getMultiplier(),
       orbsCollected: this.scoreManager.getOrbsCollected(),
       runCoins: this.scoreManager.getRunCoins(),

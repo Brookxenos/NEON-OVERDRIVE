@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { LaneIndex, LaneSystem } from '../track/LaneSystem';
 import { DESPAWN_Z, SPAWN_Z } from '../utils/Constants';
+import { damp } from '../utils/MathUtils';
 import { ObjectPool, Poolable } from '../utils/ObjectPool';
 import { TextureBundle } from '../utils/TextureFactory';
 
@@ -97,9 +98,9 @@ export class CollectibleManager {
     this.materials.push(orbMat, coinGoldMat, coinRimMat, cellMat, whiteRingMat, padMat);
 
     const kindPlan: CollectibleType[] = [];
-    for (let i = 0; i < 60; i++) kindPlan.push('score_crystal');
-    for (let i = 0; i < 20; i++) kindPlan.push('energy_orb');
-    for (let i = 0; i < 16; i++) kindPlan.push('boost_cell');
+    for (let i = 0; i < 96; i++) kindPlan.push('score_crystal');
+    for (let i = 0; i < 28; i++) kindPlan.push('energy_orb');
+    for (let i = 0; i < 24; i++) kindPlan.push('boost_cell');
 
     const colItems: CollectibleInstance[] = [];
 
@@ -138,7 +139,7 @@ export class CollectibleManager {
     }
 
     const padItems: BoostPadInstance[] = [];
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 16; i++) {
       const mesh = new THREE.Mesh(padGeo, padMat);
       mesh.visible = false;
       mesh.position.y = 0.04;
@@ -205,19 +206,33 @@ export class CollectibleManager {
     }
   }
 
-  public update(dt: number, worldSpeed: number): void {
+  public update(dt: number, worldSpeed: number, playerX = 0, magnetStrength = 0): void {
     this.elapsed = (this.elapsed + dt) % (Math.PI * 200);
+    const hasMagnet = magnetStrength > 0;
+    const magnetRadius = magnetStrength >= 1 ? 8.0 : 4.8;
+    const magnetRate = magnetStrength >= 1 ? 14 : 9;
 
     this.collectiblePool.forEachActive((col) => {
       col.prevX = col.group.position.x;
       col.prevZ = col.group.position.z;
-      col.group.position.z += worldSpeed * dt;
+      const nextZ = col.group.position.z + worldSpeed * dt;
+      col.group.position.z = nextZ;
+
+      if (
+        hasMagnet &&
+        nextZ >= -26 &&
+        nextZ <= 1.2 &&
+        Math.abs(col.group.position.x - playerX) <= magnetRadius
+      ) {
+        col.group.position.x = damp(col.group.position.x, playerX, magnetRate, dt);
+      }
+
       col.group.rotation.y =
         (col.group.rotation.y + dt * (col.kind === 'score_crystal' ? 3.8 : 3.0)) %
         (Math.PI * 2);
       col.group.position.y = 0.95 + Math.sin(this.elapsed * 4.5 + col.phase) * 0.14;
 
-      if (col.group.position.z > DESPAWN_Z) {
+      if (nextZ > DESPAWN_Z) {
         col.active = false;
         col.group.visible = false;
       }

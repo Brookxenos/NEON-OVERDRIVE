@@ -47,6 +47,8 @@ export class AudioManager {
   private isUnlocked = false;
   private disposed = false;
   private lastResumeAttemptMs = 0;
+  private lastAudioClockTime = -1;
+  private stalledClockFrames = 0;
   private noiseBuffer: AudioBuffer | null = null;
   private readonly sfx = new SoundEffects();
   private readonly soundtrack = new ClassicSoundtrack();
@@ -65,6 +67,7 @@ export class AudioManager {
   private readonly handleContextStateChange = (): void => {
     if (this.disposed || !this.ctx) return;
     if (this.ctx.state === 'running') {
+      this.stalledClockFrames = 0;
       this.soundtrack.resetClock();
     }
   };
@@ -230,6 +233,26 @@ export class AudioManager {
     const now = this.ctx.currentTime;
     if (!Number.isFinite(now)) return;
 
+    this.sfx.sweepStaleVoices(now);
+
+    if (dt > 0 && this.lastAudioClockTime >= 0 && Math.abs(now - this.lastAudioClockTime) < 1e-6) {
+      this.stalledClockFrames += 1;
+      if (this.stalledClockFrames >= 90 && !document.hidden) {
+        this.stalledClockFrames = 0;
+        this.sfx.sweepStaleVoices(now + 10);
+        this.soundtrack.sweepStaleVoices(now + 10);
+        const nowMs = Date.now();
+        if (nowMs - this.lastResumeAttemptMs >= 4000) {
+          this.lastResumeAttemptMs = nowMs;
+          const ctx = this.ctx;
+          void ctx.suspend().then(() => ctx.resume()).catch(() => undefined);
+        }
+      }
+    } else {
+      this.stalledClockFrames = 0;
+    }
+    this.lastAudioClockTime = now;
+
     const safeSpeedNorm = safeFinite(speedNorm, 0, 0, 1.5);
 
     if (
@@ -299,6 +322,10 @@ export class AudioManager {
     if (this.canPlaySfx()) this.sfx.playNearMiss();
   }
 
+  public playShieldBlock(): void {
+    if (this.canPlaySfx()) this.sfx.playShieldBlock();
+  }
+
   public playCrash(): void {
     if (this.canPlaySfx()) this.sfx.playCrash();
   }
@@ -313,6 +340,8 @@ export class AudioManager {
 
   public dispose(): void {
     this.disposed = true;
+    this.sfx.dispose();
+    this.soundtrack.dispose();
     document.removeEventListener('visibilitychange', this.handleVisibilityChange);
     if (this.ctx) {
       this.ctx.removeEventListener('statechange', this.handleContextStateChange);

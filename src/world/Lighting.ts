@@ -9,13 +9,17 @@ export class Lighting {
 
   private readonly baseHemiSky = new THREE.Color(0xffe1b8);
   private readonly expressHemiSky = new THREE.Color(0xf9b4c4);
+  private readonly apexHemiSky = new THREE.Color(0xfde68a);
   private readonly baseHemiGround = new THREE.Color(0x8578a8);
   private readonly expressHemiGround = new THREE.Color(0x5b4b8a);
+  private readonly apexHemiGround = new THREE.Color(0x3b1d5e);
 
   private readonly baseSunColor = new THREE.Color(0xffd49e);
   private readonly expressSunColor = new THREE.Color(0xffa96b);
+  private readonly apexSunColor = new THREE.Color(0xfb7185);
   private readonly baseFillColor = new THREE.Color(0xa5b4fc);
   private readonly expressFillColor = new THREE.Color(0x818cf8);
+  private readonly apexFillColor = new THREE.Color(0x38bdf8);
 
   constructor(isSoftwareGl: boolean) {
     // Soft golden-peach sky dome & periwinkle bounce to preserve shadow detail
@@ -43,12 +47,24 @@ export class Lighting {
     this.group.add(this.skyFill);
   }
 
-  public setZoneBlend(blend: number): void {
-    this.hemi.color.copy(this.baseHemiSky).lerp(this.expressHemiSky, blend);
-    this.hemi.groundColor.copy(this.baseHemiGround).lerp(this.expressHemiGround, blend);
-    this.sunsetKey.color.copy(this.baseSunColor).lerp(this.expressSunColor, blend);
-    this.sunsetKey.intensity = 2.35 + blend * 0.25;
-    this.skyFill.color.copy(this.baseFillColor).lerp(this.expressFillColor, blend);
-    this.skyFill.intensity = 0.72 + blend * 0.22;
+  public setZoneBlend(expressBlend: number, deepBlend = 0): void {
+    this.hemi.color
+      .copy(this.baseHemiSky)
+      .lerp(this.expressHemiSky, expressBlend)
+      .lerp(this.apexHemiSky, deepBlend);
+    this.hemi.groundColor
+      .copy(this.baseHemiGround)
+      .lerp(this.expressHemiGround, expressBlend)
+      .lerp(this.apexHemiGround, deepBlend);
+    this.sunsetKey.color
+      .copy(this.baseSunColor)
+      .lerp(this.expressSunColor, expressBlend)
+      .lerp(this.apexSunColor, deepBlend);
+    this.sunsetKey.intensity = 2.35 + expressBlend * 0.22 + deepBlend * 0.18;
+    this.skyFill.color
+      .copy(this.baseFillColor)
+      .lerp(this.expressFillColor, expressBlend)
+      .lerp(this.apexFillColor, deepBlend);
+    this.skyFill.intensity = 0.72 + expressBlend * 0.2 + deepBlend * 0.18;
   }
 }

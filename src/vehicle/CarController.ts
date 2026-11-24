@@ -86,6 +86,7 @@ export class CarController {
       false,
       pose.phase,
     );
+    this.model.setDefenseState(false, false, 0, 0);
   }
 
   public update(
@@ -94,6 +95,9 @@ export class CarController {
     isBoosting: boolean,
     isAttractMode: boolean,
     particles: ParticleSystem,
+    shieldActive = false,
+    magnetActive = false,
+    invulnerableTimer = 0,
   ): void {
     const pose = this.physics.step(
       dt,
@@ -117,6 +121,12 @@ export class CarController {
       this.throttling,
       this.braking,
       pose.isCrashed,
+      pose.phase,
+    );
+    this.model.setDefenseState(
+      shieldActive && !pose.isCrashed,
+      magnetActive && !pose.isCrashed,
+      invulnerableTimer,
       pose.phase,
     );
 

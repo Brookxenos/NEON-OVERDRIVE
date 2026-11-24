@@ -15,10 +15,13 @@ export class SceneManager {
 
   private readonly baseBgColor = new THREE.Color(COLORS.bgVoid);
   private readonly expressBgColor = new THREE.Color(0xd86f8c);
+  private readonly overclockBgColor = new THREE.Color(0x7e3af2);
   private readonly baseFogColor = new THREE.Color(COLORS.fogNight);
   private readonly expressFogColor = new THREE.Color(0xa864a8);
+  private readonly overclockFogColor = new THREE.Color(0x4c1d95);
   private readonly fog: THREE.FogExp2;
   private zoneBlend = 0;
+  private deepBlend = 0;
 
   constructor(
     renderer: THREE.WebGLRenderer,
@@ -50,23 +53,32 @@ export class SceneManager {
 
   public resetAtmosphere(): void {
     this.zoneBlend = 0;
+    this.deepBlend = 0;
     if (this.scene.background instanceof THREE.Color) {
       this.scene.background.copy(this.baseBgColor);
     }
     this.fog.color.copy(this.baseFogColor);
-    this.lighting.setZoneBlend(0);
+    this.lighting.setZoneBlend(0, 0);
   }
 
   public update(dt: number, worldSpeed: number, isBoosting: boolean, distance = 0): void {
     const targetBlend = clamp((distance - 2500) / 800, 0, 1);
+    const targetDeep = clamp((distance - 5000) / 1400, 0, 1);
     this.zoneBlend = damp(this.zoneBlend, targetBlend, 1.8, dt);
+    this.deepBlend = damp(this.deepBlend, targetDeep, 1.4, dt);
 
     if (this.scene.background instanceof THREE.Color) {
-      this.scene.background.copy(this.baseBgColor).lerp(this.expressBgColor, this.zoneBlend);
+      this.scene.background
+        .copy(this.baseBgColor)
+        .lerp(this.expressBgColor, this.zoneBlend)
+        .lerp(this.overclockBgColor, this.deepBlend * 0.72);
     }
-    this.fog.color.copy(this.baseFogColor).lerp(this.expressFogColor, this.zoneBlend);
-    this.lighting.setZoneBlend(this.zoneBlend);
-    this.environment.update(dt, worldSpeed, isBoosting, this.zoneBlend);
+    this.fog.color
+      .copy(this.baseFogColor)
+      .lerp(this.expressFogColor, this.zoneBlend)
+      .lerp(this.overclockFogColor, this.deepBlend * 0.72);
+    this.lighting.setZoneBlend(this.zoneBlend, this.deepBlend);
+    this.environment.update(dt, worldSpeed, isBoosting, this.zoneBlend, this.deepBlend);
   }
 
   public dispose(): void {

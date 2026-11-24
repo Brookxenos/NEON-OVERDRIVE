@@ -49,7 +49,10 @@ type FormationId =
   | 'velocity_choke'
   | 'overdrive_blitz'
   | 'rush_hour_convoy'
-  | 'apex_hellstorm';
+  | 'apex_hellstorm'
+  | 'sweeper_gauntlet'
+  | 'shock_storm'
+  | 'overclock_apex';
 
 const OPENING_FORMATION_LABELS: Record<OpeningFormationId, string> = {
   gate_gauntlet: 'GATE GAUNTLET',
@@ -411,10 +414,17 @@ export class TacticalWaveDirector {
     }
     if (difficultyLevel >= 2 && allowTwoLaneJump) available.push('apex_sweep');
     if (difficultyLevel >= 3) available.push('gauntlet_crossfire', 'evil_crossfire');
-    if (difficultyLevel >= 5 && allowTwoLaneJump) available.push('phantom_zig_zag', 'phantom_zig_zag');
+    if (difficultyLevel >= 5) {
+      available.push('sweeper_gauntlet', 'sweeper_gauntlet');
+      if (allowTwoLaneJump) available.push('phantom_zig_zag', 'phantom_zig_zag');
+    }
     if (difficultyLevel >= 6) available.push('velocity_choke', 'velocity_choke');
-    if (difficultyLevel >= 8) available.push('overdrive_blitz', 'overdrive_blitz');
-    if (difficultyLevel >= 10) available.push('rush_hour_convoy', 'rush_hour_convoy');
+    if (difficultyLevel >= 8) {
+      available.push('overdrive_blitz', 'overdrive_blitz', 'shock_storm', 'shock_storm');
+    }
+    if (difficultyLevel >= 10) {
+      available.push('rush_hour_convoy', 'rush_hour_convoy', 'overclock_apex', 'overclock_apex');
+    }
     if (difficultyLevel >= 12) available.push('apex_hellstorm', 'apex_hellstorm');
 
     const nonRepeating = available.filter((id) => id !== this.lastFormation);
@@ -803,6 +813,79 @@ export class TacticalWaveDirector {
             relativeSpeedOverride:
               kind === 'traffic' ? -(baseDelta * (idx % 2 === 0 ? 1.0 : 0.65)) : undefined,
             spacingScale: isLast ? 1.0 : 0.84,
+            preferRewardInSafeLane: true,
+          });
+        });
+        break;
+      }
+
+      case 'sweeper_gauntlet': {
+        const lanesOrder: LaneIndex[] = [1, flank, oppFlank, 1, flank];
+        const kinds: ObstacleType[] = [
+          'sweeper_beam',
+          'laser_gate',
+          'sweeper_beam',
+          'traffic',
+          'sweeper_beam',
+        ];
+        lanesOrder.forEach((lane, idx) => {
+          const isLast = idx === lanesOrder.length - 1;
+          const kind = kinds[idx];
+          this.queue.push({
+            safeLane: lane,
+            blockCount: kind === 'sweeper_beam' ? 1 : 2,
+            obstacleKind: kind,
+            relativeSpeedOverride: kind === 'traffic' ? -4.5 : undefined,
+            spacingScale: isLast ? 0.96 : 0.86,
+            preferRewardInSafeLane: true,
+          });
+        });
+        break;
+      }
+
+      case 'shock_storm': {
+        const lanesOrder: LaneIndex[] = [flank, 1, oppFlank, 1, oppFlank];
+        const kinds: ObstacleType[] = [
+          'shock_pylon',
+          'evil_drone',
+          'shock_pylon',
+          'hazard_zone',
+          'shock_pylon',
+        ];
+        lanesOrder.forEach((lane, idx) => {
+          const isLast = idx === lanesOrder.length - 1;
+          const kind = kinds[idx];
+          this.queue.push({
+            safeLane: lane,
+            blockCount: kind === 'shock_pylon' || kind === 'evil_drone' ? 1 : 2,
+            obstacleKind: kind,
+            spacingScale: isLast ? 0.98 : 0.86,
+            preferRewardInSafeLane: true,
+          });
+        });
+        break;
+      }
+
+      case 'overclock_apex': {
+        const convoyDelta = -Math.min(18.5, 5.2 + (difficultyLevel - 1) * 0.42);
+        const lanesOrder: LaneIndex[] = [1, flank, oppFlank, 1, flank, 1];
+        const kinds: ObstacleType[] = [
+          'sweeper_beam',
+          'shock_pylon',
+          'traffic',
+          'sweeper_beam',
+          'shock_pylon',
+          'evil_drone',
+        ];
+        lanesOrder.forEach((lane, idx) => {
+          const isLast = idx === lanesOrder.length - 1;
+          const kind = kinds[idx];
+          this.queue.push({
+            safeLane: lane,
+            blockCount: kind === 'traffic' ? 2 : 1,
+            obstacleKind: kind,
+            relativeSpeedOverride: kind === 'traffic' ? convoyDelta : undefined,
+            spacingScale: isLast ? 1.0 : 0.85,
             preferRewardInSafeLane: true,
           });
         });

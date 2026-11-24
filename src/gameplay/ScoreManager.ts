@@ -41,22 +41,26 @@ export class ScoreManager {
     dt: number,
     worldSpeed: number,
     isBoosting: boolean,
-    isExpressZone = false,
+    zoneScoreMultiplier = 1,
     isFeverActive = false,
   ): void {
-    const deltaMeters = worldSpeed * dt;
+    const safeDt = Number.isFinite(dt) ? Math.max(0, dt) : 0;
+    const safeSpeed = Number.isFinite(worldSpeed) ? Math.max(0, worldSpeed) : 0;
+    const deltaMeters = safeSpeed * safeDt;
     this.distance += deltaMeters;
-    const zoneBonus = (isExpressZone ? 1.5 : 1) * (isFeverActive ? 2 : 1);
+    const zoneBonus =
+      Math.max(1, Number.isFinite(zoneScoreMultiplier) ? zoneScoreMultiplier : 1) *
+      (isFeverActive ? 2 : 1);
     this.score +=
       deltaMeters * SCORE_PER_METER * this.multiplier * (isBoosting ? 1.5 : 1) * zoneBonus;
 
-    const kmh = Math.round(worldSpeed * SPEED_TO_KMH);
+    const kmh = Math.round(safeSpeed * SPEED_TO_KMH);
     if (kmh > this.peakSpeedKmh) {
       this.peakSpeedKmh = kmh;
     }
 
     if (this.comboTimer > 0) {
-      this.comboTimer -= dt;
+      this.comboTimer -= safeDt;
       if (this.comboTimer <= 0) {
         this.multiplier = 1;
       }
@@ -65,7 +69,7 @@ export class ScoreManager {
 
   public registerCollectible(
     kind: 'energy_orb' | 'score_crystal' | 'boost_cell',
-    isExpressZone = false,
+    zoneScoreMultiplier = 1,
     isFeverActive = false,
   ): CollectibleReward {
     this.orbsCollected += 1;
@@ -87,9 +91,8 @@ export class ScoreManager {
           : ORB_COIN_VALUE;
 
     const feverBonus = isFeverActive ? 2 : 1;
-    const points = Math.round(
-      baseValue * this.multiplier * (isExpressZone ? 1.5 : 1) * feverBonus,
-    );
+    const zoneBonus = Math.max(1, Number.isFinite(zoneScoreMultiplier) ? zoneScoreMultiplier : 1);
+    const points = Math.round(baseValue * this.multiplier * zoneBonus * feverBonus);
     this.score += points;
     this.runCoins += coinReward;
     return { points, coins: coinReward };

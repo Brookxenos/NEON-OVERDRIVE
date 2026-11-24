@@ -6,7 +6,7 @@ A browser-based 3D coastal sunset highway racing arcade game built with **TypeSc
 
 - **Sunset Coastal Highway**: Endless pooled road segments, Art Deco skyline blocks, beachfront palms, billboard landmarks, golden-hour sky dome, and 360° city horizon framing.
 - **25 Unlockable Cars & 3D Garage**: Nine custom-sculpted vehicle chassis classes with interactive Front, Side, Rear, and 360° showroom camera angles, dual Coin + Best Distance unlock requirements, and per-car top-speed bonuses.
-- **Dynamic Obstacles & Arcade Gameplay**: Smooth 3-lane switching, throttle/brake control, manual boost and track boost pads, 6 obstacle types with live lane-weaving traffic, swooping interceptor drones, oscillating laser gates, rotating EMP hazards, hydraulic roadblocks, near-miss bonuses, and combo multipliers.
+- **Dynamic Obstacles & Deep-Run Tech**: Smooth 3-lane switching, throttle/brake control, manual boost and track boost pads, 8 dynamic obstacle types (adding Laser Sweepers at 1,500m+ and Shock Pylons at 3,000m+), Energy Shield crash absorption, Coin Magnet pull, deep-run Express (`2,500m`), Overclock (`5,000m`), and Apex (`8,000m`) score zones, near-miss bonuses, and combo multipliers.
 - **Procedural Rap & Beast Soundtrack**: Rotating multi-track Web Audio beat sequencer (four distinct 16-step beat arrangements switching each run), speed-reactive engine audio, and balanced arcade sound effects.
 - **Controls & Persistence**: Keyboard steering (`A`/`D` or `←`/`→`), throttle/brake (`W`/`S` or `↑`/`↓`), boost (`Space`), pause (`Esc`/`P`), mobile swipe + touch buttons, and `localStorage` persistence for records, unlocks, and settings.
 

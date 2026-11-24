@@ -11,9 +11,11 @@ export type ObstacleType =
   | 'roadblock'
   | 'laser_gate'
   | 'hazard_zone'
-  | 'evil_drone';
+  | 'evil_drone'
+  | 'sweeper_beam'
+  | 'shock_pylon';
 
-export type DynamicMotionMode = 'none' | 'weave' | 'swoop' | 'slide' | 'patrol';
+export type DynamicMotionMode = 'none' | 'weave' | 'swoop' | 'slide' | 'patrol' | 'sweep' | 'feint';
 
 export interface ObstacleInstance extends Poolable {
   kind: ObstacleType;
@@ -32,6 +34,8 @@ export interface ObstacleInstance extends Poolable {
   laserBeams: THREE.Mesh[];
   hazardCage: THREE.Group | null;
   roadblockDeck: THREE.Group | null;
+  sweeperHead: THREE.Group | null;
+  shockRing: THREE.Group | null;
   trafficWheels: THREE.Group[];
   baseY: number;
   phase: number;
@@ -524,6 +528,23 @@ export class ObstacleManager {
     const evilCrestGeo = new THREE.BoxGeometry(0.16, 0.24, 1.45);
     const evilSkidGeo = new THREE.BoxGeometry(0.14, 0.12, 1.82);
 
+    // 7. Laser Sweeper Carriage (1,500m+ Mobile Turret with Rotating Plasma Emitters)
+    const sweeperBaseGeo = new THREE.BoxGeometry(2.38, 0.26, 1.12);
+    const sweeperTrimGeo = new THREE.BoxGeometry(2.44, 0.14, 0.28);
+    const sweeperTurretGeo = new THREE.CylinderGeometry(0.42, 0.54, 0.56, 16);
+    const sweeperRodGeo = new THREE.CylinderGeometry(0.08, 0.08, 2.52, 12);
+    sweeperRodGeo.rotateZ(Math.PI / 2);
+    const sweeperTipGeo = new THREE.SphereGeometry(0.16, 12, 10);
+
+    // 8. Shock Pylon (3,000m+ Dual Tesla Surge Unit with Spinning Gyro Ring)
+    const shockHullGeo = new THREE.BoxGeometry(2.12, 0.42, 1.66);
+    const shockProwGeo = new THREE.ConeGeometry(0.48, 0.92, 6);
+    shockProwGeo.rotateX(-Math.PI / 2);
+    const shockCoilGeo = new THREE.CylinderGeometry(0.14, 0.2, 1.28, 12);
+    const shockRotorGeo = new THREE.TorusGeometry(0.92, 0.085, 10, 26);
+    shockRotorGeo.rotateX(Math.PI / 2);
+    const shockOrbGeo = new THREE.OctahedronGeometry(0.32, 0);
+
     this.geometries.push(
       floorStripGeo,
       barrierSillGeo,
@@ -572,6 +593,16 @@ export class ObstacleManager {
       evilCoreGeo,
       evilCrestGeo,
       evilSkidGeo,
+      sweeperBaseGeo,
+      sweeperTrimGeo,
+      sweeperTurretGeo,
+      sweeperRodGeo,
+      sweeperTipGeo,
+      shockHullGeo,
+      shockProwGeo,
+      shockCoilGeo,
+      shockRotorGeo,
+      shockOrbGeo,
     );
 
     const kinds: ObstacleType[] = [
@@ -581,11 +612,14 @@ export class ObstacleManager {
       'laser_gate',
       'hazard_zone',
       'evil_drone',
+      'sweeper_beam',
+      'shock_pylon',
     ];
 
     const instances: ObstacleInstance[] = [];
 
-    for (let i = 0; i < 60; i++) {
+    // 18 pooled instances per obstacle kind (144 total) prevents exhaustion during marathon runs
+    for (let i = 0; i < kinds.length * 18; i++) {
       const kind = kinds[i % kinds.length];
       const obsGroup = new THREE.Group();
       obsGroup.visible = false;
@@ -597,6 +631,8 @@ export class ObstacleManager {
       const laserBeams: THREE.Mesh[] = [];
       let hazardCage: THREE.Group | null = null;
       let roadblockDeck: THREE.Group | null = null;
+      let sweeperHead: THREE.Group | null = null;
+      let shockRing: THREE.Group | null = null;
       const trafficWheels: THREE.Group[] = [];
       let baseY = 0;
       let halfW = 1.15;
@@ -855,6 +891,81 @@ export class ObstacleManager {
 
         halfW = 1.3;
         halfZ = 1.62;
+      } else if (kind === 'sweeper_beam') {
+        const floorMarker = new THREE.Mesh(floorStripGeo, laneFloorWarningMat);
+        floorMarker.position.set(0, 0.03, 0.85);
+        obsGroup.add(floorMarker);
+
+        const carriage = new THREE.Mesh(sweeperBaseGeo, chassisSteelMat);
+        carriage.position.y = 0.19;
+        carriage.castShadow = true;
+        obsGroup.add(carriage);
+
+        for (const bz of [-0.46, 0.46]) {
+          const trim = new THREE.Mesh(sweeperTrimGeo, hazardStripeMat);
+          trim.position.set(0, 0.25, bz);
+          obsGroup.add(trim);
+        }
+
+        const head = new THREE.Group();
+        head.position.set(0, 0.62, 0);
+
+        const turret = new THREE.Mesh(sweeperTurretGeo, darkTrimMat);
+        turret.castShadow = true;
+        head.add(turret);
+
+        const beamRod = new THREE.Mesh(sweeperRodGeo, this.dangerRedMat);
+        beamRod.position.y = 0.16;
+        head.add(beamRod);
+
+        for (const tx of [-1.28, 1.28]) {
+          const tip = new THREE.Mesh(sweeperTipGeo, this.warningAmberMat);
+          tip.position.set(tx, 0.16, 0);
+          head.add(tip);
+        }
+
+        obsGroup.add(head);
+        sweeperHead = head;
+        halfW = 1.28;
+        halfZ = 0.62;
+      } else if (kind === 'shock_pylon') {
+        const floorMarker = new THREE.Mesh(floorStripGeo, evilFloorWarningMat);
+        floorMarker.position.set(0, 0.03, 1.12);
+        obsGroup.add(floorMarker);
+
+        const hull = new THREE.Mesh(shockHullGeo, evilObsidianMat);
+        hull.position.y = 0.26;
+        hull.castShadow = true;
+        obsGroup.add(hull);
+
+        for (const px of [-0.62, 0.62]) {
+          const prow = new THREE.Mesh(shockProwGeo, evilCrimsonMat);
+          prow.position.set(px, 0.28, 0.96);
+          obsGroup.add(prow);
+
+          const coil = new THREE.Mesh(shockCoilGeo, chassisSteelMat);
+          coil.position.set(px, 0.92, -0.18);
+          coil.castShadow = true;
+          obsGroup.add(coil);
+
+          const cap = new THREE.Mesh(sweeperTipGeo, this.warningAmberMat);
+          cap.position.set(px, 1.62, -0.18);
+          obsGroup.add(cap);
+        }
+
+        const gyro = new THREE.Group();
+        gyro.position.set(0, 1.38, -0.1);
+
+        const ring = new THREE.Mesh(shockRotorGeo, evilCrimsonMat);
+        gyro.add(ring);
+
+        const orb = new THREE.Mesh(shockOrbGeo, this.warningAmberMat);
+        gyro.add(orb);
+
+        obsGroup.add(gyro);
+        shockRing = gyro;
+        halfW = 1.18;
+        halfZ = 1.02;
       } else {
         const floorMarker = new THREE.Mesh(floorStripGeo, evilFloorWarningMat);
         floorMarker.position.set(0, 0.03, 1.12);
@@ -932,6 +1043,8 @@ export class ObstacleManager {
         laserBeams,
         hazardCage,
         roadblockDeck,
+        sweeperHead,
+        shockRing,
         trafficWheels,
         baseY,
         phase: i * 0.85,
@@ -955,6 +1068,10 @@ export class ObstacleManager {
         return 1.62;
       case 'evil_drone':
         return 1.12;
+      case 'shock_pylon':
+        return 1.02;
+      case 'sweeper_beam':
+        return 0.62;
       case 'roadblock':
         return 0.58;
       case 'barrier':
@@ -1065,22 +1182,44 @@ export class ObstacleManager {
     );
   }
 
-  private static pickObstacleType(difficultyLevel: number): ObstacleType {
+  private static pickObstacleType(difficultyLevel: number, distance = 0): ObstacleType {
     const levelBoost = Math.min(1, Math.max(0, difficultyLevel - 1) / 24);
-    const evilWeight = difficultyLevel >= 2 ? 0.14 + levelBoost * 0.16 : 0.08;
-    const trafficWeight = 0.15 + levelBoost * 0.2;
-    const hazardWeight = 0.11 + levelBoost * 0.13;
-    const gateWeight = 0.2;
-    const barrierWeight = Math.max(0.06, 0.22 - levelBoost * 0.16);
-    const roll = Math.random();
+    const sweeperUnlocked = distance >= 1500 || difficultyLevel >= 5;
+    const shockUnlocked = distance >= 3000 || difficultyLevel >= 8;
 
-    if (roll < evilWeight) return 'evil_drone';
-    if (roll < evilWeight + trafficWeight) return 'traffic';
-    if (roll < evilWeight + trafficWeight + hazardWeight) return 'hazard_zone';
-    if (roll < evilWeight + trafficWeight + hazardWeight + gateWeight) return 'laser_gate';
-    if (roll < evilWeight + trafficWeight + hazardWeight + gateWeight + barrierWeight) {
-      return 'barrier';
-    }
+    const evilWeight = difficultyLevel >= 2 ? 0.13 + levelBoost * 0.14 : 0.08;
+    const sweeperWeight = sweeperUnlocked ? 0.13 + levelBoost * 0.06 : 0;
+    const shockWeight = shockUnlocked ? 0.12 + levelBoost * 0.06 : 0;
+    const trafficWeight = 0.15 + levelBoost * 0.16;
+    const hazardWeight = 0.1 + levelBoost * 0.1;
+    const gateWeight = 0.16;
+    const barrierWeight = Math.max(0.05, 0.2 - levelBoost * 0.15);
+    const roadblockWeight = 0.12;
+    const total =
+      evilWeight +
+      sweeperWeight +
+      shockWeight +
+      trafficWeight +
+      hazardWeight +
+      gateWeight +
+      barrierWeight +
+      roadblockWeight;
+    const roll = Math.random() * total;
+
+    let acc = evilWeight;
+    if (roll < acc) return 'evil_drone';
+    acc += sweeperWeight;
+    if (sweeperUnlocked && roll < acc) return 'sweeper_beam';
+    acc += shockWeight;
+    if (shockUnlocked && roll < acc) return 'shock_pylon';
+    acc += trafficWeight;
+    if (roll < acc) return 'traffic';
+    acc += hazardWeight;
+    if (roll < acc) return 'hazard_zone';
+    acc += gateWeight;
+    if (roll < acc) return 'laser_gate';
+    acc += barrierWeight;
+    if (roll < acc) return 'barrier';
     return 'roadblock';
   }
 
@@ -1093,6 +1232,7 @@ export class ObstacleManager {
     spawnZ = SPAWN_Z,
     preferredKind?: ObstacleType,
     relativeSpeedOverride?: number,
+    distance = 0,
   ): LaneIndex[] {
     this.lastWorldSpeed = Math.max(24, worldSpeed);
     this.lastDifficultyLevel = Math.max(1, difficultyLevel);
@@ -1103,7 +1243,8 @@ export class ObstacleManager {
 
     for (let i = 0; i < lanes.length; i++) {
       const lane = lanes[i];
-      const preferred = preferredKind ?? ObstacleManager.pickObstacleType(difficultyLevel);
+      const preferred =
+        preferredKind ?? ObstacleManager.pickObstacleType(difficultyLevel, distance);
       let relSpeed =
         preferred === 'traffic'
           ? (relativeSpeedOverride ?? -(2.2 + Math.random() * maxTrafficDelta))
@@ -1144,6 +1285,11 @@ export class ObstacleManager {
       if (obs.signalRight) obs.signalRight.visible = false;
       if (obs.droneCore) obs.droneCore.scale.set(1, 1, 1);
       if (obs.hazardCage) obs.hazardCage.rotation.y = 0;
+      if (obs.sweeperHead) obs.sweeperHead.rotation.y = 0;
+      if (obs.shockRing) {
+        obs.shockRing.rotation.set(0, 0, 0);
+        obs.shockRing.scale.setScalar(1);
+      }
       if (obs.roadblockDeck) obs.roadblockDeck.scale.set(1, 0.12, 1);
       obs.group.visible = true;
       spawnedLanes.push(lane);
@@ -1290,6 +1436,26 @@ export class ObstacleManager {
               obs.motionMode = 'patrol';
             }
           }
+        } else if (obs.kind === 'sweeper_beam') {
+          obs.hasShiftedLane = true;
+          if (Math.random() < 0.72) {
+            const candidate = this.pickAdjacentCandidate(obs.lane);
+            if (this.canDynamicShiftTo(obs, candidate)) {
+              obs.pendingLane = candidate;
+              obs.telegraphTimer = 0.32;
+              obs.motionMode = 'sweep';
+            }
+          }
+        } else if (obs.kind === 'shock_pylon') {
+          obs.hasShiftedLane = true;
+          if (Math.random() < 0.68) {
+            const candidate = this.pickAdjacentCandidate(obs.lane);
+            if (this.canDynamicShiftTo(obs, candidate)) {
+              obs.pendingLane = candidate;
+              obs.telegraphTimer = 0.3;
+              obs.motionMode = 'feint';
+            }
+          }
         }
       }
 
@@ -1304,6 +1470,8 @@ export class ObstacleManager {
                 this.lastDifficultyLevel >= 3
                   ? 4 + Math.min(6, (this.lastDifficultyLevel - 2) * 0.65)
                   : 2.5;
+            } else if (obs.kind === 'shock_pylon') {
+              obs.relativeSpeed = 5 + Math.min(6, Math.max(0, this.lastDifficultyLevel - 6) * 0.7);
             }
           } else {
             obs.pendingLane = obs.lane;
@@ -1344,6 +1512,36 @@ export class ObstacleManager {
           const coreScale =
             obs.telegraphTimer > 0 ? 1.38 : 1.0 + Math.sin(this.elapsed * 9 + obs.phase) * 0.12;
           obs.droneCore.scale.setScalar(coreScale);
+        }
+      } else if (obs.kind === 'sweeper_beam') {
+        const targetX = LaneSystem.getLaneX(obs.targetLane);
+        const nextX = damp(obs.group.position.x, targetX, 6.4, dt);
+        obs.group.position.x = nextX;
+        if (Math.abs(targetX - nextX) < 0.08) {
+          obs.lane = obs.targetLane;
+        }
+        if (obs.sweeperHead) {
+          const spinSpeed = obs.telegraphTimer > 0 ? 6.8 : 3.6;
+          obs.sweeperHead.rotation.y = (obs.sweeperHead.rotation.y + dt * spinSpeed) % (Math.PI * 2);
+        }
+      } else if (obs.kind === 'shock_pylon') {
+        const targetX = LaneSystem.getLaneX(obs.targetLane);
+        const nextX = damp(obs.group.position.x, targetX, 7.6, dt);
+        obs.group.position.x = nextX;
+        const bank =
+          obs.telegraphTimer > 0
+            ? -(obs.pendingLane - obs.lane) * 0.14
+            : clamp(-(targetX - nextX) * 0.08, -0.2, 0.2);
+        obs.group.rotation.z = damp(obs.group.rotation.z, bank, 10, dt);
+        if (Math.abs(targetX - nextX) < 0.08) {
+          obs.lane = obs.targetLane;
+        }
+        if (obs.shockRing) {
+          obs.shockRing.rotation.y = (obs.shockRing.rotation.y + dt * 5.4) % (Math.PI * 2);
+          obs.shockRing.rotation.x = Math.sin(this.elapsed * 4.5 + obs.phase) * 0.22;
+          const ringScale =
+            obs.telegraphTimer > 0 ? 1.24 : 1.0 + Math.sin(this.elapsed * 8 + obs.phase) * 0.06;
+          obs.shockRing.scale.setScalar(ringScale);
         }
       } else if (obs.kind === 'laser_gate') {
         const targetX = LaneSystem.getLaneX(obs.targetLane);
@@ -1401,6 +1599,15 @@ export class ObstacleManager {
     });
   }
 
+  public shatterObstacle(obs: ObstacleInstance | null): void {
+    if (!obs) return;
+    obs.active = false;
+    obs.hasShiftedLane = false;
+    obs.telegraphTimer = 0;
+    obs.motionMode = 'none';
+    obs.group.visible = false;
+  }
+
   public snapToFraction(fraction: number): void {
     const t = Math.max(0, Math.min(1, fraction));
     this.pool.forEachActive((obs) => {
@@ -1427,6 +1634,10 @@ export class ObstacleManager {
         return 'EMP Hazard';
       case 'evil_drone':
         return 'Interceptor Drone';
+      case 'sweeper_beam':
+        return 'Laser Sweeper';
+      case 'shock_pylon':
+        return 'Shock Pylon';
     }
   }
 
@@ -1443,6 +1654,11 @@ export class ObstacleManager {
       if (obs.signalLeft) obs.signalLeft.visible = false;
       if (obs.signalRight) obs.signalRight.visible = false;
       if (obs.droneCore) obs.droneCore.scale.set(1, 1, 1);
+      if (obs.sweeperHead) obs.sweeperHead.rotation.y = 0;
+      if (obs.shockRing) {
+        obs.shockRing.rotation.set(0, 0, 0);
+        obs.shockRing.scale.setScalar(1);
+      }
       if (obs.roadblockDeck) obs.roadblockDeck.scale.set(1, 1, 1);
       obs.group.visible = false;
     });

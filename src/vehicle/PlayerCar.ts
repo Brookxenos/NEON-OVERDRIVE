@@ -233,6 +233,10 @@ export class PlayerCar {
   private readonly thrusterOuterMat: THREE.MeshBasicMaterial;
   private readonly thrusterInnerMat: THREE.MeshBasicMaterial;
   private readonly headlightBeamMat: THREE.MeshBasicMaterial;
+  private readonly shieldRingMat: THREE.MeshBasicMaterial;
+  private readonly magnetRingMat: THREE.MeshBasicMaterial;
+  private readonly shieldAuraGroup: THREE.Group;
+  private readonly magnetAuraRing: THREE.Mesh;
   private readonly headlightGlow: THREE.PointLight;
   private readonly underGlowLight: THREE.PointLight;
   private readonly contactShadow: THREE.Mesh;
@@ -642,6 +646,46 @@ export class PlayerCar {
     this.underGlowLight = new THREE.PointLight(initialSpec.flameOuterColor, 0, 4.5, 2.0);
     this.underGlowLight.position.set(0, 0.15, 2.4);
     this.bodyGroup.add(this.underGlowLight);
+
+    const shieldRingGeo = new THREE.TorusGeometry(1.75, 0.048, 8, 40);
+    shieldRingGeo.rotateX(Math.PI / 2);
+    const shieldSideGeo = new THREE.TorusGeometry(1.45, 0.032, 8, 32);
+    shieldSideGeo.rotateY(Math.PI / 2);
+    const magnetRingGeo = new THREE.TorusGeometry(1.52, 0.036, 8, 32);
+    magnetRingGeo.rotateX(Math.PI / 2);
+
+    this.shieldRingMat = new THREE.MeshBasicMaterial({
+      color: 0x22d3ee,
+      transparent: true,
+      opacity: 0.56,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    this.magnetRingMat = new THREE.MeshBasicMaterial({
+      color: 0xfacc15,
+      transparent: true,
+      opacity: 0.38,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    this.geometries.push(shieldRingGeo, shieldSideGeo, magnetRingGeo);
+    this.materials.push(this.shieldRingMat, this.magnetRingMat);
+
+    this.shieldAuraGroup = new THREE.Group();
+    this.shieldAuraGroup.position.set(0, 0.62, 0);
+    this.shieldAuraGroup.visible = false;
+    const shieldMain = new THREE.Mesh(shieldRingGeo, this.shieldRingMat);
+    shieldMain.scale.set(0.86, 1, 1.56);
+    const shieldVert = new THREE.Mesh(shieldSideGeo, this.shieldRingMat);
+    shieldVert.scale.set(1.75, 0.52, 0.85);
+    this.shieldAuraGroup.add(shieldMain, shieldVert);
+    this.group.add(this.shieldAuraGroup);
+
+    this.magnetAuraRing = new THREE.Mesh(magnetRingGeo, this.magnetRingMat);
+    this.magnetAuraRing.position.set(0, 0.14, 0);
+    this.magnetAuraRing.scale.set(1.08, 1, 1.72);
+    this.magnetAuraRing.visible = false;
+    this.group.add(this.magnetAuraRing);
 
     this.group.position.set(0, 0, PLAYER_Z);
     this.bodyGroup.position.y = CAR_CHASSIS_CLEARANCE;
@@ -1192,6 +1236,32 @@ export class PlayerCar {
     this.headlightGlow.intensity = isBoosting ? 2.3 : 1.65;
     this.underGlowLight.intensity = isBoosting ? 0.45 : 0;
     this.headlightBeamMat.opacity = isBoosting ? 0.28 : isThrottling ? 0.2 : 0.15;
+  }
+
+  public setDefenseState(
+    shieldActive: boolean,
+    magnetActive: boolean,
+    invulnerableTimer: number,
+    phase: number,
+  ): void {
+    this.shieldAuraGroup.visible = shieldActive;
+    if (shieldActive) {
+      this.shieldAuraGroup.rotation.y = (phase * 0.45) % (Math.PI * 2);
+      this.shieldRingMat.opacity = 0.48 + Math.sin(phase * 3.2) * 0.12;
+    }
+
+    this.magnetAuraRing.visible = magnetActive;
+    if (magnetActive) {
+      const pulse = 1 + Math.sin(phase * 4.2) * 0.04;
+      this.magnetAuraRing.scale.set(1.08 * pulse, 1, 1.72 * pulse);
+      this.magnetRingMat.opacity = 0.34 + Math.sin(phase * 4.2) * 0.1;
+    }
+
+    if (invulnerableTimer > 0) {
+      this.bodyGroup.visible = Math.floor(invulnerableTimer * 18) % 2 === 0;
+    } else {
+      this.bodyGroup.visible = true;
+    }
   }
 
   public dispose(): void {
