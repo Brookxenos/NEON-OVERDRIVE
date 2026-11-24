@@ -212,7 +212,7 @@ export class UIManager {
 
     this.mainMenu.setVisible(snap.status === 'menu' && !this.garageOpen);
     this.gameHud.setVisible(snap.status === 'playing');
-    this.pauseMenu.setVisible(snap.status === 'paused');
+    this.pauseMenu.setVisible(snap.status === 'paused' && !this.settingsOpen);
     this.gameOverScreen.setVisible(snap.status === 'gameover' && !this.garageOpen);
     this.settingsMenu.setVisible(this.settingsOpen);
     this.garageModal.setVisible(this.garageOpen);

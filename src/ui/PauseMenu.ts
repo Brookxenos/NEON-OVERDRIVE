@@ -19,23 +19,25 @@ export class PauseMenu {
 
   constructor(actions: PauseMenuActions) {
     this.element = document.createElement('div');
-    this.element.className = 'modal-backdrop hidden';
+    this.element.className = 'pause-overlay hidden';
     this.element.innerHTML = `
-      <div class="animate-modal-enter modal-card">
-        <div class="modal-header">
-          <p class="modal-kicker">NEON OVERDRIVE</p>
-          <h2 class="font-display modal-title">Paused</h2>
-          <div class="modal-submeta">
-            <span>Score <strong class="font-mono-num" style="color:#fff" data-role="score">0</strong></span>
-            <span style="color:#475569" aria-hidden="true">·</span>
-            <span>Distance <strong class="font-mono-num" style="color:#67e8f9" data-role="distance">0 m</strong></span>
+      <div class="animate-modal-enter pause-bar" role="dialog" aria-label="Game Paused">
+        <div class="pause-bar-meta">
+          <div class="pause-bar-heading">
+            <span class="pause-indicator" aria-hidden="true"></span>
+            <h2 class="font-display pause-bar-title">Paused</h2>
+          </div>
+          <div class="pause-bar-stats">
+            <span>Score <strong class="font-mono-num pause-stat-score" data-role="score">0</strong></span>
+            <span class="pause-stat-sep" aria-hidden="true">·</span>
+            <span>Dist <strong class="font-mono-num pause-stat-dist" data-role="distance">0 m</strong></span>
           </div>
         </div>
-        <div class="modal-stack">
-          <button type="button" class="btn-modal-primary" data-role="resume-btn">${ICON_PLAY}<span>Resume Race</span></button>
-          <button type="button" class="btn-modal-secondary" data-role="restart-btn">${ICON_RESTART}<span>Restart Run</span></button>
-          <button type="button" class="btn-modal-secondary" data-role="settings-btn">${ICON_SETTINGS}<span>Settings</span></button>
-          <button type="button" class="btn-modal-ghost" data-role="menu-btn">${ICON_HOME}<span>Main Menu</span></button>
+        <div class="pause-bar-actions">
+          <button type="button" class="pause-btn pause-btn-primary" data-role="resume-btn">${ICON_PLAY}<span>Resume</span></button>
+          <button type="button" class="pause-btn pause-btn-secondary" data-role="restart-btn">${ICON_RESTART}<span>Restart</span></button>
+          <button type="button" class="pause-btn pause-btn-secondary" data-role="settings-btn">${ICON_SETTINGS}<span>Settings</span></button>
+          <button type="button" class="pause-btn pause-btn-ghost" data-role="menu-btn">${ICON_HOME}<span>Menu</span></button>
         </div>
       </div>
     `;
