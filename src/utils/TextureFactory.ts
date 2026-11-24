@@ -13,6 +13,7 @@ export interface TextureBundle {
   contactShadow: THREE.CanvasTexture;
   skyBackdrop: THREE.CanvasTexture;
   gantrySigns: readonly THREE.CanvasTexture[];
+  sideBanners: readonly THREE.CanvasTexture[];
   dispose: () => void;
 }
 
@@ -480,6 +481,104 @@ function createGantrySignTexture(label: string, maxAnisotropy: number): THREE.Ca
   return tex;
 }
 
+export const SIDE_BANNER_IMAGE_PATHS: readonly string[] = [
+  '/assets/aistudio/Gemini_Generated_Image_xuz9lhxuz9lhxuz9_ea03150c.png',
+  '/assets/aistudio/Photo_from_2026-10-29_19-19-24.405529_99733e6a.jpeg',
+  '/assets/aistudio/itachi-uchiha-moon-5120x2880-25777_c56f5d2b.jpg',
+  '/assets/aistudio/astronaut-dark-3840x2160-22768_3df94603.jpg',
+  '/assets/aistudio/moon-mountains-3840x2160-11462_dc1c89ce.jpeg',
+  '/assets/aistudio/grand-theft-auto-vi-3840x2160-27352_613da459.jpg',
+  '/assets/aistudio/grand-theft-auto-vi-3840x2160-27417_2105951f.jpg',
+];
+
+function createSideBannerTexture(imagePath: string, maxAnisotropy: number): THREE.CanvasTexture {
+  const width = 1024;
+  const height = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d')!;
+
+  const fallbackGrad = ctx.createLinearGradient(0, 0, width, height);
+  fallbackGrad.addColorStop(0, '#0f172a');
+  fallbackGrad.addColorStop(1, '#1e293b');
+  ctx.fillStyle = fallbackGrad;
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(4, 4, width - 8, height - 8);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.ClampToEdgeWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.anisotropy = maxAnisotropy;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+
+  if (typeof Image !== 'undefined') {
+    const img = new Image();
+    img.decoding = 'async';
+    img.onload = () => {
+      const iw = img.naturalWidth || img.width;
+      const ih = img.naturalHeight || img.height;
+      if (iw <= 0 || ih <= 0) return;
+
+      const imgRatio = iw / ih;
+      const targetRatio = width / height;
+
+      ctx.clearRect(0, 0, width, height);
+
+      if (imgRatio < 1.1) {
+        // Portrait photo: ambient blurred cover backdrop + crisp uncropped centered foreground
+        const bgW = width;
+        const bgH = width / imgRatio;
+        const bgY = -(bgH - height) * 0.35;
+        ctx.save();
+        ctx.filter = 'blur(18px) brightness(0.45)';
+        ctx.drawImage(img, 0, bgY, bgW, bgH);
+        ctx.restore();
+
+        ctx.fillStyle = 'rgba(10, 15, 28, 0.32)';
+        ctx.fillRect(0, 0, width, height);
+
+        const fgH = height - 16;
+        const fgW = fgH * imgRatio;
+        const fgX = (width - fgW) * 0.5;
+        ctx.drawImage(img, fgX, 8, fgW, fgH);
+
+        ctx.strokeStyle = 'rgba(226, 232, 240, 0.4)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(fgX, 8, fgW, fgH);
+      } else {
+        // Landscape photo: edge-to-edge cover-fit with slight upper focal bias
+        let drawW = width;
+        let drawH = height;
+        let drawX = 0;
+        let drawY = 0;
+        if (imgRatio > targetRatio) {
+          drawH = height;
+          drawW = height * imgRatio;
+          drawX = -(drawW - width) * 0.5;
+        } else {
+          drawW = width;
+          drawH = width / imgRatio;
+          drawY = -(drawH - height) * 0.42;
+        }
+        ctx.drawImage(img, drawX, drawY, drawW, drawH);
+      }
+
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.28)';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(2, 2, width - 4, height - 4);
+      tex.needsUpdate = true;
+    };
+    img.src = imagePath;
+  }
+
+  return tex;
+}
+
 export class TextureFactory {
   public static createBundle(maxAnisotropy: number): TextureBundle {
     const roadAlbedo = createRoadAlbedoTexture(maxAnisotropy);
@@ -510,6 +609,9 @@ export class TextureFactory {
     const gantrySigns = GANTRY_SIGN_LABELS.map((label) =>
       createGantrySignTexture(label, maxAnisotropy),
     );
+    const sideBanners = SIDE_BANNER_IMAGE_PATHS.map((path) =>
+      createSideBannerTexture(path, maxAnisotropy),
+    );
 
     return {
       roadAlbedo,
@@ -524,6 +626,7 @@ export class TextureFactory {
       contactShadow,
       skyBackdrop,
       gantrySigns,
+      sideBanners,
       dispose: () => {
         roadAlbedo.dispose();
         roadRoughness.dispose();
@@ -537,6 +640,7 @@ export class TextureFactory {
         contactShadow.dispose();
         skyBackdrop.dispose();
         gantrySigns.forEach((tex) => tex.dispose());
+        sideBanners.forEach((tex) => tex.dispose());
       },
     };
   }

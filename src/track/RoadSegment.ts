@@ -13,6 +13,7 @@ export interface RoadSegmentMaterials {
   gantrySteelMat: THREE.MeshStandardMaterial;
   highwaySignMat: THREE.MeshStandardMaterial;
   gantrySignFaceMats: readonly THREE.MeshStandardMaterial[];
+  sideBannerFaceMats: readonly THREE.MeshStandardMaterial[];
   signalRedMat: THREE.MeshStandardMaterial;
   signalGreenMat: THREE.MeshStandardMaterial;
   amberLampMat: THREE.MeshStandardMaterial;
@@ -36,6 +37,8 @@ export interface RoadSegmentGeometries {
   signalLensGeo: THREE.CylinderGeometry;
   archTrimGeo: THREE.BoxGeometry;
   sideSignBoardGeo: THREE.BoxGeometry;
+  sideBannerFaceGeo: THREE.PlaneGeometry;
+  sideSignPostGeo: THREE.BoxGeometry;
   dispose: () => void;
 }
 
@@ -57,8 +60,10 @@ function makeTransformedBox(
 export class RoadSegment {
   public readonly group = new THREE.Group();
   public readonly hasGantry: boolean;
+  public readonly hasSideBanner: boolean;
   private readonly gateStripMat: THREE.MeshStandardMaterial | null = null;
   private readonly signFaceMesh: THREE.Mesh | null = null;
+  private readonly sideBannerFaceMesh: THREE.Mesh | null = null;
   private readonly index: number;
 
   public static createSharedMaterials(textures: TextureBundle): RoadSegmentMaterials {
@@ -123,6 +128,20 @@ export class RoadSegment {
           polygonOffsetUnits: -1,
         }),
     );
+    const sideBannerFaceMats = textures.sideBanners.map(
+      (bannerTex) =>
+        new THREE.MeshStandardMaterial({
+          map: bannerTex,
+          emissiveMap: bannerTex,
+          emissive: new THREE.Color(0xffffff),
+          emissiveIntensity: 0.55,
+          roughness: 0.42,
+          metalness: 0.06,
+          polygonOffset: true,
+          polygonOffsetFactor: -1,
+          polygonOffsetUnits: -1,
+        }),
+    );
     const signalRedMat = new THREE.MeshStandardMaterial({
       color: 0xfb7185,
       emissive: 0xe11d48,
@@ -158,6 +177,7 @@ export class RoadSegment {
       gantrySteelMat,
       highwaySignMat,
       gantrySignFaceMats,
+      sideBannerFaceMats,
       signalRedMat,
       signalGreenMat,
       amberLampMat,
@@ -172,6 +192,7 @@ export class RoadSegment {
         gantrySteelMat.dispose();
         highwaySignMat.dispose();
         gantrySignFaceMats.forEach((mat) => mat.dispose());
+        sideBannerFaceMats.forEach((mat) => mat.dispose());
         signalRedMat.dispose();
         signalGreenMat.dispose();
         amberLampMat.dispose();
@@ -245,7 +266,9 @@ export class RoadSegment {
     const signalLensGeo = new THREE.CylinderGeometry(0.13, 0.13, 0.08, 14);
     signalLensGeo.rotateX(Math.PI / 2);
     const archTrimGeo = new THREE.BoxGeometry(6.8, 0.1, 0.22);
-    const sideSignBoardGeo = new THREE.BoxGeometry(0.16, 1.9, 4.4);
+    const sideSignBoardGeo = new THREE.BoxGeometry(0.16, 2.35, 4.4);
+    const sideBannerFaceGeo = new THREE.PlaneGeometry(4.24, 2.18);
+    const sideSignPostGeo = new THREE.BoxGeometry(0.16, 3.2, 0.16);
 
     return {
       deckGeo,
@@ -263,6 +286,8 @@ export class RoadSegment {
       signalLensGeo,
       archTrimGeo,
       sideSignBoardGeo,
+      sideBannerFaceGeo,
+      sideSignPostGeo,
       dispose: () => {
         deckGeo.dispose();
         curbsGeo.dispose();
@@ -279,6 +304,8 @@ export class RoadSegment {
         signalLensGeo.dispose();
         archTrimGeo.dispose();
         sideSignBoardGeo.dispose();
+        sideBannerFaceGeo.dispose();
+        sideSignPostGeo.dispose();
       },
     };
   }
@@ -290,6 +317,7 @@ export class RoadSegment {
   ) {
     this.index = index;
     this.hasGantry = index % 3 === 0;
+    this.hasSideBanner = index % 3 === 1;
     this.group.position.z = 376 - index * SEGMENT_LENGTH;
 
     const deck = new THREE.Mesh(geos.deckGeo, mats.roadMat);
@@ -351,12 +379,34 @@ export class RoadSegment {
       const archLight = new THREE.Mesh(geos.archTrimGeo, this.gateStripMat);
       archLight.position.set(0, 6.38, 0.38);
       this.group.add(archLight);
-    } else if (index % 3 === 1) {
+    } else if (this.hasSideBanner) {
       const side = index % 2 === 0 ? -1 : 1;
-      const signBoard = new THREE.Mesh(geos.sideSignBoardGeo, mats.highwaySignMat);
-      signBoard.position.set(side * (ROAD_WIDTH * 0.5 + 3.2), 4.1, 0);
-      signBoard.rotation.y = side * -0.18;
-      this.group.add(signBoard);
+      const sideSignGroup = new THREE.Group();
+      sideSignGroup.position.set(side * (ROAD_WIDTH * 0.5 + 3.2), 4.2, 0);
+      sideSignGroup.rotation.y = side * 0.18;
+
+      const signBoard = new THREE.Mesh(geos.sideSignBoardGeo, mats.gantrySteelMat);
+      sideSignGroup.add(signBoard);
+
+      for (const postZ of [-1.45, 1.45]) {
+        const post = new THREE.Mesh(geos.sideSignPostGeo, mats.gantrySteelMat);
+        post.position.set(side * 0.04, -2.6, postZ);
+        sideSignGroup.add(post);
+      }
+
+      const bannerCount = mats.sideBannerFaceMats.length;
+      const bannerOrdinal = Math.floor(index / 3) - 4;
+      const initialBannerIdx = ((bannerOrdinal % bannerCount) + bannerCount) % bannerCount;
+      const bannerFace = new THREE.Mesh(
+        geos.sideBannerFaceGeo,
+        mats.sideBannerFaceMats[initialBannerIdx],
+      );
+      bannerFace.position.set(-side * 0.088, 0, 0);
+      bannerFace.rotation.y = side === -1 ? Math.PI / 2 : -Math.PI / 2;
+      sideSignGroup.add(bannerFace);
+      this.sideBannerFaceMesh = bannerFace;
+
+      this.group.add(sideSignGroup);
     }
   }
 
@@ -365,6 +415,13 @@ export class RoadSegment {
     const count = mats.gantrySignFaceMats.length;
     const safeIdx = ((signIndex % count) + count) % count;
     this.signFaceMesh.material = mats.gantrySignFaceMats[safeIdx];
+  }
+
+  public setSideBannerIndex(bannerIndex: number, mats: RoadSegmentMaterials): void {
+    if (!this.sideBannerFaceMesh || mats.sideBannerFaceMats.length === 0) return;
+    const count = mats.sideBannerFaceMats.length;
+    const safeIdx = ((bannerIndex % count) + count) % count;
+    this.sideBannerFaceMesh.material = mats.sideBannerFaceMats[safeIdx];
   }
 
   public animate(elapsed: number, isBoosting: boolean): void {

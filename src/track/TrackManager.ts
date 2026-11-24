@@ -17,11 +17,13 @@ export class TrackManager {
   private readonly sharedGeos: RoadSegmentGeometries;
   private elapsed = 0;
   private nextGantrySignIndex = 0;
+  private nextSideBannerIndex = 4;
 
   constructor(textures: TextureBundle) {
     this.sharedMats = RoadSegment.createSharedMaterials(textures);
     this.sharedGeos = RoadSegment.createSharedGeometries();
     this.nextGantrySignIndex = this.sharedMats.gantrySignFaceMats.length;
+    this.nextSideBannerIndex = 4;
 
     for (let i = 0; i < SEGMENT_COUNT; i++) {
       const segment = new RoadSegment(i, this.sharedMats, this.sharedGeos);
@@ -36,13 +38,18 @@ export class TrackManager {
   public reset(): void {
     this.elapsed = 0;
     const signCount = this.sharedMats.gantrySignFaceMats.length;
+    const bannerCount = this.sharedMats.sideBannerFaceMats.length;
     this.nextGantrySignIndex = signCount;
+    this.nextSideBannerIndex = 4;
     for (let i = 0; i < this.segments.length; i++) {
       const seg = this.segments[i];
       seg.group.position.z = 376 - i * SEGMENT_LENGTH;
       if (seg.hasGantry && signCount > 0) {
         const gantryOrdinal = Math.floor(i / 3) - 4;
         seg.setGantrySignIndex(gantryOrdinal, this.sharedMats);
+      } else if (seg.hasSideBanner && bannerCount > 0) {
+        const bannerOrdinal = Math.floor(i / 3) - 4;
+        seg.setSideBannerIndex(bannerOrdinal, this.sharedMats);
       }
       seg.animate(0, false);
     }
@@ -61,6 +68,9 @@ export class TrackManager {
         if (seg.hasGantry) {
           seg.setGantrySignIndex(this.nextGantrySignIndex, this.sharedMats);
           this.nextGantrySignIndex += 1;
+        } else if (seg.hasSideBanner) {
+          seg.setSideBannerIndex(this.nextSideBannerIndex, this.sharedMats);
+          this.nextSideBannerIndex += 1;
         }
       }
       seg.animate(this.elapsed, isBoosting);
