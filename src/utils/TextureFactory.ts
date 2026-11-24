@@ -12,7 +12,7 @@ export interface TextureBundle {
   headlightBeam: THREE.CanvasTexture;
   contactShadow: THREE.CanvasTexture;
   skyBackdrop: THREE.CanvasTexture;
-  theBrookSign: THREE.CanvasTexture;
+  gantrySigns: readonly THREE.CanvasTexture[];
   dispose: () => void;
 }
 
@@ -416,11 +416,19 @@ function createSkyBackdropTexture(): THREE.CanvasTexture {
   return tex;
 }
 
-function createTheBrookSignTexture(maxAnisotropy: number): THREE.CanvasTexture {
+export const GANTRY_SIGN_LABELS: readonly string[] = [
+  'Iesus Dominus est',
+  'xenos',
+  'Ἁγία Μαρία, Μήτηρ Θεοῦ',
+  'The Brook',
+];
+
+function createGantrySignTexture(label: string, maxAnisotropy: number): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 128;
+  canvas.width = 1024;
+  canvas.height = 256;
   const ctx = canvas.getContext('2d')!;
+  ctx.scale(2, 2);
 
   const bgGrad = ctx.createLinearGradient(0, 0, 0, 128);
   bgGrad.addColorStop(0, '#072a24');
@@ -448,11 +456,20 @@ function createTheBrookSignTexture(maxAnisotropy: number): THREE.CanvasTexture {
     ctx.fill();
   }
 
-  ctx.font = '700 54px "Chakra Petch", "Plus Jakarta Sans", sans-serif';
+  let fontSize = 54;
+  const maxTextWidth = 392;
+  const fontFamily =
+    '"Chakra Petch", "Plus Jakarta Sans", "Noto Sans", "Segoe UI", "DejaVu Sans", system-ui, sans-serif';
+  ctx.font = `700 ${fontSize}px ${fontFamily}`;
+  while (fontSize > 22 && ctx.measureText(label).width > maxTextWidth) {
+    fontSize -= 2;
+    ctx.font = `700 ${fontSize}px ${fontFamily}`;
+  }
+
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = '#fef3c7';
-  ctx.fillText('The Brook', 256, 68);
+  ctx.fillText(label, 256, 68);
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.wrapS = THREE.ClampToEdgeWrapping;
@@ -490,7 +507,9 @@ export class TextureFactory {
     const headlightBeam = createHeadlightBeamTexture();
     const contactShadow = createRadialTexture('rgba(0, 0, 0, 0.9)', 'rgba(24, 24, 48, 0.22)');
     const skyBackdrop = createSkyBackdropTexture();
-    const theBrookSign = createTheBrookSignTexture(maxAnisotropy);
+    const gantrySigns = GANTRY_SIGN_LABELS.map((label) =>
+      createGantrySignTexture(label, maxAnisotropy),
+    );
 
     return {
       roadAlbedo,
@@ -504,7 +523,7 @@ export class TextureFactory {
       headlightBeam,
       contactShadow,
       skyBackdrop,
-      theBrookSign,
+      gantrySigns,
       dispose: () => {
         roadAlbedo.dispose();
         roadRoughness.dispose();
@@ -517,7 +536,7 @@ export class TextureFactory {
         headlightBeam.dispose();
         contactShadow.dispose();
         skyBackdrop.dispose();
-        theBrookSign.dispose();
+        gantrySigns.forEach((tex) => tex.dispose());
       },
     };
   }

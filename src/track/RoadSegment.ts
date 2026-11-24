@@ -12,7 +12,7 @@ export interface RoadSegmentMaterials {
   studMat: THREE.MeshBasicMaterial;
   gantrySteelMat: THREE.MeshStandardMaterial;
   highwaySignMat: THREE.MeshStandardMaterial;
-  theBrookFaceMat: THREE.MeshStandardMaterial;
+  gantrySignFaceMats: readonly THREE.MeshStandardMaterial[];
   signalRedMat: THREE.MeshStandardMaterial;
   signalGreenMat: THREE.MeshStandardMaterial;
   amberLampMat: THREE.MeshStandardMaterial;
@@ -56,7 +56,9 @@ function makeTransformedBox(
 
 export class RoadSegment {
   public readonly group = new THREE.Group();
+  public readonly hasGantry: boolean;
   private readonly gateStripMat: THREE.MeshStandardMaterial | null = null;
+  private readonly signFaceMesh: THREE.Mesh | null = null;
   private readonly index: number;
 
   public static createSharedMaterials(textures: TextureBundle): RoadSegmentMaterials {
@@ -107,17 +109,20 @@ export class RoadSegment {
       roughness: 0.45,
       metalness: 0.18,
     });
-    const theBrookFaceMat = new THREE.MeshStandardMaterial({
-      map: textures.theBrookSign,
-      emissiveMap: textures.theBrookSign,
-      emissive: new THREE.Color(0xffffff),
-      emissiveIntensity: 0.48,
-      roughness: 0.38,
-      metalness: 0.1,
-      polygonOffset: true,
-      polygonOffsetFactor: -1,
-      polygonOffsetUnits: -1,
-    });
+    const gantrySignFaceMats = textures.gantrySigns.map(
+      (signTex) =>
+        new THREE.MeshStandardMaterial({
+          map: signTex,
+          emissiveMap: signTex,
+          emissive: new THREE.Color(0xffffff),
+          emissiveIntensity: 0.48,
+          roughness: 0.38,
+          metalness: 0.1,
+          polygonOffset: true,
+          polygonOffsetFactor: -1,
+          polygonOffsetUnits: -1,
+        }),
+    );
     const signalRedMat = new THREE.MeshStandardMaterial({
       color: 0xfb7185,
       emissive: 0xe11d48,
@@ -152,7 +157,7 @@ export class RoadSegment {
       studMat,
       gantrySteelMat,
       highwaySignMat,
-      theBrookFaceMat,
+      gantrySignFaceMats,
       signalRedMat,
       signalGreenMat,
       amberLampMat,
@@ -166,7 +171,7 @@ export class RoadSegment {
         studMat.dispose();
         gantrySteelMat.dispose();
         highwaySignMat.dispose();
-        theBrookFaceMat.dispose();
+        gantrySignFaceMats.forEach((mat) => mat.dispose());
         signalRedMat.dispose();
         signalGreenMat.dispose();
         amberLampMat.dispose();
@@ -284,6 +289,7 @@ export class RoadSegment {
     geos: RoadSegmentGeometries,
   ) {
     this.index = index;
+    this.hasGantry = index % 3 === 0;
     this.group.position.z = 376 - index * SEGMENT_LENGTH;
 
     const deck = new THREE.Mesh(geos.deckGeo, mats.roadMat);
@@ -310,16 +316,23 @@ export class RoadSegment {
     this.group.add(new THREE.Mesh(geos.streetlightsGeo, mats.gantrySteelMat));
     this.group.add(new THREE.Mesh(geos.lampHeadsGeo, mats.amberLampMat));
 
-    if (index % 3 === 0) {
+    if (this.hasGantry) {
       this.group.add(new THREE.Mesh(geos.gantryStructureGeo, mats.gantrySteelMat));
 
       const signBoard = new THREE.Mesh(geos.gantrySignGeo, mats.highwaySignMat);
       signBoard.position.set(0, 7.15, 0.36);
       this.group.add(signBoard);
 
-      const signFace = new THREE.Mesh(geos.gantrySignFaceGeo, mats.theBrookFaceMat);
+      const signCount = mats.gantrySignFaceMats.length;
+      const gantryOrdinal = Math.floor(index / 3) - 4;
+      const initialSignIdx = ((gantryOrdinal % signCount) + signCount) % signCount;
+      const signFace = new THREE.Mesh(
+        geos.gantrySignFaceGeo,
+        mats.gantrySignFaceMats[initialSignIdx],
+      );
       signFace.position.set(0, 7.15, 0.45);
       this.group.add(signFace);
+      this.signFaceMesh = signFace;
 
       const signalMats = [mats.signalRedMat, mats.amberLampMat, mats.signalGreenMat];
       for (const sideX of [-4.15, 4.15]) {
@@ -345,6 +358,13 @@ export class RoadSegment {
       signBoard.rotation.y = side * -0.18;
       this.group.add(signBoard);
     }
+  }
+
+  public setGantrySignIndex(signIndex: number, mats: RoadSegmentMaterials): void {
+    if (!this.signFaceMesh || mats.gantrySignFaceMats.length === 0) return;
+    const count = mats.gantrySignFaceMats.length;
+    const safeIdx = ((signIndex % count) + count) % count;
+    this.signFaceMesh.material = mats.gantrySignFaceMats[safeIdx];
   }
 
   public animate(elapsed: number, isBoosting: boolean): void {

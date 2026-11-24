@@ -405,6 +405,7 @@ export class Game {
     this.boostSystem.reset();
     this.scoreManager.reset();
     this.carController.reset();
+    this.trackManager.reset();
     this.obstacleManager.reset();
     this.collectibleManager.reset();
     this.visualEffects.reset();

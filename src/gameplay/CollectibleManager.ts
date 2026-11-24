@@ -31,7 +31,6 @@ export class CollectibleManager {
   private elapsed = 0;
   private wavesSinceBoostPickup = 0;
   private wavesSinceBoostPad = 0;
-  private wavesSinceCollectible = 1;
 
   constructor(textures: TextureBundle) {
     const orbCoreGeo = new THREE.OctahedronGeometry(0.45, 0);
@@ -160,7 +159,6 @@ export class CollectibleManager {
   public spawnRewardInLane(lane: LaneIndex, spawnZ = SPAWN_Z, expressZone = false): void {
     this.wavesSinceBoostPickup += 1;
     this.wavesSinceBoostPad += 1;
-    this.wavesSinceCollectible += 1;
 
     let activeEnergyOrbs = 0;
     let activeBoostCells = 0;
@@ -184,12 +182,7 @@ export class CollectibleManager {
         pad.mesh.position.set(LaneSystem.getLaneX(lane), 0.04, spawnZ);
         pad.mesh.visible = true;
         this.wavesSinceBoostPad = 0;
-        this.wavesSinceCollectible = 0;
       }
-      return;
-    }
-
-    if (this.wavesSinceCollectible < 2) {
       return;
     }
 
@@ -197,22 +190,22 @@ export class CollectibleManager {
       const kindRoll = Math.random();
       const canSpawnBoostCell = this.wavesSinceBoostPickup >= 10 && activeBoostCells < 1;
       const canSpawnEnergyOrb =
-        this.wavesSinceBoostPickup >= 4 && activeEnergyOrbs + activeBoostCells < 2;
+        this.wavesSinceBoostPickup >= 6 && activeEnergyOrbs + activeBoostCells < 2;
 
       let kind: CollectibleType = 'score_crystal';
       if (kindRoll < 0.04 && canSpawnBoostCell) {
         kind = 'boost_cell';
-      } else if (kindRoll < 0.22 && canSpawnEnergyOrb) {
+      } else if (kindRoll < 0.14 && canSpawnEnergyOrb) {
         kind = 'energy_orb';
       }
 
       const count =
         kind === 'score_crystal'
           ? expressZone
-            ? Math.random() < 0.45
+            ? Math.random() < 0.65
               ? 2
               : 1
-            : Math.random() < 0.3
+            : Math.random() < 0.55
               ? 2
               : 1
           : 1;
@@ -232,11 +225,8 @@ export class CollectibleManager {
         spawnedAny = true;
       }
 
-      if (spawnedAny) {
-        this.wavesSinceCollectible = 0;
-        if (kind === 'energy_orb' || kind === 'boost_cell') {
-          this.wavesSinceBoostPickup = 0;
-        }
+      if (spawnedAny && (kind === 'energy_orb' || kind === 'boost_cell')) {
+        this.wavesSinceBoostPickup = 0;
       }
     }
   }
@@ -284,7 +274,6 @@ export class CollectibleManager {
     this.elapsed = 0;
     this.wavesSinceBoostPickup = 0;
     this.wavesSinceBoostPad = 0;
-    this.wavesSinceCollectible = 1;
     this.collectiblePool.forEachAll((c) => {
       c.active = false;
       c.group.visible = false;
