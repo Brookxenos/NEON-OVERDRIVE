@@ -12,7 +12,6 @@ export const DESPAWN_Z = 22;
 export const SPAWN_Z = -340;
 
 export const PLAYER_Z = 0;
-export const PLAYER_HOVER_Y = 0;
 export const CAR_CHASSIS_CLEARANCE = 0.24;
 
 export const BASE_START_SPEED = 34;
@@ -43,8 +42,8 @@ export const CELL_COIN_VALUE = 1;
 export const GOLD_COIN_VALUE = 2;
 
 export const COLORS = {
-  bgVoid: 0xf2a582,
-  fogNight: 0xdf979c,
+  skyHorizon: 0xf2a582,
+  fogHorizon: 0xdf979c,
   roadAsphalt: 0x2b2d36,
   neonCyan: 0x2dd4bf,
   electricBlue: 0x60a5fa,

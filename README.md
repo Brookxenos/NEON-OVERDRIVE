@@ -4,7 +4,7 @@ A browser-based 3D coastal sunset highway racing arcade game built with **TypeSc
 
 ## Features
 
-- **Sunset Coastal Highway**: Endless pooled road segments, Art Deco skyline blocks, beachfront palms, billboard landmarks, golden-hour sky dome, and 360° city horizon framing.
+- **Sunset Coastal Highway**: Endless pooled road segments, Art Deco skyline blocks, beachfront palms, billboard landmarks, dynamic day-night sky cycle, and 360° city horizon framing.
 - **25 Unlockable Cars & 3D Garage**: Nine custom-sculpted vehicle chassis classes with interactive Front, Side, Rear, and 360° showroom camera angles, dual Coin + Best Distance unlock requirements, and per-car top-speed bonuses.
 - **Dynamic Obstacles & Deep-Run Zones**: Smooth 3-lane switching, throttle/brake control, manual boost and track boost pads, 8 dynamic obstacle types (adding Laser Sweepers at 1,500m+ and Shock Pylons at 3,000m+), deep-run Express (`2,500m`), Overclock (`5,000m`), and Apex (`8,000m`) score zones, near-miss bonuses, and combo multipliers.
 - **Procedural Soundtrack**: Rotating multi-track Web Audio beat sequencer (four 16-step arrangements switching each run), speed-reactive engine audio, and balanced arcade sound effects.
@@ -47,7 +47,7 @@ Outputs the optimized production bundle to `dist/`.
 ## Architecture Overview
 
 - `src/core/`: Top-level game orchestration (`Game`), frame timing (`GameLoop`), central state store (`GameState`), and WebGL/bloom pipeline (`Renderer`).
-- `src/world/`: Scene lifecycle (`SceneManager`), dynamic chase/attract/showroom camera (`CameraController`), golden-hour lighting (`Lighting`), and sky/horizon backdrop (`Environment`).
+- `src/world/`: Scene lifecycle (`SceneManager`), dynamic chase/attract/showroom camera (`CameraController`), dynamic lighting (`Lighting`), day-night cycle (`DayNightCycle`), and sky/horizon backdrop (`Environment`).
 - `src/vehicle/`: Composite 3D car builder (`PlayerCar`), catalog specs (`CarCatalog`), kinematics (`CarPhysics`), exhaust effects (`CarEffects`), and vehicle coordinator (`CarController`).
 - `src/track/`: Lane math (`LaneSystem`), pooled road geometry (`RoadSegment`), city blocks and coastal trees (`TrackDecorations`), and streaming coordinator (`TrackManager`).
 - `src/gameplay/`: Dynamic obstacle and collectible pools (`ObstacleManager`, `CollectibleManager`), wave formations (`TacticalWaveDirector`), swept 2D collision & near-miss detection (`CollisionSystem`), boost gauge (`BoostSystem`), combo scoring (`ScoreManager`), and speed progression (`DifficultyManager`).

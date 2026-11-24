@@ -13,7 +13,7 @@ export class SpeedEffects {
   private currentOpacity = 0;
   private currentStretch = 1;
 
-  private readonly dummy = new THREE.Object3D();
+  private readonly instanceTransform = new THREE.Object3D();
 
   constructor() {
     this.speedLineGeo = new THREE.BoxGeometry(0.022, 0.022, 1);
@@ -60,11 +60,11 @@ export class SpeedEffects {
         line.z = -125 - Math.random() * 40;
       }
       const stretch = line.len * this.currentStretch;
-      this.dummy.position.set(line.x, line.y, line.z);
-      this.dummy.rotation.set(0, 0, 0);
-      this.dummy.scale.set(1, 1, stretch);
-      this.dummy.updateMatrix();
-      this.speedLinesMesh.setMatrixAt(i, this.dummy.matrix);
+      this.instanceTransform.position.set(line.x, line.y, line.z);
+      this.instanceTransform.rotation.set(0, 0, 0);
+      this.instanceTransform.scale.set(1, 1, stretch);
+      this.instanceTransform.updateMatrix();
+      this.speedLinesMesh.setMatrixAt(i, this.instanceTransform.matrix);
     }
     this.speedLinesMesh.instanceMatrix.needsUpdate = true;
   }

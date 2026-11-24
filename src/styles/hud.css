@@ -117,7 +117,7 @@
   color: #4ade80;
 }
 
-.hud-tech-status {
+.hud-zone-status {
   margin-top: 4px;
   font-size: 11px;
   font-weight: 700;
@@ -487,4 +487,3 @@
     padding: 0 18px;
   }
 }
-

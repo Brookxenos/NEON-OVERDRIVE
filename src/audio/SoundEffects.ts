@@ -12,7 +12,7 @@ function clampFreq(freq: number): number {
   return Math.max(24, Math.min(18000, freq));
 }
 
-function scheduleCleanEnvelope(
+function scheduleEnvelope(
   gainParam: AudioParam,
   startTime: number,
   peak: number,
@@ -44,7 +44,6 @@ export class SoundEffects {
   private lastNearMissAt = -1;
   private lastUiClickAt = -1;
   private lastBoostAt = -1;
-
 
   public attach(
     ctx: AudioContext,
@@ -144,7 +143,7 @@ export class SoundEffects {
     osc.frequency.setValueAtTime(clampFreq(startFreq), now);
     osc.frequency.exponentialRampToValueAtTime(clampFreq(endFreq), now + 0.07);
     const stopAt = now + 0.095;
-    scheduleCleanEnvelope(gain.gain, now, 0.05, 0.005, now + 0.078, now + 0.09);
+    scheduleEnvelope(gain.gain, now, 0.05, 0.005, now + 0.078, now + 0.09);
 
     let panner: StereoPannerNode | null = null;
     if (typeof this.ctx.createStereoPanner === 'function') {
@@ -180,7 +179,7 @@ export class SoundEffects {
     sub.frequency.setValueAtTime(102, now);
     sub.frequency.exponentialRampToValueAtTime(44, now + 0.22);
     const subStop = now + 0.27;
-    scheduleCleanEnvelope(subEnv.gain, now, 0.035, 0.01, now + 0.24, subStop);
+    scheduleEnvelope(subEnv.gain, now, 0.035, 0.01, now + 0.24, subStop);
     sub.connect(subEnv);
     subEnv.connect(this.outputNode);
     this.trackVoice(sub, subStop, () => {
@@ -196,7 +195,7 @@ export class SoundEffects {
     osc.frequency.setValueAtTime(160, now);
     osc.frequency.exponentialRampToValueAtTime(520, now + 0.26);
     const oscStop = now + 0.32;
-    scheduleCleanEnvelope(gain.gain, now, 0.018, 0.012, now + 0.28, oscStop);
+    scheduleEnvelope(gain.gain, now, 0.018, 0.012, now + 0.28, oscStop);
     osc.connect(gain);
     gain.connect(this.outputNode);
     this.trackVoice(osc, oscStop, () => {
@@ -216,7 +215,7 @@ export class SoundEffects {
       filter.frequency.exponentialRampToValueAtTime(1700, now + 0.28);
       const nGain = this.ctx.createGain();
       const nStop = now + 0.34;
-      scheduleCleanEnvelope(nGain.gain, now, 0.02, 0.012, now + 0.3, nStop);
+      scheduleEnvelope(nGain.gain, now, 0.02, 0.012, now + 0.3, nStop);
       noise.connect(filter);
       filter.connect(nGain);
       nGain.connect(this.outputNode);
@@ -255,7 +254,7 @@ export class SoundEffects {
       const t = now + idx * 0.024;
       const stopAt = t + 0.095;
       osc.frequency.setValueAtTime(clampFreq(f), t);
-      scheduleCleanEnvelope(gain.gain, t, peakGain, 0.005, t + 0.075, stopAt);
+      scheduleEnvelope(gain.gain, t, peakGain, 0.005, t + 0.075, stopAt);
       osc.connect(gain);
       gain.connect(this.outputNode);
       this.trackVoice(osc, stopAt, () => {
@@ -279,7 +278,7 @@ export class SoundEffects {
     osc.frequency.setValueAtTime(880, now);
     osc.frequency.exponentialRampToValueAtTime(220, now + 0.15);
     const stopAt = now + 0.185;
-    scheduleCleanEnvelope(gain.gain, now, 0.048, 0.006, now + 0.155, now + 0.175);
+    scheduleEnvelope(gain.gain, now, 0.048, 0.006, now + 0.155, now + 0.175);
     osc.connect(gain);
     gain.connect(this.outputNode);
     this.trackVoice(osc, stopAt, () => {
@@ -302,7 +301,7 @@ export class SoundEffects {
     sub.frequency.setValueAtTime(160, now);
     sub.frequency.exponentialRampToValueAtTime(28, now + 0.55);
     const subStop = now + 0.62;
-    scheduleCleanEnvelope(subGain.gain, now, 0.34, 0.006, now + 0.58, subStop);
+    scheduleEnvelope(subGain.gain, now, 0.34, 0.006, now + 0.58, subStop);
     sub.connect(subGain);
     subGain.connect(this.outputNode);
     this.trackVoice(sub, subStop, () => {
@@ -321,7 +320,7 @@ export class SoundEffects {
       filter.frequency.exponentialRampToValueAtTime(160, now + 0.65);
       const nGain = this.ctx.createGain();
       const nStop = now + 0.72;
-      scheduleCleanEnvelope(nGain.gain, now, 0.32, 0.008, now + 0.68, nStop);
+      scheduleEnvelope(nGain.gain, now, 0.32, 0.008, now + 0.68, nStop);
       noise.connect(filter);
       filter.connect(nGain);
       nGain.connect(this.outputNode);
@@ -348,7 +347,7 @@ export class SoundEffects {
     osc.frequency.setValueAtTime(confirm ? 560 : 420, now);
     osc.frequency.exponentialRampToValueAtTime(confirm ? 880 : 540, now + 0.065);
     const stopAt = now + 0.09;
-    scheduleCleanEnvelope(gain.gain, now, 0.085, 0.004, now + 0.075, stopAt);
+    scheduleEnvelope(gain.gain, now, 0.085, 0.004, now + 0.075, stopAt);
     osc.connect(gain);
     gain.connect(this.outputNode);
     this.trackVoice(osc, stopAt, () => {
@@ -371,7 +370,7 @@ export class SoundEffects {
       const t = now + idx * 0.065;
       const stopAt = t + 0.34;
       osc.frequency.setValueAtTime(clampFreq(freq), t);
-      scheduleCleanEnvelope(
+      scheduleEnvelope(
         gain.gain,
         t,
         idx === notes.length - 1 ? 0.05 : 0.042,

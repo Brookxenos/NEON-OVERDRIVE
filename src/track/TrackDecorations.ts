@@ -164,7 +164,7 @@ export class TrackDecorations {
   private readonly treeTrunks: THREE.InstancedMesh;
   private readonly treeCanopies: THREE.InstancedMesh;
   private readonly treeSlots: TreeSlot[] = [];
-  private readonly dummy = new THREE.Object3D();
+  private readonly instanceTransform = new THREE.Object3D();
 
   private readonly geometries: THREE.BufferGeometry[] = [];
   private readonly materials: THREE.Material[] = [];
@@ -349,12 +349,12 @@ export class TrackDecorations {
   private syncPalmMatrices(): void {
     for (let i = 0; i < PALM_COUNT; i++) {
       const slot = this.palmSlots[i];
-      this.dummy.position.set(slot.x, -0.1, slot.z);
-      this.dummy.rotation.set(0, slot.rotY, slot.leanX);
-      this.dummy.scale.setScalar(slot.scale);
-      this.dummy.updateMatrix();
-      this.palmTrunks.setMatrixAt(i, this.dummy.matrix);
-      this.palmCrowns.setMatrixAt(i, this.dummy.matrix);
+      this.instanceTransform.position.set(slot.x, -0.1, slot.z);
+      this.instanceTransform.rotation.set(0, slot.rotY, slot.leanX);
+      this.instanceTransform.scale.setScalar(slot.scale);
+      this.instanceTransform.updateMatrix();
+      this.palmTrunks.setMatrixAt(i, this.instanceTransform.matrix);
+      this.palmCrowns.setMatrixAt(i, this.instanceTransform.matrix);
     }
     this.palmTrunks.instanceMatrix.needsUpdate = true;
     this.palmCrowns.instanceMatrix.needsUpdate = true;
@@ -363,12 +363,12 @@ export class TrackDecorations {
   private syncTreeMatrices(): void {
     for (let i = 0; i < TREE_COUNT; i++) {
       const slot = this.treeSlots[i];
-      this.dummy.position.set(slot.x, -0.2, slot.z);
-      this.dummy.rotation.set(0, slot.rotY, 0);
-      this.dummy.scale.setScalar(slot.scale);
-      this.dummy.updateMatrix();
-      this.treeTrunks.setMatrixAt(i, this.dummy.matrix);
-      this.treeCanopies.setMatrixAt(i, this.dummy.matrix);
+      this.instanceTransform.position.set(slot.x, -0.2, slot.z);
+      this.instanceTransform.rotation.set(0, slot.rotY, 0);
+      this.instanceTransform.scale.setScalar(slot.scale);
+      this.instanceTransform.updateMatrix();
+      this.treeTrunks.setMatrixAt(i, this.instanceTransform.matrix);
+      this.treeCanopies.setMatrixAt(i, this.instanceTransform.matrix);
     }
     this.treeTrunks.instanceMatrix.needsUpdate = true;
     this.treeCanopies.instanceMatrix.needsUpdate = true;

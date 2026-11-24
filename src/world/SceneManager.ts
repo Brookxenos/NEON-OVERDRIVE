@@ -30,8 +30,8 @@ export class SceneManager {
     aspect: number,
   ) {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(COLORS.bgVoid);
-    this.fog = new THREE.FogExp2(COLORS.fogNight, 0.00145);
+    this.scene.background = new THREE.Color(COLORS.skyHorizon);
+    this.fog = new THREE.FogExp2(COLORS.fogHorizon, 0.00145);
     this.scene.fog = this.fog;
 
     const pmremGenerator = new THREE.PMREMGenerator(renderer);

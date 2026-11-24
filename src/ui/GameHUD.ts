@@ -72,7 +72,7 @@ export class GameHUD {
             <span>Tier <strong class="font-mono-num" style="color:#d8b4fe" data-role="tier">1</strong></span>
           </div>
           <div class="hud-goal-hint" data-role="goal-hint"></div>
-          <div class="hud-tech-status hidden" data-role="tech-status"></div>
+          <div class="hud-zone-status hidden" data-role="zone-status"></div>
         </div>
 
         <div class="hud-banner-slot" data-role="banner-slot"></div>
@@ -140,7 +140,7 @@ export class GameHUD {
     this.coinsEl = this.element.querySelector('[data-role="coins"]')!;
     this.tierEl = this.element.querySelector('[data-role="tier"]')!;
     this.goalHintEl = this.element.querySelector('[data-role="goal-hint"]')!;
-    this.zoneBadgeEl = this.element.querySelector('[data-role="tech-status"]')!;
+    this.zoneBadgeEl = this.element.querySelector('[data-role="zone-status"]')!;
     this.speedEl = this.element.querySelector('[data-role="speed"]')!;
     this.distanceEl = this.element.querySelector('[data-role="distance"]')!;
     this.boostStatusEl = this.element.querySelector('[data-role="boost-status"]')!;
