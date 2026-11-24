@@ -664,7 +664,13 @@ export class Game {
       const crashFrac = clamp(this.collisionReport.crashTime, 0, 1);
       this.obstacleManager.snapToFraction(crashFrac);
       this.trackManager.update(dt * crashFrac, this.currentSpeed, isAnyBoost);
-      this.sceneManager.update(dt * crashFrac, this.currentSpeed, isAnyBoost, exactDistance);
+      this.sceneManager.update(
+        dt * crashFrac,
+        this.currentSpeed,
+        isAnyBoost,
+        exactDistance,
+        this.runElapsedSeconds,
+      );
       this.scoreManager.updateRun(
         dt * crashFrac,
         this.currentSpeed,
@@ -680,7 +686,13 @@ export class Game {
 
     this.scoreManager.updateRun(dt, this.currentSpeed, isAnyBoost, zoneScoreMultiplier, isFeverActive);
     this.trackManager.update(dt, this.currentSpeed, isAnyBoost);
-    this.sceneManager.update(dt, this.currentSpeed, isAnyBoost, exactDistance);
+    this.sceneManager.update(
+      dt,
+      this.currentSpeed,
+      isAnyBoost,
+      exactDistance,
+      this.runElapsedSeconds,
+    );
     this.visualEffects.update(dt, this.currentSpeed, isAnyBoost);
 
     this.spawnDistanceRemaining -= this.currentSpeed * dt;

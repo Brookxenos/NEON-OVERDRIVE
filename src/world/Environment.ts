@@ -4,6 +4,7 @@ import { TextureBundle } from '../utils/TextureFactory';
 export class Environment {
   public readonly group = new THREE.Group();
 
+  private readonly skyMat: THREE.MeshBasicMaterial;
   private readonly shimmerPlane: THREE.Mesh;
   private readonly shimmerMat: THREE.MeshBasicMaterial;
   private readonly baseShimmerColor = new THREE.Color(0xf7b99b);
@@ -15,14 +16,14 @@ export class Environment {
 
   constructor(textures: TextureBundle) {
     const skyGeo = new THREE.SphereGeometry(520, 28, 18);
-    const skyMat = new THREE.MeshBasicMaterial({
+    this.skyMat = new THREE.MeshBasicMaterial({
       map: textures.skyBackdrop,
       side: THREE.BackSide,
       fog: false,
     });
     this.geometries.push(skyGeo);
-    this.materials.push(skyMat);
-    this.group.add(new THREE.Mesh(skyGeo, skyMat));
+    this.materials.push(this.skyMat);
+    this.group.add(new THREE.Mesh(skyGeo, this.skyMat));
 
     const groundGeo = new THREE.PlaneGeometry(860, 960, 1, 1);
     groundGeo.rotateX(-Math.PI / 2);
@@ -111,19 +112,30 @@ export class Environment {
     }
   }
 
+  public resetAtmosphere(): void {
+    this.skyMat.color.setHex(0xffffff);
+    this.shimmerMat.color.copy(this.baseShimmerColor);
+    this.shimmerMat.opacity = 0.12;
+  }
+
   public update(
     dt: number,
     worldSpeed: number,
     isBoosting: boolean,
     zoneBlend = 0,
     deepBlend = 0,
+    skyTint?: THREE.Color,
+    shimmerColor?: THREE.Color,
   ): void {
     this.shimmerOffset = (this.shimmerOffset + dt * worldSpeed * 0.4) % 21.8;
     this.shimmerPlane.position.z = this.shimmerOffset;
+    if (skyTint) {
+      this.skyMat.color.copy(skyTint);
+    }
     this.shimmerMat.color
-      .copy(this.baseShimmerColor)
-      .lerp(this.expressShimmerColor, zoneBlend)
-      .lerp(this.apexShimmerColor, deepBlend);
+      .copy(shimmerColor ?? this.baseShimmerColor)
+      .lerp(this.expressShimmerColor, zoneBlend * 0.65)
+      .lerp(this.apexShimmerColor, deepBlend * 0.65);
     this.shimmerMat.opacity = (isBoosting ? 0.16 : 0.1) + zoneBlend * 0.05 + deepBlend * 0.04;
   }
 
