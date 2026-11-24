@@ -193,6 +193,7 @@ export class Game {
 
     window.addEventListener('resize', this.handleResize);
     window.addEventListener('beforeunload', this.flushPendingSave);
+    document.addEventListener('visibilitychange', this.handleVisibilityChange);
 
     this.loop = new GameLoop(
       this.renderer.isSoftwareGl,
@@ -438,6 +439,12 @@ export class Game {
     const height = Math.max(this.container.clientHeight, 240);
     this.sceneManager.cameraController.resize(width, height);
     this.renderer.resize(width, height);
+  };
+
+  private handleVisibilityChange = (): void => {
+    if (document.hidden && this.state.getStatus() === 'playing') {
+      this.pause();
+    }
   };
 
   private seedOpeningHighway(): string {
@@ -944,6 +951,7 @@ export class Game {
     this.loop.stop();
     window.removeEventListener('resize', this.handleResize);
     window.removeEventListener('beforeunload', this.flushPendingSave);
+    document.removeEventListener('visibilitychange', this.handleVisibilityChange);
     this.keyboardController.dispose();
     this.touchController.dispose();
     this.audioManager.dispose();
