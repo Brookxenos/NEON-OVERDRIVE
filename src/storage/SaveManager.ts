@@ -37,7 +37,13 @@ export class SaveManager {
           unlockedCars: [...DEFAULT_SAVE_DATA.unlockedCars],
         };
       }
-      const parsed = JSON.parse(raw) as Partial<SaveData>;
+      const parsed = JSON.parse(raw) as Partial<SaveData> | null;
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        return {
+          ...DEFAULT_SAVE_DATA,
+          unlockedCars: [...DEFAULT_SAVE_DATA.unlockedCars],
+        };
+      }
       const isCurrentProgression = parsed.progressionVersion === CURRENT_PROGRESSION_VERSION;
 
       const rawUnlocked =
@@ -58,23 +64,26 @@ export class SaveManager {
 
       const nextData: SaveData = {
         bestScore:
-          typeof parsed.bestScore === 'number' && parsed.bestScore >= 0
+          typeof parsed.bestScore === 'number' && Number.isFinite(parsed.bestScore) && parsed.bestScore >= 0
             ? Math.floor(parsed.bestScore)
             : 0,
         bestDistance:
-          typeof parsed.bestDistance === 'number' && parsed.bestDistance >= 0
+          typeof parsed.bestDistance === 'number' && Number.isFinite(parsed.bestDistance) && parsed.bestDistance >= 0
             ? Math.floor(parsed.bestDistance)
             : 0,
         totalRuns:
-          typeof parsed.totalRuns === 'number' && parsed.totalRuns >= 0
+          typeof parsed.totalRuns === 'number' && Number.isFinite(parsed.totalRuns) && parsed.totalRuns >= 0
             ? Math.floor(parsed.totalRuns)
             : 0,
         totalOrbs:
-          typeof parsed.totalOrbs === 'number' && parsed.totalOrbs >= 0
+          typeof parsed.totalOrbs === 'number' && Number.isFinite(parsed.totalOrbs) && parsed.totalOrbs >= 0
             ? Math.floor(parsed.totalOrbs)
             : 0,
         coins:
-          isCurrentProgression && typeof parsed.coins === 'number' && parsed.coins >= 0
+          isCurrentProgression &&
+          typeof parsed.coins === 'number' &&
+          Number.isFinite(parsed.coins) &&
+          parsed.coins >= 0
             ? Math.floor(parsed.coins)
             : 0,
         unlockedCars,
@@ -107,11 +116,14 @@ export class SaveManager {
     try {
       const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
       if (!raw) return { ...DEFAULT_GAME_SETTINGS };
-      const parsed = JSON.parse(raw) as Partial<GameSettingsData>;
+      const parsed = JSON.parse(raw) as Partial<GameSettingsData> | null;
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        return { ...DEFAULT_GAME_SETTINGS };
+      }
       return {
         graphicsQuality: parsed.graphicsQuality === 'balanced' ? 'balanced' : 'high',
         masterVolume:
-          typeof parsed.masterVolume === 'number'
+          typeof parsed.masterVolume === 'number' && Number.isFinite(parsed.masterVolume)
             ? Math.max(0, Math.min(1, parsed.masterVolume))
             : DEFAULT_GAME_SETTINGS.masterVolume,
         musicEnabled:

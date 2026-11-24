@@ -197,6 +197,9 @@ export class AudioManager {
 
     this.isUnlocked = true;
     this.applyVolumes();
+    if (this.ctx.state !== 'running') {
+      void this.ctx.resume().catch(() => undefined);
+    }
   }
 
   public nextMusicTrack(): void {

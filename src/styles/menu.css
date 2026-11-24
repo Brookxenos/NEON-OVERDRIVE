@@ -10,6 +10,8 @@
     max(16px, var(--safe-bottom))
     max(14px, var(--safe-left));
   overflow-y: auto;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
   pointer-events: none;
 }
 
@@ -185,6 +187,8 @@
   max-width: 390px;
   max-height: calc(100dvh - 24px);
   overflow-y: auto;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
   background: var(--modal-bg);
   border: 1px solid var(--border-cyan);
   border-radius: 16px;
@@ -533,6 +537,7 @@
   flex-wrap: wrap;
   gap: 5px;
   margin-bottom: 9px;
+  touch-action: pan-x;
 }
 
 .garage-filter-btn {
@@ -614,6 +619,7 @@
   border-radius: 12px;
   background: rgba(7, 11, 24, 0.84);
   border: 1px solid var(--border-subtle);
+  touch-action: pan-x;
   pointer-events: auto;
 }
 
@@ -677,6 +683,8 @@
   flex-direction: column;
   gap: 6px;
   overflow-y: auto;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
   padding-right: 6px;
   scrollbar-width: thin;
   scrollbar-color: rgba(34, 211, 238, 0.55) rgba(15, 23, 42, 0.85);

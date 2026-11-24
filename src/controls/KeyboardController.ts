@@ -15,7 +15,12 @@ export class KeyboardController {
     this.events = events;
     window.addEventListener('keydown', this.handleKeyDown);
     window.addEventListener('keyup', this.handleKeyUp);
+    window.addEventListener('blur', this.handleWindowBlur);
   }
+
+  private handleWindowBlur = (): void => {
+    this.reset();
+  };
 
   private handleKeyDown = (event: KeyboardEvent): void => {
     this.events.onInteraction();
@@ -74,6 +79,7 @@ export class KeyboardController {
         this.events.onBrakeChange(false);
         break;
       case 'Space':
+        event.preventDefault();
         this.boostHeld = false;
         this.events.onBoostChange(false);
         break;
@@ -90,5 +96,6 @@ export class KeyboardController {
   public dispose(): void {
     window.removeEventListener('keydown', this.handleKeyDown);
     window.removeEventListener('keyup', this.handleKeyUp);
+    window.removeEventListener('blur', this.handleWindowBlur);
   }
 }

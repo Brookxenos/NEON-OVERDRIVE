@@ -25,13 +25,21 @@ function bootstrap(): void {
   shell.append(canvasViewport, uiLayer);
   root.appendChild(shell);
 
-  const game = new Game(canvasViewport);
-  const ui = new UIManager(uiLayer, game);
+  try {
+    const game = new Game(canvasViewport);
+    const ui = new UIManager(uiLayer, game);
 
-  window.addEventListener('beforeunload', () => {
-    ui.dispose();
-    game.dispose();
-  });
+    window.addEventListener('beforeunload', () => {
+      ui.dispose();
+      game.dispose();
+    });
+  } catch {
+    const fallbackBanner = document.createElement('div');
+    fallbackBanner.className = 'webgl-error-banner';
+    fallbackBanner.textContent =
+      'WebGL 2 graphics could not start in this browser. Enable hardware acceleration or try a modern browser.';
+    uiLayer.appendChild(fallbackBanner);
+  }
 }
 
 bootstrap();

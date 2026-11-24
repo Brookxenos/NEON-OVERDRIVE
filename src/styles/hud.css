@@ -44,8 +44,14 @@
   .hud-panel {
     border-radius: 12px;
     padding: 12px 16px;
-    min-width: 224px;
+    min-width: 196px;
     flex: 0 1 auto;
+  }
+}
+
+@media (min-width: 960px) {
+  .hud-panel {
+    min-width: 224px;
   }
 }
 
@@ -131,8 +137,12 @@
 @media (min-width: 640px) {
   .hud-right-cluster {
     gap: 10px;
-    flex: 0 1 auto;
+    flex: 0 0 auto;
   }
+}
+
+.hud-quick-buttons {
+  flex-shrink: 0;
 }
 
 .hud-speed-row {
@@ -332,7 +342,7 @@
   border-color: #ffffff;
 }
 
-@media (max-width: 639px) {
+@media (max-width: 959px) {
   .hud-top-row {
     flex-wrap: wrap;
   }
@@ -342,6 +352,9 @@
     flex-basis: 100%;
     padding-top: 2px;
   }
+}
+
+@media (max-width: 639px) {
 
   .hud-kicker {
     font-size: 9px;
