@@ -4,6 +4,17 @@ import { DESPAWN_Z, SPAWN_Z } from '../utils/Constants';
 import { clamp, damp } from '../utils/MathUtils';
 import { ObjectPool, Poolable } from '../utils/ObjectPool';
 import { TextureBundle } from '../utils/TextureFactory';
+import {
+  createAeroMirrorGeometry,
+  createAeroSplitterGeometry,
+  createAirfoilWingGeometry,
+  createBeveledPlateGeometry,
+  createCarShellGeometries,
+  createFenderArchLinerGeometry,
+  createProfiledTireGeometry,
+  createRimBarrelGeometry,
+  createSculptedSpokeGeometry,
+} from '../vehicle/CarGeometryFactory';
 
 export type ObstacleType =
   | 'traffic'
@@ -90,155 +101,6 @@ function createSidePylonGeometry(): THREE.ExtrudeGeometry {
   });
   geo.rotateY(Math.PI / 2);
   geo.translate(-0.14, 0, 0);
-  return geo;
-}
-
-interface TrafficBodyStation {
-  z: number;
-  halfW: number;
-  fenderW: number;
-  bottomY: number;
-  midY: number;
-  shoulderY: number;
-  crownY: number;
-}
-
-function createTrafficBodyGeometry(): THREE.BufferGeometry {
-  const stations: TrafficBodyStation[] = [
-    { z: -2.06, halfW: 0.72, fenderW: 0.78, bottomY: 0.14, midY: 0.24, shoulderY: 0.34, crownY: 0.37 },
-    { z: -1.86, halfW: 0.84, fenderW: 0.92, bottomY: 0.06, midY: 0.27, shoulderY: 0.44, crownY: 0.48 },
-    { z: -1.32, halfW: 0.76, fenderW: 0.78, bottomY: 0.1, midY: 0.4, shoulderY: 0.54, crownY: 0.59 },
-    { z: -0.68, halfW: 0.85, fenderW: 0.92, bottomY: 0.05, midY: 0.31, shoulderY: 0.56, crownY: 0.6 },
-    { z: 0.02, halfW: 0.83, fenderW: 0.9, bottomY: 0.05, midY: 0.31, shoulderY: 0.57, crownY: 0.6 },
-    { z: 0.68, halfW: 0.86, fenderW: 0.95, bottomY: 0.05, midY: 0.33, shoulderY: 0.6, crownY: 0.62 },
-    { z: 1.28, halfW: 0.78, fenderW: 0.8, bottomY: 0.1, midY: 0.41, shoulderY: 0.61, crownY: 0.63 },
-    { z: 1.84, halfW: 0.84, fenderW: 0.92, bottomY: 0.07, midY: 0.32, shoulderY: 0.56, crownY: 0.58 },
-    { z: 2.04, halfW: 0.74, fenderW: 0.78, bottomY: 0.14, midY: 0.29, shoulderY: 0.5, crownY: 0.52 },
-  ];
-
-  const ringSize = 10;
-  const positions: number[] = [];
-  const indices: number[] = [];
-
-  for (const s of stations) {
-    const pts: Array<[number, number]> = [
-      [-s.halfW * 0.84, s.bottomY],
-      [-s.fenderW, s.midY],
-      [-s.halfW * 0.95, s.shoulderY],
-      [-s.halfW * 0.44, s.crownY - 0.01],
-      [0, s.crownY],
-      [s.halfW * 0.44, s.crownY - 0.01],
-      [s.halfW * 0.95, s.shoulderY],
-      [s.fenderW, s.midY],
-      [s.halfW * 0.84, s.bottomY],
-      [0, s.bottomY],
-    ];
-    for (const [px, py] of pts) {
-      positions.push(px, py, s.z);
-    }
-  }
-
-  for (let i = 0; i < stations.length - 1; i++) {
-    const a = i * ringSize;
-    const b = (i + 1) * ringSize;
-    for (let j = 0; j < ringSize; j++) {
-      const jNext = (j + 1) % ringSize;
-      indices.push(a + j, b + j, b + jNext);
-      indices.push(a + j, b + jNext, a + jNext);
-    }
-  }
-
-  const frontCenter = positions.length / 3;
-  positions.push(0, 0.25, stations[0].z);
-  for (let j = 0; j < ringSize; j++) {
-    indices.push(frontCenter, j, (j + 1) % ringSize);
-  }
-
-  const lastBase = (stations.length - 1) * ringSize;
-  const rearCenter = positions.length / 3;
-  positions.push(0, 0.32, stations[stations.length - 1].z);
-  for (let j = 0; j < ringSize; j++) {
-    indices.push(rearCenter, lastBase + ((j + 1) % ringSize), lastBase + j);
-  }
-
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geo.setIndex(indices);
-  geo.computeVertexNormals();
-  return geo;
-}
-
-function createTrafficCabinGeometry(): THREE.BufferGeometry {
-  const stations = [
-    { z: -0.78, baseW: 0.76, topW: 0.66, baseY: 0.55, topY: 0.59 },
-    { z: -0.24, baseW: 0.73, topW: 0.57, baseY: 0.57, topY: 0.98 },
-    { z: 0.48, baseW: 0.73, topW: 0.56, baseY: 0.59, topY: 0.97 },
-    { z: 1.38, baseW: 0.75, topW: 0.64, baseY: 0.6, topY: 0.64 },
-  ];
-
-  const ringSize = 6;
-  const positions: number[] = [];
-  const indices: number[] = [];
-
-  for (const s of stations) {
-    const pts: Array<[number, number]> = [
-      [-s.baseW, s.baseY],
-      [-s.topW, s.topY - 0.02],
-      [0, s.topY],
-      [s.topW, s.topY - 0.02],
-      [s.baseW, s.baseY],
-      [0, s.baseY - 0.03],
-    ];
-    for (const [px, py] of pts) {
-      positions.push(px, py, s.z);
-    }
-  }
-
-  for (let i = 0; i < stations.length - 1; i++) {
-    const a = i * ringSize;
-    const b = (i + 1) * ringSize;
-    for (let j = 0; j < ringSize; j++) {
-      const jNext = (j + 1) % ringSize;
-      indices.push(a + j, b + j, b + jNext);
-      indices.push(a + j, b + jNext, a + jNext);
-    }
-  }
-
-  const frontCenter = positions.length / 3;
-  positions.push(0, 0.57, stations[0].z);
-  for (let j = 0; j < ringSize; j++) {
-    indices.push(frontCenter, j, (j + 1) % ringSize);
-  }
-
-  const lastBase = (stations.length - 1) * ringSize;
-  const rearCenter = positions.length / 3;
-  positions.push(0, 0.61, stations[stations.length - 1].z);
-  for (let j = 0; j < ringSize; j++) {
-    indices.push(rearCenter, lastBase + ((j + 1) % ringSize), lastBase + j);
-  }
-
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geo.setIndex(indices);
-  geo.computeVertexNormals();
-  return geo;
-}
-
-function createTrafficTireGeometry(radius: number, width: number): THREE.LatheGeometry {
-  const halfW = width * 0.5;
-  const innerR = radius * 0.62;
-  const pts: THREE.Vector2[] = [
-    new THREE.Vector2(innerR, -halfW * 0.92),
-    new THREE.Vector2(radius * 0.88, -halfW),
-    new THREE.Vector2(radius * 0.98, -halfW * 0.8),
-    new THREE.Vector2(radius, -halfW * 0.42),
-    new THREE.Vector2(radius, halfW * 0.42),
-    new THREE.Vector2(radius * 0.98, halfW * 0.8),
-    new THREE.Vector2(radius * 0.88, halfW),
-    new THREE.Vector2(innerR, halfW * 0.92),
-  ];
-  const geo = new THREE.LatheGeometry(pts, 22);
-  geo.rotateZ(Math.PI / 2);
   return geo;
 }
 
@@ -352,36 +214,40 @@ export class ObstacleManager {
     const trafficColors = [0xff4d42, 0xff851b, 0xff69b4, 0xfacc15, 0xfef9c3];
     const trafficCarMats = trafficColors.map(
       (color) =>
-        new THREE.MeshStandardMaterial({
+        new THREE.MeshPhysicalMaterial({
           color,
           emissive: color,
-          emissiveIntensity: 0.42,
-          metalness: 0.08,
-          roughness: 0.48,
-          envMapIntensity: 0.1,
+          emissiveIntensity: 0.36,
+          metalness: 0.25,
+          roughness: 0.28,
+          clearcoat: 0.95,
+          clearcoatRoughness: 0.08,
+          envMapIntensity: 0.95,
         }),
     );
     const rivalTireMat = new THREE.MeshStandardMaterial({
-      color: 0x453042,
-      metalness: 0.06,
-      roughness: 0.8,
-      envMapIntensity: 0.06,
+      color: 0x1e1b26,
+      metalness: 0.05,
+      roughness: 0.86,
+      envMapIntensity: 0.08,
     });
     const rivalRimMat = new THREE.MeshStandardMaterial({
       color: 0xfef3c7,
       emissive: 0x78350f,
-      emissiveIntensity: 0.25,
-      metalness: 0.4,
-      roughness: 0.34,
-      envMapIntensity: 0.2,
+      emissiveIntensity: 0.2,
+      metalness: 0.82,
+      roughness: 0.22,
+      envMapIntensity: 1.0,
     });
-    const rivalCanopyMat = new THREE.MeshStandardMaterial({
-      color: 0x67e8f9,
-      emissive: 0x0891b2,
-      emissiveIntensity: 0.48,
-      metalness: 0.15,
-      roughness: 0.26,
-      envMapIntensity: 0.2,
+    const rivalCanopyMat = new THREE.MeshPhysicalMaterial({
+      color: 0x164e63,
+      emissive: 0x0e7490,
+      emissiveIntensity: 0.32,
+      metalness: 0.1,
+      roughness: 0.06,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.04,
+      envMapIntensity: 1.4,
     });
 
     const trafficTrimMat = new THREE.MeshStandardMaterial({
@@ -468,27 +334,26 @@ export class ObstacleManager {
     const barrierShieldGeo = new THREE.PlaneGeometry(2.42, 1.08);
     const barrierHeaderGeo = new THREE.BoxGeometry(2.74, 0.22, 0.28);
 
-    const rivalHullGeo = createTrafficBodyGeometry();
-    const rivalCanopyGeo = createTrafficCabinGeometry();
-    const rivalRoofGeo = new THREE.BoxGeometry(1.16, 0.05, 0.82);
-    const rivalGrilleGeo = new THREE.BoxGeometry(1.02, 0.18, 0.08);
-    const rivalSplitterGeo = new THREE.BoxGeometry(1.66, 0.05, 0.22);
-    const rivalHeadlampGeo = new THREE.BoxGeometry(0.28, 0.09, 0.08);
-    const rivalMirrorGeo = new THREE.BoxGeometry(0.17, 0.075, 0.11);
-    const rivalSpoilerBladeGeo = new THREE.BoxGeometry(1.68, 0.06, 0.22);
-    const rivalTailHousingGeo = new THREE.BoxGeometry(1.6, 0.19, 0.08);
-    const rivalTailClusterGeo = new THREE.BoxGeometry(1.5, 0.13, 0.06);
-    const rivalSignalGeo = new THREE.BoxGeometry(0.26, 0.13, 0.08);
-    const rivalPlateGeo = new THREE.BoxGeometry(0.38, 0.12, 0.03);
-    const rivalDiffuserGeo = new THREE.BoxGeometry(1.28, 0.11, 0.12);
-    const rivalExhaustGeo = new THREE.CylinderGeometry(0.065, 0.075, 0.22, 12);
+    const trafficShell = createCarShellGeometries('traffic_coupe');
+    const rivalHullGeo = trafficShell.body;
+    const rivalCanopyGeo = trafficShell.cabinGlass;
+    const rivalRoofGeo = trafficShell.roofShell;
+    const rivalGrilleGeo = createBeveledPlateGeometry(1.0, 0.16, 0.075, 0.03, 0.012);
+    const rivalSplitterGeo = createAeroSplitterGeometry(1.64, 0.22);
+    const rivalHeadlampGeo = createBeveledPlateGeometry(0.28, 0.085, 0.075, 0.024, 0.01);
+    const rivalMirrorGeo = createAeroMirrorGeometry();
+    const rivalSpoilerBladeGeo = createAirfoilWingGeometry(1.66, 0.22, 0.044);
+    const rivalTailHousingGeo = createBeveledPlateGeometry(1.54, 0.16, 0.07, 0.03, 0.012);
+    const rivalTailClusterGeo = createBeveledPlateGeometry(1.44, 0.1, 0.05, 0.02, 0.008);
+    const rivalSignalGeo = createBeveledPlateGeometry(0.24, 0.11, 0.07, 0.02, 0.008);
+    const rivalPlateGeo = createBeveledPlateGeometry(0.38, 0.115, 0.032, 0.014, 0.005);
+    const rivalDiffuserGeo = createAeroSplitterGeometry(1.28, 0.18);
+    const rivalExhaustGeo = new THREE.CylinderGeometry(0.062, 0.072, 0.22, 16);
     rivalExhaustGeo.rotateX(Math.PI / 2);
-    const rivalWheelTireGeo = createTrafficTireGeometry(0.33, 0.26);
-    const rivalWheelRimGeo = new THREE.CylinderGeometry(0.21, 0.21, 0.21, 18);
-    rivalWheelRimGeo.rotateZ(Math.PI / 2);
-    const rivalWheelSpokeGeo = new THREE.BoxGeometry(0.23, 0.36, 0.045);
-    const rivalWheelArchGeo = new THREE.CylinderGeometry(0.41, 0.41, 0.18, 16, 1, true, 0, Math.PI);
-    rivalWheelArchGeo.rotateZ(Math.PI / 2);
+    const rivalWheelTireGeo = createProfiledTireGeometry(0.33, 0.26, 24);
+    const rivalWheelRimGeo = createRimBarrelGeometry(0.33, 0.26);
+    const rivalWheelSpokeGeo = createSculptedSpokeGeometry(0.33);
+    const rivalWheelArchGeo = createFenderArchLinerGeometry(0.38, 0.445);
     const rivalShadowGeo = new THREE.PlaneGeometry(2.55, 4.65);
     rivalShadowGeo.rotateX(-Math.PI / 2);
 
@@ -678,69 +543,72 @@ export class ObstacleManager {
         carBody.add(canopy);
 
         const roof = new THREE.Mesh(rivalRoofGeo, carMat);
-        roof.position.set(0, 0.99, 0.12);
         carBody.add(roof);
 
         const grille = new THREE.Mesh(rivalGrilleGeo, trafficTrimMat);
-        grille.position.set(0, 0.25, -2.02);
+        grille.position.set(0, 0.25, -2.01);
         carBody.add(grille);
 
         const splitter = new THREE.Mesh(rivalSplitterGeo, trafficTrimMat);
-        splitter.position.set(0, 0.09, -1.96);
+        splitter.position.set(0, 0.085, -1.96);
         carBody.add(splitter);
 
-        for (const sx of [-0.66, 0.66]) {
+        for (const sx of [-0.63, 0.63]) {
           const headlamp = new THREE.Mesh(rivalHeadlampGeo, trafficHeadlampMat);
-          headlamp.position.set(sx, 0.34, -1.98);
+          headlamp.position.set(sx, 0.34, -1.95);
+          headlamp.rotation.y = (sx > 0 ? -1 : 1) * 0.2;
           carBody.add(headlamp);
 
           const mirror = new THREE.Mesh(rivalMirrorGeo, carMat);
-          mirror.position.set(sx > 0 ? 0.92 : -0.92, 0.65, -0.45);
+          mirror.position.set(sx > 0 ? 0.91 : -0.91, 0.65, -0.48);
+          mirror.rotation.y = (sx > 0 ? -1 : 1) * 0.16;
           carBody.add(mirror);
         }
 
         const spoiler = new THREE.Mesh(rivalSpoilerBladeGeo, this.warningAmberMat);
-        spoiler.position.set(0, 0.68, 1.84);
+        spoiler.position.set(0, 0.67, 1.84);
+        spoiler.rotation.x = 0.14;
         carBody.add(spoiler);
 
         const tailHousing = new THREE.Mesh(rivalTailHousingGeo, trafficTrimMat);
-        tailHousing.position.set(0, 0.39, 2.02);
+        tailHousing.position.set(0, 0.39, 2.0);
         carBody.add(tailHousing);
 
         const tailBar = new THREE.Mesh(rivalTailClusterGeo, this.dangerRedMat);
-        tailBar.position.set(0, 0.39, 2.055);
+        tailBar.position.set(0, 0.39, 2.035);
         carBody.add(tailBar);
 
         const leftSignal = new THREE.Mesh(rivalSignalGeo, this.warningAmberMat);
-        leftSignal.position.set(-0.78, 0.46, 2.065);
+        leftSignal.position.set(-0.76, 0.44, 2.045);
         leftSignal.visible = false;
         carBody.add(leftSignal);
         signalLeft = leftSignal;
 
         const rightSignal = new THREE.Mesh(rivalSignalGeo, this.warningAmberMat);
-        rightSignal.position.set(0.78, 0.46, 2.065);
+        rightSignal.position.set(0.76, 0.44, 2.045);
         rightSignal.visible = false;
         carBody.add(rightSignal);
         signalRight = rightSignal;
 
         const plate = new THREE.Mesh(rivalPlateGeo, trafficPlateMat);
-        plate.position.set(0, 0.25, 2.045);
+        plate.position.set(0, 0.24, 2.025);
         carBody.add(plate);
 
         const diffuser = new THREE.Mesh(rivalDiffuserGeo, trafficTrimMat);
-        diffuser.position.set(0, 0.12, 1.98);
+        diffuser.position.set(0, 0.1, 1.96);
         carBody.add(diffuser);
 
         for (const sx of [-0.52, -0.38, 0.38, 0.52]) {
           const pipe = new THREE.Mesh(rivalExhaustGeo, chassisSteelMat);
-          pipe.position.set(sx, 0.13, 2.04);
+          pipe.position.set(sx, 0.12, 2.02);
           carBody.add(pipe);
         }
 
-        for (const wx of [-0.91, 0.91]) {
+        for (const wx of [-0.9, 0.9]) {
+          const side = wx > 0 ? 1 : -1;
           for (const wz of [-1.32, 1.28]) {
-            const arch = new THREE.Mesh(rivalWheelArchGeo, trafficTrimMat);
-            arch.position.set(wx * 0.98, 0.34, wz);
+            const arch = new THREE.Mesh(rivalWheelArchGeo, carMat);
+            arch.position.set(wx * 0.99, 0.34, wz);
             obsGroup.add(arch);
 
             const wheel = new THREE.Group();
@@ -754,8 +622,9 @@ export class ObstacleManager {
             wheel.add(rim);
 
             for (let s = 0; s < 5; s++) {
-              const spoke = new THREE.Mesh(rivalWheelSpokeGeo, darkTrimMat);
-              spoke.rotation.x = (s * Math.PI) / 5;
+              const spoke = new THREE.Mesh(rivalWheelSpokeGeo, rivalRimMat);
+              spoke.position.x = side * 0.11;
+              spoke.rotation.x = (s * Math.PI * 2) / 5;
               wheel.add(spoke);
             }
 
