@@ -552,39 +552,12 @@ export class PlayerCar {
 
   private buildMuscleBlowerKit(): THREE.Group {
     const kit = new THREE.Group();
-    const stripeHoodGeo = createBeveledPlateGeometry(0.15, 0.018, 1.24, 0.01, 0.004);
-    const stripeRoofGeo = createBeveledPlateGeometry(0.15, 0.018, 0.72, 0.01, 0.004);
-    const stripeDeckGeo = createBeveledPlateGeometry(0.15, 0.018, 0.6, 0.01, 0.004);
     const blowerBlockGeo = createBeveledPlateGeometry(0.38, 0.2, 0.52, 0.04, 0.02);
     const blowerScoopGeo = createRoofScoopGeometry(0.42, 0.15, 0.44);
     const intakeValveGeo = new THREE.CylinderGeometry(0.052, 0.052, 0.06, 16);
     intakeValveGeo.rotateX(Math.PI / 2);
     const ducktailGeo = createAirfoilWingGeometry(1.66, 0.22, 0.055);
-    this.geometries.push(
-      stripeHoodGeo,
-      stripeRoofGeo,
-      stripeDeckGeo,
-      blowerBlockGeo,
-      blowerScoopGeo,
-      intakeValveGeo,
-      ducktailGeo,
-    );
-
-    for (const sx of [-0.15, 0.15]) {
-      const hoodStripe = new THREE.Mesh(stripeHoodGeo, this.stripeMat);
-      hoodStripe.position.set(sx, 0.629, -1.44);
-      hoodStripe.rotation.x = 0.09;
-      kit.add(hoodStripe);
-
-      const roofStripe = new THREE.Mesh(stripeRoofGeo, this.stripeMat);
-      roofStripe.position.set(sx, 1.057, 0.16);
-      kit.add(roofStripe);
-
-      const deckStripe = new THREE.Mesh(stripeDeckGeo, this.stripeMat);
-      deckStripe.position.set(sx, 0.653, 1.84);
-      deckStripe.rotation.x = -0.11;
-      kit.add(deckStripe);
-    }
+    this.geometries.push(blowerBlockGeo, blowerScoopGeo, intakeValveGeo, ducktailGeo);
 
     const blowerBlock = new THREE.Mesh(blowerBlockGeo, this.secondaryMat);
     blowerBlock.position.set(0, 0.68, -1.26);
