@@ -7,7 +7,7 @@ A 3D coastal highway arcade racing game built with TypeScript, Three.js, Vite, a
 - **3D Coastal Highway & Day-Night Cycle**: Endless pooled road segments, Art Deco skyline blocks, coastal palms, sequential overhead gantry signs (`Iesus Dominus est`, `xenos`, `Ἁγία Μαρία, Μήτηρ Θεοῦ`, `The Brook`), cycling roadside artwork billboards, 360-degree horizon framing, and a continuous day-night cycle transitioning through Day, Sunset, Midnight, and Dawn every 1 minute 30 seconds on the first cycle (6 minutes total), then every 2 minutes 30 seconds on subsequent cycles (10 minutes total).
 - **25 Unlockable Cars & 3D Garage**: Nine distinct vehicle chassis classes (`muscle_blower`, `drift_widebody`, `ourea_electric`, `magnetar_super`, `cerbero_racer`, `chiron_rally`, `spectra_wtype`, `janus_racer`, `chronos_proto`) with category filters, interactive Front, Side, Rear, and 360° Spin showroom cameras, dual Coin (`1,500`–`150,000` Coins) + Best Distance unlock requirements, and per-car top-speed bonuses.
 - **Dynamic Obstacles & Wave Formations**: Opening highway formations and scaling tactical waves featuring 8 obstacle types—Traffic Vehicles (with lane-change blinkers), Energy Barriers, Roadblocks, Laser Gates, EMP Hazards, Interceptor Drones, Laser Sweepers (unlocked at 1,500m / Tier 5), and Shock Pylons (unlocked at 3,000m / Tier 8)—with corridor checks that always preserve at least one clear path.
-- **Risk-Reward Scoring & Deep-Run Zones**: Collect Gold Coins (`score_crystal`), limited Energy Orbs and Boost Cells, hit track Boost Pads, earn Near-Miss bonuses, trigger 5,000-point Fever bursts, and enter Express (`2,500m`, `1.5x`), Overclock (`5,000m`, `2.0x`), and Apex (`8,000m`, `2.5x`) score zones.
+- **Risk-Reward Scoring & Deep-Run Zones**: Collect Gold Coins (`score_crystal`), limited Energy Orbs and Boost Cells, hit track Boost Pads, earn Near-Miss bonuses, trigger 1,000-point Fever bursts, and enter Express (`2,500m`, `1.5x`), Overclock (`5,000m`, `2.0x`), and Apex (`8,000m`, `2.5x`) score zones.
 - **Procedural Web Audio Engine**: Four-track rotating beat sequencer, speed- and boost-reactive engine synthesis, and voice-capped arcade sound effects with master volume, music, SFX, and mute controls.
 - **Responsive Desktop & Mobile Support**: Auto-adapting FOV for portrait and wide screens, keyboard controls, swipe gestures, configurable on-screen touch pads (`Auto`, `Always`, `Off`), a translucent bottom pause dock that keeps the 3D city visible while paused, automatic pause when switching tabs, and `localStorage` persistence.
 
@@ -41,7 +41,7 @@ A 3D coastal highway arcade racing game built with TypeScript, Three.js, Vite, a
 ### Gameplay Tips
 
 - Passing closely beside obstacles triggers a **Near Miss** score and boost energy bonus.
-- Every `5,000` points awards bonus coins, refills boost, and activates an 8-second `2x` score burst.
+- Every `1,000` points awards bonus coins, refills boost, and activates an 8-second `2x` score burst.
 - Unlocking new cars in the **Cars** garage requires both Coins and a Best Distance milestone, and permanently increases your starting and top speeds.
 
 ## Tech Stack

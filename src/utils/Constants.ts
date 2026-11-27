@@ -28,11 +28,11 @@ export const BOOST_PASSIVE_REGEN_PER_SEC = 4.5;
 export const BOOST_MIN_ACTIVATION = 15;
 export const PAD_BOOST_DURATION = 1.35;
 
-export const SCORE_PER_METER = 0.8;
-export const ENERGY_ORB_SCORE = 40;
-export const SCORE_CRYSTAL_VALUE = 100;
-export const BOOST_CELL_SCORE = 50;
-export const NEAR_MISS_SCORE = 35;
+export const SCORE_PER_METER = 0.15;
+export const ENERGY_ORB_SCORE = 10;
+export const SCORE_CRYSTAL_VALUE = 25;
+export const BOOST_CELL_SCORE = 15;
+export const NEAR_MISS_SCORE = 10;
 export const COMBO_DURATION = 5.0;
 export const MAX_MULTIPLIER = 5;
 

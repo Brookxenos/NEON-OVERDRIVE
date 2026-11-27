@@ -773,7 +773,7 @@ export class Game {
 
   private checkScoreMilestone(): void {
     const score = this.scoreManager.getScore();
-    const milestoneStep = Math.floor(score / 5000);
+    const milestoneStep = Math.floor(score / 1000);
     if (milestoneStep <= this.lastScoreMilestone) return;
 
     const stepsCrossed = milestoneStep - this.lastScoreMilestone;
@@ -787,7 +787,7 @@ export class Game {
     this.scoreFeverTimer = 8.0;
 
     this.state.pushBanner(
-      `${(milestoneStep * 5).toLocaleString()}K · 2X SCORE +${bonusCoins} COINS`,
+      `${milestoneStep.toLocaleString()}K · 2X SCORE +${bonusCoins} COINS`,
       'amber',
     );
     this.audioManager.playMilestoneFanfare();

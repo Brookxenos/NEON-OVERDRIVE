@@ -109,7 +109,7 @@ export class ScoreManager {
   }
 
   public registerBoostPad(): number {
-    const points = 60 * this.multiplier;
+    const points = 15 * this.multiplier;
     this.score += points;
     return points;
   }
