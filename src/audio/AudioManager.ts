@@ -54,6 +54,12 @@ export class AudioManager {
 
   constructor(initialSettings: GameSettingsData) {
     this.settings = { ...initialSettings };
+    this.soundtrack.preload();
+    this.soundtrack.syncMix(
+      safeFinite(this.settings.masterVolume, 0.75, 0, 1),
+      this.settings.musicEnabled,
+      this.settings.muted,
+    );
   }
 
   private readonly handleVisibilityChange = (): void => {
@@ -82,11 +88,12 @@ export class AudioManager {
   public unlock(): void {
     if (this.disposed) return;
 
+    this.soundtrack.unlock();
+
     if (this.isUnlocked && this.ctx) {
       if (this.ctx.state !== 'running') {
         this.tryResumeContext();
       }
-      this.soundtrack.resetClock();
       return;
     }
 
@@ -191,13 +198,29 @@ export class AudioManager {
     this.engineAirSource.start();
 
     this.sfx.attach(this.ctx, this.sfxGain, this.delaySend, this.noiseBuffer);
-    this.soundtrack.attach(this.ctx, this.musicGain, this.delaySend, this.noiseBuffer);
 
     this.isUnlocked = true;
     this.applyVolumes();
     if (this.ctx.state !== 'running') {
       void this.ctx.resume().catch(() => undefined);
     }
+  }
+
+  public startRaceMusic(): void {
+    if (this.disposed) return;
+    this.unlock();
+    const active = this.settings.musicEnabled && !this.settings.muted && !document.hidden;
+    this.soundtrack.setPlaybackActive(active);
+  }
+
+  public stopMusic(): void {
+    if (this.disposed) return;
+    this.soundtrack.stopNow();
+  }
+
+  public stopMusicForGameOver(): void {
+    if (this.disposed) return;
+    this.soundtrack.stopForGameOver();
   }
 
   public nextMusicTrack(): void {
@@ -210,10 +233,12 @@ export class AudioManager {
   }
 
   private applyVolumes(): void {
+    const rawMaster = safeFinite(this.settings.masterVolume, 0.75, 0, 1);
+    this.soundtrack.syncMix(rawMaster, this.settings.musicEnabled, this.settings.muted);
+
     if (!this.ctx || !this.masterGain || !this.musicGain || !this.sfxGain) return;
     const now = this.ctx.currentTime;
     if (!Number.isFinite(now)) return;
-    const rawMaster = safeFinite(this.settings.masterVolume, 0.75, 0, 1);
     const master = this.settings.muted ? 0 : rawMaster * 0.88;
     this.masterGain.gain.setTargetAtTime(master, now, 0.04);
     this.musicGain.gain.setTargetAtTime(this.settings.musicEnabled ? 0.62 : 0, now, 0.06);
@@ -221,7 +246,16 @@ export class AudioManager {
   }
 
   public update(dt: number, status: GameStatus, speedNorm: number, isBoosting: boolean): void {
-    if (!this.ctx || !this.isUnlocked || this.disposed) return;
+    if (this.disposed) return;
+
+    const shouldPlayMusic =
+      status === 'playing' &&
+      this.settings.musicEnabled &&
+      !this.settings.muted &&
+      !document.hidden;
+    this.soundtrack.setPlaybackActive(shouldPlayMusic);
+
+    if (!this.ctx || !this.isUnlocked) return;
 
     if (this.ctx.state !== 'running') {
       if (status === 'playing' && !document.hidden) {
@@ -240,7 +274,6 @@ export class AudioManager {
       if (this.stalledClockFrames >= 90 && !document.hidden) {
         this.stalledClockFrames = 0;
         this.sfx.sweepStaleVoices(now + 10);
-        this.soundtrack.sweepStaleVoices(now + 10);
         const nowMs = Date.now();
         if (nowMs - this.lastResumeAttemptMs >= 4000) {
           this.lastResumeAttemptMs = nowMs;
@@ -295,11 +328,8 @@ export class AudioManager {
     }
 
     if (!this.settings.musicEnabled || this.settings.muted || status === 'paused') {
-      this.soundtrack.resetClock();
       return;
     }
-
-    this.soundtrack.update(dt, status, safeSpeedNorm, isBoosting);
   }
 
   private canPlaySfx(): boolean {

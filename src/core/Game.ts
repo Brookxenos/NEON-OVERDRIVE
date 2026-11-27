@@ -201,8 +201,7 @@ export class Game {
   }
 
   public start(): void {
-    this.audioManager.unlock();
-    this.audioManager.nextMusicTrack();
+    this.audioManager.startRaceMusic();
     this.audioManager.playUiClick(true);
     this.resetRun();
     const openingLabel = this.seedOpeningHighway();
@@ -212,6 +211,7 @@ export class Game {
 
   public pause(): void {
     if (this.state.getStatus() !== 'playing') return;
+    this.audioManager.stopMusic();
     this.flushPendingSave();
     this.audioManager.playUiClick(false);
     this.keyboardController.reset();
@@ -225,13 +225,14 @@ export class Game {
 
   public resume(): void {
     if (this.state.getStatus() !== 'paused') return;
-    this.audioManager.unlock();
+    this.audioManager.startRaceMusic();
     this.audioManager.playUiClick(true);
     this.loop.flushDelta();
     this.state.setStatus('playing');
   }
 
   public returnToMenu(): void {
+    this.audioManager.stopMusic();
     this.flushPendingSave();
     this.audioManager.playUiClick(false);
     this.resetRun();
@@ -867,6 +868,7 @@ export class Game {
     this.carController.triggerCrash(crashPosition.x);
     this.sceneManager.cameraController.triggerShake(1.15);
     this.visualEffects.emitCrashExplosion(crashPosition);
+    this.audioManager.stopMusicForGameOver();
     this.audioManager.playCrash();
     this.keyboardController.reset();
     this.touchController.reset();

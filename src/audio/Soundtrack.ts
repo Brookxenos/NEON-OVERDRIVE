@@ -1,590 +1,508 @@
-import { GameStatus } from '../core/GameState';
+const YOUTUBE_PLAYLIST_ID = 'PLgnM8w6PHYgdqsfLvJGA7dAL_2qaPnNyp';
+const MAX_PLAYLIST_TRACKS = 30;
+const YOUTUBE_IFRAME_API_SRC = 'https://www.youtube.com/iframe_api';
 
-interface HarmonicBar {
-  root: number;
-  brassStab: readonly number[];
-  hook: readonly number[];
+const YT_STATE = {
+  UNSTARTED: -1,
+  ENDED: 0,
+  PLAYING: 1,
+  PAUSED: 2,
+  BUFFERING: 3,
+  CUED: 5,
+} as const;
+
+interface YTPlayerInstance {
+  playVideo(): void;
+  pauseVideo(): void;
+  stopVideo(): void;
+  playVideoAt(index: number): void;
+  mute(): void;
+  unMute(): void;
+  setVolume(volume: number): void;
+  setLoop(loopPlaylists: boolean): void;
+  setShuffle(shufflePlaylist: boolean): void;
+  getPlaylist(): string[] | null;
+  getPlaylistIndex(): number;
+  getPlayerState(): number;
+  destroy(): void;
 }
 
-interface BeatTrack {
-  id: string;
-  bpm: number;
-  swing: number;
-  halfTime?: boolean;
-  kickSteps: readonly number[];
-  clapSteps: readonly number[];
-  hatSteps: readonly number[];
-  hatRollSteps: readonly number[];
-  bassPattern: readonly number[];
-  brassStabSteps: readonly number[];
-  hookSteps: readonly number[];
-  useGlideLead?: boolean;
-  bars: readonly HarmonicBar[];
+interface YTNamespace {
+  Player: new (
+    elementId: string | HTMLElement,
+    options: {
+      width?: number | string;
+      height?: number | string;
+      playerVars?: Record<string, string | number>;
+      events?: {
+        onReady?: () => void;
+        onStateChange?: (event: { data: number }) => void;
+        onError?: (event: { data: number }) => void;
+      };
+    },
+  ) => YTPlayerInstance;
 }
 
-const BEAT_TRACKS: readonly BeatTrack[] = [
-  {
-    id: 'highway_808',
-    bpm: 132,
-    swing: 0.02,
-    halfTime: true,
-    kickSteps: [0, 3, 6, 10, 14],
-    clapSteps: [8],
-    hatSteps: [0, 2, 4, 6, 8, 10, 12, 14],
-    hatRollSteps: [7, 13, 15],
-    bassPattern: [1, 0, 0, 1, 0, 0, 1.5, 0, 0, 0, 1, 0, 0, 0, 1.25, 0],
-    brassStabSteps: [0, 10],
-    hookSteps: [0, 3, 6, 8, 10, 14],
-    bars: [
-      { root: 55.0, brassStab: [110.0, 220.0, 261.63, 329.63], hook: [523.25, 659.25, 587.33, 523.25, 440.0, 659.25] },
-      { root: 43.65, brassStab: [87.31, 174.61, 220.0, 261.63], hook: [523.25, 587.33, 659.25, 523.25, 440.0, 523.25] },
-      { root: 73.42, brassStab: [146.83, 220.0, 293.66, 349.23], hook: [587.33, 659.25, 698.46, 587.33, 523.25, 440.0] },
-      { root: 41.2, brassStab: [82.41, 164.81, 246.94, 329.63], hook: [659.25, 587.33, 523.25, 493.88, 523.25, 659.25] },
-    ],
-  },
-  {
-    id: 'boulevard_boom_bap',
-    bpm: 98,
-    swing: 0.1,
-    kickSteps: [0, 2, 7, 10, 11],
-    clapSteps: [4, 12],
-    hatSteps: [0, 2, 4, 6, 8, 10, 12, 14],
-    hatRollSteps: [15],
-    bassPattern: [1, 0, 1.5, 0, 0, 0, 0, 1, 0, 0, 1.25, 1.5, 0, 0, 1, 0],
-    brassStabSteps: [0, 6, 12],
-    hookSteps: [0, 4, 7, 10, 12, 14],
-    bars: [
-      { root: 55.0, brassStab: [110.0, 220.0, 261.63, 329.63], hook: [440.0, 523.25, 659.25, 587.33, 523.25, 440.0] },
-      { root: 49.0, brassStab: [98.0, 196.0, 246.94, 293.66], hook: [493.88, 587.33, 783.99, 659.25, 587.33, 493.88] },
-      { root: 43.65, brassStab: [87.31, 174.61, 220.0, 261.63], hook: [523.25, 659.25, 698.46, 659.25, 523.25, 440.0] },
-      { root: 41.2, brassStab: [82.41, 164.81, 246.94, 329.63], hook: [659.25, 587.33, 493.88, 523.25, 587.33, 659.25] },
-    ],
-  },
-  {
-    id: 'west_coast_cruise',
-    bpm: 104,
-    swing: 0.09,
-    kickSteps: [0, 6, 8, 11, 14],
-    clapSteps: [4, 12],
-    hatSteps: [0, 2, 4, 6, 8, 10, 12, 14],
-    hatRollSteps: [14, 15],
-    bassPattern: [1, 0, 0, 0, 0, 0, 1.5, 0, 1, 0, 0, 1.25, 0, 0, 1.5, 0],
-    brassStabSteps: [0, 8],
-    hookSteps: [0, 3, 6, 10, 12, 14],
-    useGlideLead: true,
-    bars: [
-      { root: 73.42, brassStab: [146.83, 220.0, 261.63, 349.23], hook: [880.0, 783.99, 659.25, 880.0, 783.99, 659.25] },
-      { root: 55.0, brassStab: [110.0, 220.0, 261.63, 329.63], hook: [783.99, 659.25, 587.33, 659.25, 783.99, 659.25] },
-      { root: 43.65, brassStab: [87.31, 174.61, 220.0, 261.63], hook: [659.25, 783.99, 880.0, 783.99, 659.25, 523.25] },
-      { root: 41.2, brassStab: [82.41, 164.81, 246.94, 329.63], hook: [783.99, 659.25, 587.33, 493.88, 587.33, 659.25] },
-    ],
-  },
-  {
-    id: 'overdrive_anthem',
-    bpm: 122,
-    swing: 0.04,
-    kickSteps: [0, 3, 4, 8, 10, 14],
-    clapSteps: [4, 12],
-    hatSteps: [0, 2, 4, 6, 8, 10, 12, 14],
-    hatRollSteps: [7, 11, 15],
-    bassPattern: [1, 0, 2, 1, 0, 0, 1.5, 0, 1, 0, 2, 0, 1, 0, 1.5, 0],
-    brassStabSteps: [0, 6, 12],
-    hookSteps: [0, 2, 6, 8, 12, 14],
-    bars: [
-      { root: 55.0, brassStab: [110.0, 220.0, 261.63, 329.63], hook: [523.25, 659.25, 880.0, 783.99, 659.25, 523.25] },
-      { root: 65.41, brassStab: [130.81, 196.0, 261.63, 329.63], hook: [587.33, 659.25, 783.99, 659.25, 587.33, 523.25] },
-      { root: 73.42, brassStab: [146.83, 220.0, 293.66, 349.23], hook: [659.25, 783.99, 880.0, 698.46, 659.25, 587.33] },
-      { root: 43.65, brassStab: [87.31, 174.61, 220.0, 261.63], hook: [659.25, 587.33, 523.25, 440.0, 523.25, 659.25] },
-    ],
-  },
-];
-
-const SCHEDULE_AHEAD_SEC = 0.09;
-const MAX_ACTIVE_MUSIC_VOICES = 28;
-
-interface TrackedMusicVoice {
-  stopTime: number;
-  release: () => void;
+declare global {
+  interface Window {
+    YT?: YTNamespace;
+    onYouTubeIframeAPIReady?: () => void;
+  }
 }
 
-function clampFreq(freq: number): number {
-  if (!Number.isFinite(freq)) return 220;
-  return Math.max(28, Math.min(12000, freq));
-}
+let apiLoadPromise: Promise<void> | null = null;
 
-function scheduleEnvelope(
-  gainParam: AudioParam,
-  startTime: number,
-  peak: number,
-  attackSec: number,
-  decayEndTime: number,
-  stopTime: number,
-): void {
-  const safeStart = Number.isFinite(startTime) ? Math.max(0, startTime) : 0;
-  const safePeak = Math.max(0.001, Math.min(0.42, peak));
-  const safeAttack = Math.max(0.003, attackSec);
-  const safeFadeEnd = Math.max(safeStart + safeAttack + 0.012, decayEndTime);
-  const safeZero = Math.max(safeFadeEnd + 0.006, stopTime - 0.003);
+function ensureYouTubeApiLoaded(): Promise<void> {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return Promise.resolve();
+  }
+  if (window.YT && typeof window.YT.Player === 'function') {
+    return Promise.resolve();
+  }
+  if (apiLoadPromise) {
+    return apiLoadPromise;
+  }
 
-  gainParam.setValueAtTime(0, safeStart);
-  gainParam.linearRampToValueAtTime(safePeak, safeStart + safeAttack);
-  gainParam.exponentialRampToValueAtTime(0.0006, safeFadeEnd);
-  gainParam.linearRampToValueAtTime(0, safeZero);
+  apiLoadPromise = new Promise<void>((resolve) => {
+    const previousCallback = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => {
+      if (typeof previousCallback === 'function') {
+        previousCallback();
+      }
+      resolve();
+    };
+
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      `script[src="${YOUTUBE_IFRAME_API_SRC}"]`,
+    );
+    if (!existingScript) {
+      const script = document.createElement('script');
+      script.src = YOUTUBE_IFRAME_API_SRC;
+      script.async = true;
+      script.onerror = () => {
+        apiLoadPromise = null;
+        resolve();
+      };
+      document.head.appendChild(script);
+    }
+  });
+
+  return apiLoadPromise;
 }
 
 export class Soundtrack {
-  private ctx: AudioContext | null = null;
-  private outputNode: AudioNode | null = null;
-  private delaySend: AudioNode | null = null;
-  private noiseBuffer: AudioBuffer | null = null;
+  private container: HTMLDivElement | null = null;
+  private player: YTPlayerInstance | null = null;
+  private playerReady = false;
+  private initializing = false;
+  private disposed = false;
 
-  private trackIndex = 0;
-  private cycleStep = 0;
-  private nextStepTime = 0;
-  private smoothedBpm = BEAT_TRACKS[0].bpm;
-  private readonly trackedVoices: TrackedMusicVoice[] = [];
-  private lastGlideFreq = 659.25;
-  private lastBassFreq = 55;
+  private unlocked = false;
+  private shouldPlay = false;
+  private musicEnabled = true;
+  private muted = false;
+  private masterVolume = 0.75;
 
-  public attach(
-    ctx: AudioContext,
-    outputNode: AudioNode,
-    delaySend: AudioNode,
-    noiseBuffer: AudioBuffer,
-  ): void {
-    this.releaseAllVoices();
-    this.ctx = ctx;
-    this.outputNode = outputNode;
-    this.delaySend = delaySend;
-    this.noiseBuffer = noiseBuffer;
-    this.nextStepTime = ctx.currentTime + 0.02;
+  private currentTrackIndex = 0;
+  private trackLimit = MAX_PLAYLIST_TRACKS;
+  private readonly playedIndices = new Set<number>();
+  private playlistFinished = false;
+  private hasStartedFirstTrack = false;
+  private advanceOnNextStart = false;
+  private advanceTimer: number | null = null;
+  private lastAppliedPlayIntent: boolean | null = null;
+
+  public preload(): void {
+    if (this.disposed || this.player || this.initializing) return;
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+    this.initializing = true;
+    void ensureYouTubeApiLoaded().then(() => {
+      this.initializing = false;
+      if (this.disposed || this.player) return;
+      this.createPlayer();
+    });
   }
 
-  public getActiveVoiceCount(): number {
-    return this.trackedVoices.length;
+  public unlock(): void {
+    if (this.disposed) return;
+    this.unlocked = true;
+    this.preload();
+
+    if (
+      this.playerReady &&
+      this.player &&
+      this.musicEnabled &&
+      !this.muted &&
+      this.shouldPlay &&
+      !this.playlistFinished
+    ) {
+      this.lastAppliedPlayIntent = true;
+      this.startOrResumePlayback();
+    }
   }
 
-  public sweepStaleVoices(now?: number): void {
-    const refTime =
-      now !== undefined && Number.isFinite(now)
-        ? now
-        : this.ctx && Number.isFinite(this.ctx.currentTime)
-          ? this.ctx.currentTime
-          : -1;
-    if (refTime < 0) return;
+  public syncMix(masterVolume01: number, musicEnabled: boolean, muted: boolean): void {
+    this.masterVolume = Number.isFinite(masterVolume01)
+      ? Math.max(0, Math.min(1, masterVolume01))
+      : 0.75;
+    this.musicEnabled = musicEnabled;
+    this.muted = muted;
+    this.applyPlayerMix();
+  }
 
-    for (let i = this.trackedVoices.length - 1; i >= 0; i--) {
-      const entry = this.trackedVoices[i];
-      if (refTime > entry.stopTime + 0.14) {
-        entry.release();
+  public setPlaybackActive(active: boolean): void {
+    if (this.disposed) return;
+    this.shouldPlay = active;
+
+    if (!this.playerReady || !this.player) return;
+
+    if (!active || this.playlistFinished) {
+      if (this.lastAppliedPlayIntent !== false) {
+        this.lastAppliedPlayIntent = false;
+        this.clearAdvanceTimer();
+        try {
+          const state = this.player.getPlayerState();
+          if (state === YT_STATE.PLAYING || state === YT_STATE.BUFFERING) {
+            this.player.pauseVideo();
+          }
+        } catch {
+          // Ignore transient player state errors
+        }
       }
+      return;
+    }
+
+    if (!this.unlocked) return;
+
+    if (this.lastAppliedPlayIntent !== true) {
+      this.lastAppliedPlayIntent = true;
+      this.startOrResumePlayback();
     }
   }
 
-  private releaseAllVoices(): void {
-    for (let i = this.trackedVoices.length - 1; i >= 0; i--) {
-      this.trackedVoices[i].release();
+  public stopNow(): void {
+    if (this.disposed) return;
+    this.shouldPlay = false;
+    this.lastAppliedPlayIntent = false;
+    this.clearAdvanceTimer();
+    if (!this.playerReady || !this.player) return;
+    try {
+      const state = this.player.getPlayerState();
+      if (state === YT_STATE.PLAYING || state === YT_STATE.BUFFERING) {
+        this.player.pauseVideo();
+      }
+    } catch {
+      // Ignore transient player state errors
     }
-    this.trackedVoices.length = 0;
+  }
+
+  public stopForGameOver(): void {
+    if (this.disposed) return;
+    this.stopNow();
+    if (this.hasStartedFirstTrack) {
+      this.playedIndices.add(this.currentTrackIndex);
+      this.advanceOnNextStart = true;
+      this.playlistFinished = false;
+    }
   }
 
   public selectNextTrack(): void {
-    this.sweepStaleVoices();
-    this.trackIndex = (this.trackIndex + 1) % BEAT_TRACKS.length;
-    const track = BEAT_TRACKS[this.trackIndex];
-    this.cycleStep = 0;
-    this.smoothedBpm = track.bpm;
-    this.lastGlideFreq = track.bars[0].hook[0];
-    this.lastBassFreq = track.bars[0].root;
-    if (this.ctx && Number.isFinite(this.ctx.currentTime)) {
-      this.nextStepTime = this.ctx.currentTime + 0.02;
+    if (this.disposed || this.playlistFinished) return;
+    this.playedIndices.add(this.currentTrackIndex);
+    const nextIdx = this.findNextUnplayedIndex(this.currentTrackIndex + 1);
+    if (nextIdx === null) {
+      this.finishPlaylist();
+      return;
     }
-  }
-
-  public getCurrentTrackId(): string {
-    return BEAT_TRACKS[this.trackIndex].id;
+    this.currentTrackIndex = nextIdx;
+    this.hasStartedFirstTrack = true;
+    if (this.playerReady && this.player && this.unlocked && this.shouldPlay) {
+      this.playTrackAt(nextIdx);
+    }
   }
 
   public resetClock(): void {
-    if (!this.ctx || !Number.isFinite(this.ctx.currentTime)) return;
-    this.sweepStaleVoices(this.ctx.currentTime);
-    this.nextStepTime = Math.max(this.ctx.currentTime + 0.02, this.nextStepTime);
-    if (this.nextStepTime - this.ctx.currentTime > 0.25) {
-      this.nextStepTime = this.ctx.currentTime + 0.02;
-    }
+    // No-op kept for audio lifecycle compatibility
   }
 
-  public update(dt: number, status: GameStatus, speedNorm: number, isBoosting: boolean): void {
-    if (!this.ctx || !this.outputNode || this.ctx.state !== 'running') return;
-    if (!Number.isFinite(this.ctx.currentTime)) return;
-
-    const now = this.ctx.currentTime;
-    this.sweepStaleVoices(now);
-
-    const track = BEAT_TRACKS[this.trackIndex];
-    const safeSpeed = Number.isFinite(speedNorm) ? Math.max(0, Math.min(1.5, speedNorm)) : 0;
-    const targetBpm =
-      status === 'playing'
-        ? track.bpm + safeSpeed * 6 + (isBoosting ? 4 : 0)
-        : track.bpm - 3;
-
-    const safeDt = Number.isFinite(dt) ? Math.min(Math.max(dt, 0), 0.05) : 0.016;
-    const blend = 1 - Math.exp(-2.8 * safeDt);
-    this.smoothedBpm += (targetBpm - this.smoothedBpm) * blend;
-    if (!Number.isFinite(this.smoothedBpm)) {
-      this.smoothedBpm = track.bpm;
-    } else {
-      this.smoothedBpm = Math.max(60, Math.min(190, this.smoothedBpm));
-    }
-
-    if (!Number.isFinite(this.nextStepTime) || this.nextStepTime < now - 0.12 || this.nextStepTime > now + 0.5) {
-      this.nextStepTime = now + 0.02;
-    }
-
-    const totalSteps = track.bars.length * 16;
-    let scheduledInFrame = 0;
-    while (this.nextStepTime < now + SCHEDULE_AHEAD_SEC && scheduledInFrame < 4) {
-      const scheduledTime = Math.max(now, this.nextStepTime);
-      this.triggerStep(scheduledTime, track, this.cycleStep, status, safeSpeed, isBoosting);
-
-      const baseSixteenth = 60 / this.smoothedBpm / 4;
-      const isOffbeat = this.cycleStep % 2 === 1;
-      const swingMul = isOffbeat ? 1 - track.swing : 1 + track.swing;
-      this.nextStepTime += baseSixteenth * swingMul;
-
-      this.cycleStep = (this.cycleStep + 1) % totalSteps;
-      scheduledInFrame += 1;
-    }
+  public sweepStaleVoices(): void {
+    // No-op kept for audio lifecycle compatibility
   }
 
-  private trackVoice(
-    node: AudioScheduledSourceNode,
-    stopTime: number,
-    cleanup: () => void,
-  ): void {
-    let freed = false;
-    const entry: TrackedMusicVoice = {
-      stopTime,
-      release: () => {
-        if (freed) return;
-        freed = true;
-        const idx = this.trackedVoices.indexOf(entry);
-        if (idx !== -1) {
-          const lastIdx = this.trackedVoices.length - 1;
-          if (idx !== lastIdx) {
-            this.trackedVoices[idx] = this.trackedVoices[lastIdx];
-          }
-          this.trackedVoices.pop();
-        }
-        try {
-          cleanup();
-        } catch {
-          // Node may already be disconnected
-        }
+  private createPlayer(): void {
+    if (this.disposed || !window.YT || typeof window.YT.Player !== 'function') return;
+
+    const host = document.createElement('div');
+    host.setAttribute('aria-hidden', 'true');
+    host.style.position = 'fixed';
+    host.style.right = '2px';
+    host.style.bottom = '2px';
+    host.style.width = '2px';
+    host.style.height = '2px';
+    host.style.opacity = '0.001';
+    host.style.pointerEvents = 'none';
+    host.style.overflow = 'hidden';
+    host.style.zIndex = '-1';
+
+    const mount = document.createElement('div');
+    mount.id = `yt-bgm-${Math.random().toString(36).slice(2, 9)}`;
+    host.appendChild(mount);
+    document.body.appendChild(host);
+    this.container = host;
+
+    this.player = new window.YT.Player(mount, {
+      width: 2,
+      height: 2,
+      playerVars: {
+        listType: 'playlist',
+        list: YOUTUBE_PLAYLIST_ID,
+        index: this.currentTrackIndex,
+        autoplay: this.unlocked && this.shouldPlay && !this.playlistFinished ? 1 : 0,
+        loop: 0,
+        controls: 0,
+        disablekb: 1,
+        fs: 0,
+        iv_load_policy: 3,
+        modestbranding: 1,
+        playsinline: 1,
+        rel: 0,
+        origin: window.location.origin,
       },
-    };
-    this.trackedVoices.push(entry);
-    node.onended = entry.release;
-  }
-
-  private triggerStep(
-    time: number,
-    track: BeatTrack,
-    step: number,
-    status: GameStatus,
-    speedNorm: number,
-    isBoosting: boolean,
-  ): void {
-    if (!this.ctx || !this.outputNode || this.trackedVoices.length >= MAX_ACTIVE_MUSIC_VOICES) return;
-
-    const barIdx = Math.floor(step / 16) % track.bars.length;
-    const barStep = step % 16;
-    const bar = track.bars[barIdx];
-
-    if (
-      track.brassStabSteps.includes(barStep) &&
-      this.trackedVoices.length <= MAX_ACTIVE_MUSIC_VOICES - 4
-    ) {
-      this.playBrassStab(time, bar.brassStab, barStep === 0, status, isBoosting);
-    }
-
-    this.playSubBass(time, track, barStep, bar.root, status, speedNorm, isBoosting);
-    this.playDrums(time, track, barStep, status, isBoosting);
-    this.playLeadHook(time, track, bar, barStep, status, isBoosting);
-  }
-
-  private playBrassStab(
-    time: number,
-    chord: readonly number[],
-    isDownbeat: boolean,
-    status: GameStatus,
-    isBoosting: boolean,
-  ): void {
-    if (!this.ctx || !this.outputNode) return;
-    const dur = isDownbeat ? 0.56 : 0.34;
-    const level = (status === 'playing' ? 0.056 : 0.038) * (isDownbeat ? 1 : 0.78);
-    const stopAt = time + dur;
-
-    for (let i = 0; i < chord.length; i++) {
-      if (this.trackedVoices.length >= MAX_ACTIVE_MUSIC_VOICES) break;
-      const freq = clampFreq(chord[i]);
-      const osc = this.ctx.createOscillator();
-      const filter = this.ctx.createBiquadFilter();
-      const env = this.ctx.createGain();
-
-      osc.type = i === 0 ? 'sawtooth' : i % 2 === 1 ? 'sawtooth' : 'square';
-      osc.frequency.setValueAtTime(freq, time);
-      osc.detune.setValueAtTime(i % 2 === 0 ? -7 : 7, time);
-
-      filter.type = 'lowpass';
-      filter.Q.value = 1.9;
-      const peakCutoff = isBoosting ? 2450 : status === 'playing' ? 1950 : 1280;
-      filter.frequency.setValueAtTime(peakCutoff, time);
-      filter.frequency.exponentialRampToValueAtTime(340, stopAt);
-
-      scheduleEnvelope(env.gain, time, level, 0.008, stopAt - 0.06, stopAt);
-
-      osc.connect(filter);
-      filter.connect(env);
-      env.connect(this.outputNode);
-      if (this.delaySend && i === 1) env.connect(this.delaySend);
-
-      this.trackVoice(osc, stopAt, () => {
-        osc.disconnect();
-        filter.disconnect();
-        env.disconnect();
-      });
-
-      osc.start(time);
-      osc.stop(stopAt);
-    }
-  }
-
-  private playSubBass(
-    time: number,
-    track: BeatTrack,
-    barStep: number,
-    rootFreq: number,
-    status: GameStatus,
-    speedNorm: number,
-    isBoosting: boolean,
-  ): void {
-    if (!this.ctx || !this.outputNode || this.trackedVoices.length >= MAX_ACTIVE_MUSIC_VOICES - 1) return;
-
-    const ratio = track.bassPattern[barStep] ?? 0;
-    if (ratio === 0) return;
-
-    const targetFreq = clampFreq(rootFreq * ratio);
-    const isDownbeat = barStep === 0 || barStep === 8;
-    const dur = track.halfTime ? 0.42 : 0.28;
-    const stopAt = time + dur;
-
-    const subOsc = this.ctx.createOscillator();
-    const subEnv = this.ctx.createGain();
-    subOsc.type = 'sine';
-    subOsc.frequency.setValueAtTime(clampFreq(Math.max(targetFreq * 1.45, this.lastBassFreq)), time);
-    subOsc.frequency.exponentialRampToValueAtTime(targetFreq, time + 0.036);
-    this.lastBassFreq = targetFreq;
-
-    const subPeak = (status === 'playing' ? 0.34 : 0.24) * (isDownbeat ? 1.05 : 0.88);
-    scheduleEnvelope(subEnv.gain, time, subPeak, 0.005, stopAt - 0.04, stopAt);
-    subOsc.connect(subEnv);
-    subEnv.connect(this.outputNode);
-
-    this.trackVoice(subOsc, stopAt, () => {
-      subOsc.disconnect();
-      subEnv.disconnect();
+      events: {
+        onReady: () => this.handleReady(),
+        onStateChange: (event) => this.handleStateChange(event.data),
+        onError: () => this.handleTrackError(),
+      },
     });
-    subOsc.start(time);
-    subOsc.stop(stopAt);
-
-    const biteOsc = this.ctx.createOscillator();
-    const biteFilter = this.ctx.createBiquadFilter();
-    const biteEnv = this.ctx.createGain();
-    biteOsc.type = 'sawtooth';
-    biteOsc.frequency.setValueAtTime(clampFreq(targetFreq * 2), time);
-
-    biteFilter.type = 'lowpass';
-    biteFilter.Q.value = 2.2;
-    const biteCutoff = isBoosting ? 980 : status === 'playing' ? 680 + speedNorm * 200 : 440;
-    biteFilter.frequency.setValueAtTime(clampFreq(biteCutoff), time);
-    biteFilter.frequency.exponentialRampToValueAtTime(160, time + dur * 0.8);
-
-    const bitePeak = status === 'playing' ? 0.14 : 0.09;
-    scheduleEnvelope(biteEnv.gain, time, bitePeak, 0.005, time + dur * 0.72, stopAt);
-    biteOsc.connect(biteFilter);
-    biteFilter.connect(biteEnv);
-    biteEnv.connect(this.outputNode);
-
-    this.trackVoice(biteOsc, stopAt, () => {
-      biteOsc.disconnect();
-      biteFilter.disconnect();
-      biteEnv.disconnect();
-    });
-    biteOsc.start(time);
-    biteOsc.stop(stopAt);
   }
 
-  private playDrums(
-    time: number,
-    track: BeatTrack,
-    barStep: number,
-    status: GameStatus,
-    isBoosting: boolean,
-  ): void {
-    if (!this.ctx || !this.outputNode) return;
-    const isPlaying = status === 'playing';
-    const drumMul = isPlaying ? 1.0 : 0.65;
+  private handleReady(): void {
+    if (this.disposed || !this.player) return;
+    this.playerReady = true;
 
-    if (track.kickSteps.includes(barStep) && this.trackedVoices.length < MAX_ACTIVE_MUSIC_VOICES) {
-      const kickOsc = this.ctx.createOscillator();
-      const kickEnv = this.ctx.createGain();
-      kickOsc.type = 'triangle';
-      kickOsc.frequency.setValueAtTime(158, time);
-      kickOsc.frequency.exponentialRampToValueAtTime(42, time + 0.09);
-      const kickStop = time + 0.18;
-      scheduleEnvelope(kickEnv.gain, time, 0.36 * drumMul, 0.003, time + 0.15, kickStop);
-      kickOsc.connect(kickEnv);
-      kickEnv.connect(this.outputNode);
-      this.trackVoice(kickOsc, kickStop, () => {
-        kickOsc.disconnect();
-        kickEnv.disconnect();
-      });
-      kickOsc.start(time);
-      kickOsc.stop(kickStop);
+    try {
+      this.player.setLoop(false);
+      this.player.setShuffle(false);
+    } catch {
+      // Ignore if playlist metadata is still settling
     }
 
-    if (
-      track.clapSteps.includes(barStep) &&
-      this.noiseBuffer &&
-      this.trackedVoices.length < MAX_ACTIVE_MUSIC_VOICES - 1
-    ) {
-      const bodyOsc = this.ctx.createOscillator();
-      const bodyEnv = this.ctx.createGain();
-      bodyOsc.type = 'triangle';
-      bodyOsc.frequency.setValueAtTime(215, time);
-      bodyOsc.frequency.exponentialRampToValueAtTime(102, time + 0.065);
-      const bodyStop = time + 0.11;
-      scheduleEnvelope(bodyEnv.gain, time, 0.16 * drumMul, 0.003, time + 0.085, bodyStop);
-      bodyOsc.connect(bodyEnv);
-      bodyEnv.connect(this.outputNode);
-      this.trackVoice(bodyOsc, bodyStop, () => {
-        bodyOsc.disconnect();
-        bodyEnv.disconnect();
-      });
-      bodyOsc.start(time);
-      bodyOsc.stop(bodyStop);
+    this.syncTrackLimit();
+    this.applyPlayerMix();
 
-      const clapNoise = this.ctx.createBufferSource();
-      clapNoise.buffer = this.noiseBuffer;
-      const filter = this.ctx.createBiquadFilter();
-      filter.type = 'bandpass';
-      filter.frequency.value = 1950;
-      filter.Q.value = 0.85;
-      const env = this.ctx.createGain();
-      const clapStop = time + 0.17;
-      scheduleEnvelope(env.gain, time, 0.22 * drumMul, 0.003, time + 0.145, clapStop);
-      clapNoise.connect(filter);
-      filter.connect(env);
-      env.connect(this.outputNode);
-      this.trackVoice(clapNoise, clapStop, () => {
-        clapNoise.disconnect();
-        filter.disconnect();
-        env.disconnect();
-      });
-      clapNoise.start(time);
-      clapNoise.stop(clapStop);
+    if (this.unlocked && this.shouldPlay && !this.playlistFinished) {
+      this.lastAppliedPlayIntent = true;
+      this.startOrResumePlayback();
+    }
+  }
+
+  private handleStateChange(state: number): void {
+    if (this.disposed || !this.player) return;
+
+    if (state === YT_STATE.PLAYING || state === YT_STATE.BUFFERING) {
+      this.clearAdvanceTimer();
+      this.syncTrackLimit();
+
+      let ytIndex = -1;
+      try {
+        ytIndex = this.player.getPlaylistIndex();
+      } catch {
+        ytIndex = -1;
+      }
+
+      if (ytIndex >= this.trackLimit) {
+        this.finishPlaylist();
+        return;
+      }
+
+      if (ytIndex >= 0) {
+        if (this.playedIndices.has(ytIndex)) {
+          const nextIdx = this.findNextUnplayedIndex(ytIndex + 1);
+          if (nextIdx === null) {
+            this.finishPlaylist();
+          } else {
+            this.currentTrackIndex = nextIdx;
+            this.playTrackAt(nextIdx);
+          }
+          return;
+        }
+        this.currentTrackIndex = ytIndex;
+        this.hasStartedFirstTrack = true;
+      }
+      return;
     }
 
-    const isRoll = track.hatRollSteps.includes(barStep);
-    const hitHat =
-      track.hatSteps.includes(barStep) || (isPlaying && (isRoll || (isBoosting && barStep % 2 === 1)));
-    if (hitHat && this.noiseBuffer && this.trackedVoices.length < MAX_ACTIVE_MUSIC_VOICES) {
-      const subdivisions = isPlaying && isRoll ? 2 : 1;
-      const sixteenth = 60 / this.smoothedBpm / 4;
-      for (let sub = 0; sub < subdivisions; sub++) {
-        if (this.trackedVoices.length >= MAX_ACTIVE_MUSIC_VOICES) break;
-        const subTime = time + sub * (sixteenth * 0.5);
-        const hatStop = subTime + 0.048;
-        const hat = this.ctx.createBufferSource();
-        hat.buffer = this.noiseBuffer;
-        const filter = this.ctx.createBiquadFilter();
-        filter.type = 'highpass';
-        filter.frequency.value = isRoll ? 7200 : 6200;
-        const env = this.ctx.createGain();
-        const hatPeak = (barStep % 4 === 2 ? 0.07 : 0.048) * drumMul;
-        scheduleEnvelope(env.gain, subTime, hatPeak, 0.003, subTime + 0.036, hatStop);
-        hat.connect(filter);
-        filter.connect(env);
-        env.connect(this.outputNode);
-        this.trackVoice(hat, hatStop, () => {
-          hat.disconnect();
-          filter.disconnect();
-          env.disconnect();
-        });
-        hat.start(subTime);
-        hat.stop(hatStop);
+    if (state === YT_STATE.ENDED) {
+      this.clearAdvanceTimer();
+      this.syncTrackLimit();
+      this.playedIndices.add(this.currentTrackIndex);
+
+      const nextIdx = this.findNextUnplayedIndex(this.currentTrackIndex + 1);
+      if (nextIdx === null) {
+        this.finishPlaylist();
+        return;
+      }
+
+      this.currentTrackIndex = nextIdx;
+      this.advanceTimer = window.setTimeout(() => {
+        this.advanceTimer = null;
+        if (this.disposed || !this.player || !this.shouldPlay || this.playlistFinished) return;
+        try {
+          const playerState = this.player.getPlayerState();
+          const activeIndex = this.player.getPlaylistIndex();
+          if (
+            (playerState === YT_STATE.PLAYING || playerState === YT_STATE.BUFFERING) &&
+            activeIndex === nextIdx
+          ) {
+            return;
+          }
+        } catch {
+          // Proceed with explicit advance
+        }
+        this.playTrackAt(nextIdx);
+      }, 320);
+    }
+  }
+
+  private handleTrackError(): void {
+    if (this.disposed || !this.player || this.playlistFinished) return;
+    this.clearAdvanceTimer();
+    this.syncTrackLimit();
+    this.playedIndices.add(this.currentTrackIndex);
+
+    const nextIdx = this.findNextUnplayedIndex(this.currentTrackIndex + 1);
+    if (nextIdx === null) {
+      this.finishPlaylist();
+      return;
+    }
+
+    this.currentTrackIndex = nextIdx;
+    if (this.unlocked && this.shouldPlay) {
+      this.playTrackAt(nextIdx);
+    }
+  }
+
+  private startOrResumePlayback(): void {
+    if (!this.player || !this.playerReady || this.playlistFinished) return;
+    this.applyPlayerMix();
+
+    try {
+      if (this.advanceOnNextStart) {
+        this.advanceOnNextStart = false;
+        this.syncTrackLimit();
+        let nextIdx = this.findNextUnplayedIndex(this.currentTrackIndex + 1);
+        if (nextIdx === null) {
+          const previousIdx = this.currentTrackIndex;
+          this.playedIndices.clear();
+          nextIdx = this.trackLimit > 1 && previousIdx === 0 ? 1 : 0;
+        }
+        this.currentTrackIndex = nextIdx;
+        this.hasStartedFirstTrack = true;
+        this.player.playVideoAt(nextIdx);
+        return;
+      }
+
+      const state = this.player.getPlayerState();
+      if (state === YT_STATE.PLAYING || state === YT_STATE.BUFFERING) {
+        return;
+      }
+      if (!this.hasStartedFirstTrack) {
+        this.hasStartedFirstTrack = true;
+        this.currentTrackIndex = 0;
+        if (state === YT_STATE.CUED) {
+          this.player.playVideo();
+        } else {
+          this.player.playVideoAt(0);
+        }
+      } else if (state === YT_STATE.PAUSED || state === YT_STATE.CUED) {
+        this.player.playVideo();
+      } else {
+        this.player.playVideoAt(this.currentTrackIndex);
+      }
+    } catch {
+      // Ignore transient API readiness errors
+    }
+  }
+
+  private playTrackAt(index: number): void {
+    if (!this.player || !this.playerReady || this.disposed) return;
+    this.hasStartedFirstTrack = true;
+    this.applyPlayerMix();
+    try {
+      this.player.playVideoAt(index);
+    } catch {
+      // Ignore transient playback errors
+    }
+  }
+
+  private applyPlayerMix(): void {
+    if (!this.player || !this.playerReady || this.disposed) return;
+    try {
+      if (this.muted || !this.musicEnabled) {
+        this.player.mute();
+      } else {
+        this.player.unMute();
+      }
+      const vol = Math.round(this.masterVolume * 78);
+      this.player.setVolume(Math.max(0, Math.min(100, vol)));
+    } catch {
+      // Ignore transient mix errors
+    }
+  }
+
+  private syncTrackLimit(): void {
+    if (!this.player) return;
+    try {
+      const playlist = this.player.getPlaylist();
+      if (Array.isArray(playlist) && playlist.length > 0) {
+        this.trackLimit = Math.min(MAX_PLAYLIST_TRACKS, playlist.length);
+      }
+    } catch {
+      // Keep default limit
+    }
+  }
+
+  private findNextUnplayedIndex(startFrom: number): number | null {
+    for (let idx = Math.max(0, startFrom); idx < this.trackLimit; idx++) {
+      if (!this.playedIndices.has(idx)) {
+        return idx;
       }
     }
+    return null;
   }
 
-  private playLeadHook(
-    time: number,
-    track: BeatTrack,
-    bar: HarmonicBar,
-    barStep: number,
-    status: GameStatus,
-    isBoosting: boolean,
-  ): void {
-    if (!this.ctx || !this.outputNode || this.trackedVoices.length >= MAX_ACTIVE_MUSIC_VOICES) return;
-
-    const slotIdx = track.hookSteps.indexOf(barStep);
-    if (slotIdx === -1) return;
-
-    const noteFreq = clampFreq(bar.hook[slotIdx % bar.hook.length]);
-    const dur = track.useGlideLead ? 0.34 : 0.24;
-    const stopAt = time + dur;
-    const osc = this.ctx.createOscillator();
-    const filter = this.ctx.createBiquadFilter();
-    const env = this.ctx.createGain();
-
-    osc.type = track.useGlideLead ? 'sawtooth' : 'square';
-    if (track.useGlideLead) {
-      osc.frequency.setValueAtTime(clampFreq(this.lastGlideFreq), time);
-      osc.frequency.exponentialRampToValueAtTime(noteFreq, time + 0.045);
-      this.lastGlideFreq = noteFreq;
-    } else {
-      osc.frequency.setValueAtTime(noteFreq, time);
+  private finishPlaylist(): void {
+    this.playlistFinished = true;
+    this.lastAppliedPlayIntent = false;
+    this.clearAdvanceTimer();
+    try {
+      this.player?.stopVideo();
+    } catch {
+      // Ignore stop error
     }
+  }
 
-    filter.type = 'lowpass';
-    filter.Q.value = 1.6;
-    filter.frequency.setValueAtTime(isBoosting ? 3200 : status === 'playing' ? 2400 : 1650, time);
-    filter.frequency.exponentialRampToValueAtTime(750, stopAt);
-
-    const peak = status === 'playing' ? (track.useGlideLead ? 0.068 : 0.058) : 0.04;
-    scheduleEnvelope(env.gain, time, peak, 0.008, stopAt - 0.04, stopAt);
-
-    osc.connect(filter);
-    filter.connect(env);
-    env.connect(this.outputNode);
-    if (this.delaySend) env.connect(this.delaySend);
-
-    this.trackVoice(osc, stopAt, () => {
-      osc.disconnect();
-      filter.disconnect();
-      env.disconnect();
-    });
-
-    osc.start(time);
-    osc.stop(stopAt);
+  private clearAdvanceTimer(): void {
+    if (this.advanceTimer !== null) {
+      window.clearTimeout(this.advanceTimer);
+      this.advanceTimer = null;
+    }
   }
 
   public dispose(): void {
-    this.releaseAllVoices();
-    this.ctx = null;
-    this.outputNode = null;
-    this.delaySend = null;
-    this.noiseBuffer = null;
+    this.disposed = true;
+    this.clearAdvanceTimer();
+    try {
+      this.player?.destroy();
+    } catch {
+      // Ignore destroy errors
+    }
+    this.player = null;
+    this.playerReady = false;
+    if (this.container && this.container.parentNode) {
+      this.container.parentNode.removeChild(this.container);
+    }
+    this.container = null;
   }
 }
