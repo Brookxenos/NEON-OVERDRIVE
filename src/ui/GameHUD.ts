@@ -58,18 +58,25 @@ export class GameHUD {
     this.element.className = 'hud-overlay hidden';
     this.element.innerHTML = `
       <div class="hud-top-row">
-        <div class="hud-panel">
+        <div class="hud-panel hud-scoreboard">
           <div class="hud-score-header">
             <span class="hud-kicker">Score</span>
             <span class="font-display hud-multiplier" data-role="multiplier">1x Multiplier</span>
           </div>
           <div class="font-mono-num hud-score-value" data-role="score">0</div>
           <div class="hud-sub-stats">
-            <span>Orbs <strong class="font-mono-num" style="color:#67e8f9" data-role="orbs">0</strong></span>
-            <span style="color:#475569" aria-hidden="true">·</span>
-            <span>Coins <strong class="font-mono-num" style="color:#fcd34d" data-role="coins">0</strong></span>
-            <span style="color:#475569" aria-hidden="true">·</span>
-            <span>Tier <strong class="font-mono-num" style="color:#d8b4fe" data-role="tier">1</strong></span>
+            <span class="hud-stat-chip">
+              <span class="hud-stat-label">Orbs</span>
+              <strong class="font-mono-num hud-stat-val is-cyan" data-role="orbs">0</strong>
+            </span>
+            <span class="hud-stat-chip">
+              <span class="hud-stat-label">Coins</span>
+              <strong class="font-mono-num hud-stat-val is-gold" data-role="coins">+0</strong>
+            </span>
+            <span class="hud-stat-chip">
+              <span class="hud-stat-label">Tier</span>
+              <strong class="font-mono-num hud-stat-val is-violet" data-role="tier">1</strong>
+            </span>
           </div>
           <div class="hud-goal-hint" data-role="goal-hint"></div>
           <div class="hud-zone-status hidden" data-role="zone-status"></div>
@@ -86,18 +93,18 @@ export class GameHUD {
                   <span data-role="speed">122</span> <span class="hud-speed-unit">KM/H</span>
                 </div>
               </div>
-              <div style="text-align:right">
+              <div class="hud-distance-box">
                 <div class="hud-kicker">Distance</div>
                 <div class="font-mono-num hud-distance-value" data-role="distance">0 m</div>
               </div>
             </div>
             <div class="hud-boost-wrap">
               <div class="hud-boost-labels">
-                <span style="display:inline-flex;align-items:center;gap:4px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#cbd5e1">
-                  <span style="color:#22d3ee;display:inline-flex">${ICON_ZAP}</span>
+                <span class="hud-boost-title">
+                  <span class="hud-boost-icon">${ICON_ZAP}</span>
                   <span data-role="boost-status">Boost</span>
                 </span>
-                <span class="font-mono-num" style="color:#67e8f9;font-weight:700" data-role="boost-pct">100%</span>
+                <span class="font-mono-num hud-boost-pct" data-role="boost-pct">100%</span>
               </div>
               <div class="hud-boost-track">
                 <div class="hud-boost-fill" data-role="boost-fill" style="width:100%"></div>
@@ -106,8 +113,14 @@ export class GameHUD {
           </div>
 
           <div class="hud-quick-buttons">
-            <button type="button" class="hud-square-btn" data-role="pause-btn" aria-label="Pause game">${ICON_PAUSE}</button>
-            <button type="button" class="hud-square-btn" data-role="mute-btn" aria-label="Toggle audio">${ICON_VOLUME_ON}</button>
+            <button type="button" class="hud-square-btn hud-pause-btn" data-role="pause-btn" aria-label="Pause game" title="Pause (Esc)">
+              ${ICON_PAUSE}
+              <span class="hud-btn-tag">Pause</span>
+            </button>
+            <button type="button" class="hud-square-btn hud-mute-btn" data-role="mute-btn" aria-label="Toggle audio" title="Mute / Unmute">
+              ${ICON_VOLUME_ON}
+              <span class="hud-btn-tag">Sound</span>
+            </button>
           </div>
         </div>
       </div>
@@ -115,8 +128,8 @@ export class GameHUD {
       <div>
         <div class="hud-bottom-hint" data-role="bottom-hint">
           <div class="hud-bottom-pill">
-            <span>Best: <strong class="font-mono-num" style="color:#e2e8f0" data-role="bottom-best">0</strong></span>
-            <span style="margin:0 8px;color:#475569" aria-hidden="true">·</span>
+            <span>Best <strong class="font-mono-num hud-bottom-best-val" data-role="bottom-best">0</strong></span>
+            <span class="hud-hint-sep" aria-hidden="true">·</span>
             <span>Space: Boost · Esc: Pause</span>
           </div>
         </div>
@@ -261,7 +274,10 @@ export class GameHUD {
 
     if (muted !== this.lastMuted) {
       this.lastMuted = muted;
-      this.muteBtn.innerHTML = muted ? ICON_VOLUME_OFF : ICON_VOLUME_ON;
+      this.muteBtn.innerHTML = muted
+        ? `${ICON_VOLUME_OFF}<span class="hud-btn-tag">Muted</span>`
+        : `${ICON_VOLUME_ON}<span class="hud-btn-tag">Sound</span>`;
+      this.muteBtn.classList.toggle('is-muted', muted);
       this.muteBtn.setAttribute('aria-label', muted ? 'Unmute audio' : 'Mute audio');
     }
 

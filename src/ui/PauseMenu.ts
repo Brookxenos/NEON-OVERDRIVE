@@ -16,6 +16,7 @@ export class PauseMenu {
   public readonly element: HTMLElement;
   private readonly scoreEl: HTMLElement;
   private readonly distanceEl: HTMLElement;
+  private readonly coinsEl: HTMLElement;
 
   constructor(actions: PauseMenuActions) {
     this.element = document.createElement('div');
@@ -25,17 +26,29 @@ export class PauseMenu {
         <div class="pause-bar-meta">
           <div class="pause-bar-heading">
             <span class="pause-indicator" aria-hidden="true"></span>
-            <h2 class="font-display pause-bar-title">Paused</h2>
+            <div class="pause-title-stack">
+              <h2 class="font-display pause-bar-title">Paused</h2>
+              <span class="pause-bar-subtitle">Hold · City View</span>
+            </div>
           </div>
           <div class="pause-bar-stats">
-            <span>Score <strong class="font-mono-num pause-stat-score" data-role="score">0</strong></span>
-            <span class="pause-stat-sep" aria-hidden="true">·</span>
-            <span>Dist <strong class="font-mono-num pause-stat-dist" data-role="distance">0 m</strong></span>
+            <div class="pause-stat-chip">
+              <span class="pause-stat-label">Score</span>
+              <strong class="font-mono-num pause-stat-score" data-role="score">0</strong>
+            </div>
+            <div class="pause-stat-chip">
+              <span class="pause-stat-label">Distance</span>
+              <strong class="font-mono-num pause-stat-dist" data-role="distance">0 m</strong>
+            </div>
+            <div class="pause-stat-chip pause-stat-chip-coins">
+              <span class="pause-stat-label">Coins</span>
+              <strong class="font-mono-num pause-stat-coins" data-role="coins">+0</strong>
+            </div>
           </div>
         </div>
         <div class="pause-bar-actions">
           <button type="button" class="pause-btn pause-btn-primary" data-role="resume-btn">${ICON_PLAY}<span>Resume</span></button>
-          <button type="button" class="pause-btn pause-btn-secondary" data-role="restart-btn">${ICON_RESTART}<span>Restart</span></button>
+          <button type="button" class="pause-btn pause-btn-restart" data-role="restart-btn">${ICON_RESTART}<span>Restart</span></button>
           <button type="button" class="pause-btn pause-btn-secondary" data-role="settings-btn">${ICON_SETTINGS}<span>Settings</span></button>
           <button type="button" class="pause-btn pause-btn-ghost" data-role="menu-btn">${ICON_HOME}<span>Menu</span></button>
         </div>
@@ -44,6 +57,7 @@ export class PauseMenu {
 
     this.scoreEl = this.element.querySelector('[data-role="score"]')!;
     this.distanceEl = this.element.querySelector('[data-role="distance"]')!;
+    this.coinsEl = this.element.querySelector('[data-role="coins"]')!;
 
     this.element.querySelector('[data-role="resume-btn"]')!.addEventListener('click', actions.onResume);
     this.element.querySelector('[data-role="restart-btn"]')!.addEventListener('click', actions.onRestart);
@@ -54,6 +68,7 @@ export class PauseMenu {
   public update(snapshot: GameSnapshot): void {
     this.scoreEl.textContent = snapshot.score.toLocaleString();
     this.distanceEl.textContent = `${snapshot.distance.toLocaleString()} m`;
+    this.coinsEl.textContent = `+${snapshot.runCoins.toLocaleString()}`;
   }
 
   public setVisible(visible: boolean): void {
