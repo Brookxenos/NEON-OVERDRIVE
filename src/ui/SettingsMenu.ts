@@ -1,6 +1,6 @@
 import { GameSettingsData, TouchControlsMode } from '../settings/GameSettings';
 
-const ICON_CLOSE = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>`;
+const ICON_CLOSE = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>`;
 
 export interface SettingsMenuActions {
   onUpdate: (patch: Partial<GameSettingsData>) => void;
@@ -21,22 +21,21 @@ export class SettingsMenu {
 
   constructor(actions: SettingsMenuActions) {
     this.element = document.createElement('div');
-    this.element.className = 'modal-backdrop hidden';
-    this.element.style.zIndex = '45';
+    this.element.className = 'modal-backdrop modal-backdrop-settings hidden';
     this.element.innerHTML = `
       <div class="animate-modal-enter modal-card modal-card-wide">
         <div class="settings-header-row">
           <div>
-            <p class="modal-kicker" style="text-align:left">Configuration</p>
-            <h2 class="font-display modal-title" style="font-size:24px">Game Settings</h2>
+            <p class="modal-kicker modal-kicker-left">Configuration</p>
+            <h2 class="font-display modal-title modal-title-sm">Game Settings</h2>
           </div>
-          <button type="button" class="hud-square-btn" data-role="close-btn" aria-label="Close settings">${ICON_CLOSE}</button>
+          <button type="button" class="hud-square-btn modal-close-btn" data-role="close-btn" aria-label="Close settings">${ICON_CLOSE}</button>
         </div>
 
         <div class="settings-group">
           <div class="settings-label-row">
             <span>Master Volume</span>
-            <span class="font-mono-num" style="color:#67e8f9;font-weight:700" data-role="vol-label">75%</span>
+            <span class="font-mono-num settings-val-accent" data-role="vol-label">75%</span>
           </div>
           <input type="range" min="0" max="100" value="75" class="volume-slider" data-role="vol-slider" />
         </div>

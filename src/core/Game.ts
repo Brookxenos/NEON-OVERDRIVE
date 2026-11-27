@@ -295,13 +295,17 @@ export class Game {
     this.state.notify();
   }
 
-  public setGarageCameraView(mode: 'auto' | 'front' | 'side' | 'rear'): void {
+  public setGarageCameraView(mode: 'auto' | 'front' | 'side' | 'rear' | 'manual'): void {
     this.audioManager.unlock();
     this.audioManager.playUiClick(false);
     this.sceneManager.cameraController.setShowcaseMode(mode);
   }
 
-  public getGarageCameraView(): 'auto' | 'front' | 'side' | 'rear' {
+  public rotateGarageCamera(deltaRadians: number): void {
+    this.sceneManager.cameraController.orbitShowcaseBy(deltaRadians);
+  }
+
+  public getGarageCameraView(): 'auto' | 'front' | 'side' | 'rear' | 'manual' {
     return this.sceneManager.cameraController.getShowcaseMode();
   }
 
@@ -501,7 +505,8 @@ export class Game {
 
     if (this.garagePreviewOpen && (status === 'menu' || status === 'gameover')) {
       const showcaseSpeed = 20;
-      const isNarrow = this.container.clientWidth < 768;
+      const isBottomDock =
+        this.container.clientWidth < 768 && this.container.clientHeight > 520;
       this.trackManager.update(dt, showcaseSpeed, false);
       this.sceneManager.update(dt, showcaseSpeed, false);
       this.carController.update(dt, showcaseSpeed, false, false, this.visualEffects.particles);
@@ -509,7 +514,7 @@ export class Game {
       this.sceneManager.cameraController.updateGarageShowcase(
         dt,
         this.carController.getX(),
-        isNarrow,
+        isBottomDock,
       );
       this.audioManager.update(dt, 'menu', 0.15, false);
       this.renderer.render(this.sceneManager.scene, this.sceneManager.cameraController.camera);

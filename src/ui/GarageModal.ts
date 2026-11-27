@@ -7,8 +7,10 @@ const ICON_COIN = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" s
 const ICON_EYE = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`;
 const ICON_CHECK = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
 const ICON_RESET = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>`;
+const ICON_CHEVRON_LEFT = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
+const ICON_CHEVRON_RIGHT = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
 
-export type ShowcaseCameraMode = 'auto' | 'front' | 'side' | 'rear';
+export type ShowcaseCameraMode = 'auto' | 'front' | 'side' | 'rear' | 'manual';
 type GarageFilter = 'all' | 'featured' | 'magnetar' | 'drift' | 'racing' | 'rally' | 'ev';
 
 export interface GarageModalActions {
@@ -17,6 +19,7 @@ export interface GarageModalActions {
   onUnlockCar: (carId: CarId) => void;
   onResetGarage: () => void;
   onSetCameraView: (mode: ShowcaseCameraMode) => void;
+  onOrbitCamera: (deltaRadians: number) => void;
   getCameraView: () => ShowcaseCameraMode;
   onClose: () => void;
 }
@@ -135,6 +138,7 @@ export class GarageModal {
   private readonly countEl: HTMLElement;
   private readonly goalBannerEl: HTMLElement;
   private readonly listEl: HTMLElement;
+  private readonly stageControlsEl: HTMLElement;
   private readonly stageBadgeEl: HTMLElement;
   private readonly resetBtn: HTMLButtonElement;
   private readonly filterBtns: HTMLButtonElement[];
@@ -142,8 +146,11 @@ export class GarageModal {
   private readonly actions: GarageModalActions;
   private activeFilter: GarageFilter = 'all';
   private lastSnapshot: GameSnapshot | null = null;
+  private lastPreviewCarId: CarId | null = null;
   private confirmResetPending = false;
   private confirmTimer: number | null = null;
+  private activePointerId: number | null = null;
+  private lastPointerX = 0;
 
   constructor(actions: GarageModalActions) {
     this.actions = actions;
@@ -152,17 +159,17 @@ export class GarageModal {
     const featuredCount = CAR_CATALOG.filter((c) => c.featured).length;
     this.element.innerHTML = `
       <aside class="animate-modal-enter modal-card modal-card-garage-dock">
-        <div class="settings-header-row" style="margin-bottom:10px">
+        <div class="settings-header-row garage-header-row">
           <div>
-            <p class="modal-kicker">3D Car Showroom · <span data-role="car-count">${CAR_CATALOG.length} Cars</span></p>
-            <h2 class="font-display modal-title" style="font-size:21px">Garage & Unlocks</h2>
+            <p class="modal-kicker modal-kicker-left">3D Showroom · <span data-role="car-count">${CAR_CATALOG.length} Cars</span></p>
+            <h2 class="font-display modal-title modal-title-garage">Garage &amp; Unlocks</h2>
           </div>
-          <div style="display:flex;align-items:center;gap:10px">
+          <div class="garage-header-right">
             <div class="wallet-readout">
-              <span style="color:#fbbf24;display:inline-flex">${ICON_COIN}</span>
+              <span class="wallet-coin-icon">${ICON_COIN}</span>
               <span class="font-mono-num" data-role="wallet-coins">0</span>
             </div>
-            <button type="button" class="hud-square-btn" style="width:36px;height:36px" data-role="close-btn" aria-label="Close garage">${ICON_CLOSE}</button>
+            <button type="button" class="hud-square-btn modal-close-btn" data-role="close-btn" aria-label="Close garage">${ICON_CLOSE}</button>
           </div>
         </div>
 
@@ -185,17 +192,20 @@ export class GarageModal {
             ${ICON_RESET}
             <span>Reset Cars</span>
           </button>
-          <button type="button" class="btn-modal-primary" style="flex:1;height:42px" data-role="done-btn">Done</button>
+          <button type="button" class="btn-modal-primary garage-done-btn" data-role="done-btn">Done</button>
         </div>
       </aside>
 
-      <div class="garage-stage-controls">
+      <div class="garage-stage-controls" data-role="stage-controls">
         <div class="garage-preview-badge" data-role="stage-badge"></div>
-        <div class="garage-cam-bar" data-role="cam-bar">
-          <button type="button" class="garage-cam-btn" data-cam-mode="auto">360° Spin</button>
-          <button type="button" class="garage-cam-btn" data-cam-mode="front">Front</button>
-          <button type="button" class="garage-cam-btn" data-cam-mode="side">Side</button>
-          <button type="button" class="garage-cam-btn" data-cam-mode="rear">Rear</button>
+        <div class="garage-cam-stack">
+          <span class="garage-drag-hint">Drag car to rotate 360°</span>
+          <div class="garage-cam-bar" data-role="cam-bar">
+            <button type="button" class="garage-cam-btn" data-cam-mode="auto">360° Spin</button>
+            <button type="button" class="garage-cam-btn" data-cam-mode="front">Front</button>
+            <button type="button" class="garage-cam-btn" data-cam-mode="side">Side</button>
+            <button type="button" class="garage-cam-btn" data-cam-mode="rear">Rear</button>
+          </div>
         </div>
       </div>
     `;
@@ -204,6 +214,7 @@ export class GarageModal {
     this.countEl = this.element.querySelector('[data-role="car-count"]')!;
     this.goalBannerEl = this.element.querySelector('[data-role="goal-banner"]')!;
     this.listEl = this.element.querySelector('[data-role="car-list"]')!;
+    this.stageControlsEl = this.element.querySelector('[data-role="stage-controls"]')!;
     this.stageBadgeEl = this.element.querySelector('[data-role="stage-badge"]')!;
     this.resetBtn = this.element.querySelector('[data-role="reset-btn"]')!;
     this.filterBtns = Array.from(
@@ -223,6 +234,7 @@ export class GarageModal {
           other.classList.toggle('is-active', other === btn);
         }
         this.listEl.scrollTop = 0;
+        this.listEl.scrollLeft = 0;
         if (this.lastSnapshot) {
           this.update(this.lastSnapshot);
         }
@@ -255,6 +267,58 @@ export class GarageModal {
       });
     }
 
+    // Direct stage badge interactions (prev/next cycling + instant equip/unlock)
+    this.stageBadgeEl.addEventListener('click', (event) => {
+      const target = event.target as HTMLElement;
+      const stepBtn = target.closest<HTMLButtonElement>('[data-step-dir]');
+      if (stepBtn) {
+        const dir = stepBtn.dataset.stepDir === 'prev' ? -1 : 1;
+        this.stepPreviewCar(dir);
+        return;
+      }
+
+      const stageAction = target.closest<HTMLButtonElement>('[data-stage-action]');
+      if (!stageAction || !this.lastSnapshot) return;
+      const carId = stageAction.dataset.carId as CarId | undefined;
+      const mode = stageAction.dataset.stageAction;
+      if (!carId) return;
+      if (mode === 'unlock') {
+        this.actions.onUnlockCar(carId);
+      } else if (mode === 'select') {
+        this.actions.onSelectCar(carId);
+      }
+    });
+
+    // Touch / mouse drag across open 3D stage to smoothly orbit the car
+    this.stageControlsEl.addEventListener('pointerdown', (event) => {
+      const target = event.target as HTMLElement;
+      if (target.closest('button, .garage-preview-badge, .garage-cam-bar')) return;
+      this.activePointerId = event.pointerId;
+      this.lastPointerX = event.clientX;
+      this.stageControlsEl.setPointerCapture(event.pointerId);
+      this.stageControlsEl.classList.add('is-dragging');
+    });
+
+    this.stageControlsEl.addEventListener('pointermove', (event) => {
+      if (this.activePointerId !== event.pointerId) return;
+      const dx = event.clientX - this.lastPointerX;
+      this.lastPointerX = event.clientX;
+      if (Math.abs(dx) < 0.5) return;
+      this.actions.onOrbitCamera(-dx * 0.011);
+      this.syncCameraButtons();
+    });
+
+    const endDrag = (event: PointerEvent) => {
+      if (this.activePointerId !== event.pointerId) return;
+      this.activePointerId = null;
+      this.stageControlsEl.classList.remove('is-dragging');
+      if (this.stageControlsEl.hasPointerCapture(event.pointerId)) {
+        this.stageControlsEl.releasePointerCapture(event.pointerId);
+      }
+    };
+    this.stageControlsEl.addEventListener('pointerup', endDrag);
+    this.stageControlsEl.addEventListener('pointercancel', endDrag);
+
     this.listEl.addEventListener('click', (event) => {
       const target = event.target as HTMLElement;
       const actionBtn = target.closest<HTMLButtonElement>('[data-car-action]');
@@ -281,6 +345,20 @@ export class GarageModal {
     });
   }
 
+  private getVisibleCars(): readonly CarSpec[] {
+    const filtered = CAR_CATALOG.filter((car) => matchesFilter(car, this.activeFilter));
+    return filtered.length > 0 ? filtered : CAR_CATALOG;
+  }
+
+  private stepPreviewCar(dir: -1 | 1): void {
+    if (!this.lastSnapshot) return;
+    const list = this.getVisibleCars();
+    const currentIdx = list.findIndex((c) => c.id === this.lastSnapshot?.previewCarId);
+    const baseIdx = currentIdx >= 0 ? currentIdx : 0;
+    const nextIdx = (baseIdx + dir + list.length) % list.length;
+    this.actions.onPreviewCar(list[nextIdx].id);
+  }
+
   private clearResetConfirm(): void {
     this.confirmResetPending = false;
     if (this.confirmTimer !== null) {
@@ -299,14 +377,19 @@ export class GarageModal {
   }
 
   public update(snapshot: GameSnapshot): void {
+    const prevScrollTop = this.listEl.scrollTop;
+    const prevScrollLeft = this.listEl.scrollLeft;
+    const previewChanged = this.lastPreviewCarId !== snapshot.previewCarId;
+
     this.lastSnapshot = snapshot;
+    this.lastPreviewCarId = snapshot.previewCarId;
     this.syncCameraButtons();
     this.walletEl.textContent = `${snapshot.totalCoins.toLocaleString()} Coins`;
 
-    const visibleCars = CAR_CATALOG.filter((car) => matchesFilter(car, this.activeFilter));
+    const visibleCars = this.getVisibleCars();
     this.countEl.textContent =
       this.activeFilter === 'all'
-        ? `${CAR_CATALOG.length} Cars · Scroll ↓`
+        ? `${CAR_CATALOG.length} Cars`
         : `${visibleCars.length} of ${CAR_CATALOG.length} Cars`;
 
     if (snapshot.nextCarGoal) {
@@ -322,11 +405,11 @@ export class GarageModal {
       this.goalBannerEl.innerHTML = `
         <div class="garage-goal-top">
           <span>Next: <strong style="color:#fef08a">${snapshot.nextCarGoal.name}</strong></span>
-          <span class="font-mono-num" style="color:${readyToUnlock ? '#4ade80' : '#cbd5e1'}">
+          <span class="font-mono-num" style="color:${readyToUnlock ? '#4ade80' : '#e5dce8'}">
             ${
               readyToUnlock
                 ? 'Ready to Unlock'
-                : `<span style="color:${coinsMet ? '#4ade80' : '#fcd34d'}">${snapshot.totalCoins.toLocaleString()}/${snapshot.nextCarGoal.cost.toLocaleString()} Coins</span> · <span style="color:${distMet ? '#4ade80' : '#67e8f9'}">${snapshot.bestDistance.toLocaleString()}/${snapshot.nextCarGoal.minBestDistance.toLocaleString()}m</span>`
+                : `<span style="color:${coinsMet ? '#4ade80' : '#fbbf24'}">${snapshot.totalCoins.toLocaleString()}/${snapshot.nextCarGoal.cost.toLocaleString()} Coins</span> · <span style="color:${distMet ? '#4ade80' : '#fdba74'}">${snapshot.bestDistance.toLocaleString()}/${snapshot.nextCarGoal.minBestDistance.toLocaleString()}m</span>`
             }
           </span>
         </div>
@@ -338,7 +421,7 @@ export class GarageModal {
       this.goalBannerEl.innerHTML = `
         <div class="garage-goal-top">
           <span style="color:#4ade80;font-weight:700">All ${CAR_CATALOG.length} Cars Unlocked</span>
-          <span class="font-mono-num" style="color:#67e8f9">${CAR_CATALOG.length} / ${CAR_CATALOG.length}</span>
+          <span class="font-mono-num" style="color:#fdba74">${CAR_CATALOG.length} / ${CAR_CATALOG.length}</span>
         </div>
       `;
     }
@@ -347,26 +430,46 @@ export class GarageModal {
     const previewCar = getCarSpec(snapshot.previewCarId);
     const previewUnlocked = unlockedSet.has(previewCar.id);
     const previewEquipped = snapshot.selectedCarId === previewCar.id;
+    const previewCanUnlock =
+      !previewUnlocked &&
+      snapshot.totalCoins >= previewCar.costCoins &&
+      snapshot.bestDistance >= previewCar.minBestDistance;
     const previewBonus = Math.round(previewCar.speedBonus * SPEED_TO_KMH);
+    const visibleIdx = Math.max(
+      0,
+      visibleCars.findIndex((c) => c.id === previewCar.id),
+    );
+    const indexLabel = `${visibleIdx + 1}/${visibleCars.length}`;
+
+    let stageActionHtml = '';
+    if (previewEquipped) {
+      stageActionHtml = `<span class="garage-stage-pill is-equipped">${ICON_CHECK}<span>Equipped</span></span>`;
+    } else if (previewUnlocked) {
+      stageActionHtml = `<button type="button" class="garage-action-btn is-select" data-stage-action="select" data-car-id="${previewCar.id}">Drive</button>`;
+    } else if (previewCanUnlock) {
+      stageActionHtml = `<button type="button" class="garage-action-btn is-unlock-ready" data-stage-action="unlock" data-car-id="${previewCar.id}">${ICON_COIN}<span>Unlock · ${previewCar.costCoins.toLocaleString()}</span></button>`;
+    } else {
+      stageActionHtml = `<span class="garage-stage-pill is-locked">${previewCar.costCoins.toLocaleString()} Coins · ${previewCar.minBestDistance.toLocaleString()}m</span>`;
+    }
 
     this.stageBadgeEl.innerHTML = `
-      <div class="garage-stage-title-row">
-        <span class="font-display" style="font-size:17px;color:#ffffff">${previewCar.name}</span>
-        <span class="garage-meta-sep" aria-hidden="true">·</span>
-        <span class="garage-meta-text">${previewCar.series}</span>
-        ${previewBonus > 0 ? `<span class="garage-meta-sep" aria-hidden="true">·</span><span class="font-mono-num garage-speed-text">+${previewBonus} KM/H</span>` : ''}
-        <span class="garage-meta-sep" aria-hidden="true">·</span>
-        <span class="garage-stage-status ${previewEquipped ? 'is-equipped' : previewUnlocked ? 'is-owned' : 'is-locked'}">
-          ${
-            previewEquipped
-              ? 'Equipped'
-              : previewUnlocked
-                ? 'Unlocked'
-                : `${previewCar.costCoins.toLocaleString()} Coins · ${previewCar.minBestDistance.toLocaleString()}m Best`
-          }
-        </span>
+      <div class="garage-stage-switcher">
+        <button type="button" class="garage-step-btn" data-step-dir="prev" aria-label="Previous car">${ICON_CHEVRON_LEFT}</button>
+        <div class="garage-stage-body">
+          <div class="garage-stage-title-row">
+            <span class="font-display garage-stage-name">${previewCar.name}</span>
+            <span class="garage-meta-sep" aria-hidden="true">·</span>
+            <span class="garage-meta-text">${previewCar.series}</span>
+            ${previewBonus > 0 ? `<span class="garage-meta-sep" aria-hidden="true">·</span><span class="font-mono-num garage-speed-text">+${previewBonus} KM/H</span>` : ''}
+            <span class="font-mono-num garage-stage-counter">${indexLabel}</span>
+          </div>
+          <div class="garage-stage-subrow">
+            <span class="garage-stage-tagline">${previewCar.tagline}</span>
+            ${stageActionHtml}
+          </div>
+        </div>
+        <button type="button" class="garage-step-btn" data-step-dir="next" aria-label="Next car">${ICON_CHEVRON_RIGHT}</button>
       </div>
-      <div style="font-size:12px;color:#cbd5e1;margin-top:3px">${previewCar.tagline}</div>
     `;
 
     this.listEl.innerHTML = visibleCars
@@ -391,11 +494,7 @@ export class GarageModal {
         } else if (isUnlocked) {
           actionsHtml = `<button type="button" class="garage-action-btn is-select" data-car-action="select" data-car-id="${car.id}">Drive</button>`;
         } else if (canUnlock) {
-          actionsHtml = `
-          <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
-            <button type="button" class="garage-action-btn is-unlock-ready" data-car-action="unlock" data-car-id="${car.id}">${ICON_COIN}<span>Unlock · ${car.costCoins.toLocaleString()}</span></button>
-          </div>
-        `;
+          actionsHtml = `<button type="button" class="garage-action-btn is-unlock-ready" data-car-action="unlock" data-car-id="${car.id}">${ICON_COIN}<span>Unlock · ${car.costCoins.toLocaleString()}</span></button>`;
         } else {
           actionsHtml = `
           <button type="button" class="garage-action-btn ${isPreviewing ? 'is-preview-active' : 'is-preview'}" data-car-action="preview" data-car-id="${car.id}">
@@ -420,24 +519,36 @@ export class GarageModal {
             ${
               !isUnlocked
                 ? `<div class="garage-locked-meta">
-                    <span class="font-mono-num" style="color:${canAfford ? '#4ade80' : '#fcd34d'}">${snapshot.totalCoins.toLocaleString()}/${car.costCoins.toLocaleString()} Coins</span>
+                    <span class="font-mono-num" style="color:${canAfford ? '#4ade80' : '#fbbf24'}">${snapshot.totalCoins.toLocaleString()}/${car.costCoins.toLocaleString()} Coins</span>
                     <span class="garage-meta-sep" aria-hidden="true">·</span>
-                    <span class="font-mono-num" style="color:${meetsDistance ? '#4ade80' : '#67e8f9'}">${snapshot.bestDistance.toLocaleString()}/${car.minBestDistance.toLocaleString()}m Best</span>
+                    <span class="font-mono-num" style="color:${meetsDistance ? '#4ade80' : '#fdba74'}">${snapshot.bestDistance.toLocaleString()}/${car.minBestDistance.toLocaleString()}m Best</span>
                    </div>
                    <div class="goal-progress-track" style="margin-top:4px;height:4px"><div class="goal-progress-fill ${canUnlock ? 'is-ready' : ''}" style="width:${pct}%"></div></div>`
                 : ''
             }
           </div>
-          ${actionsHtml}
+          <div class="garage-car-action-wrap">${actionsHtml}</div>
         </div>
       `;
       })
       .join('');
+
+    this.listEl.scrollTop = prevScrollTop;
+    this.listEl.scrollLeft = prevScrollLeft;
+
+    if (previewChanged) {
+      const activeCard = this.listEl.querySelector<HTMLElement>('.garage-car-card.is-previewing');
+      if (activeCard) {
+        activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }
   }
 
   public setVisible(visible: boolean): void {
     if (!visible) {
       this.clearResetConfirm();
+      this.activePointerId = null;
+      this.lastPreviewCarId = null;
     }
     this.element.classList.toggle('hidden', !visible);
   }

@@ -3,18 +3,29 @@
   --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
-  --bg-void: #05070e;
-  --panel-bg: rgba(7, 11, 24, 0.86);
-  --modal-bg: #090f20;
-  --surface-dark: #050812;
-  --neon-cyan: #06b6d4;
-  --neon-cyan-bright: #22d3ee;
-  --electric-blue: #3b82f6;
-  --neon-purple: #8b5cf6;
-  --neon-magenta: #ec4899;
-  --amber-gold: #f59e0b;
-  --border-subtle: rgba(255, 255, 255, 0.12);
-  --border-cyan: rgba(34, 211, 238, 0.28);
+  --bg-void: #0c0916;
+  --ui-glass: linear-gradient(160deg, rgba(22, 16, 36, 0.84) 0%, rgba(12, 9, 22, 0.92) 100%);
+  --ui-glass-soft: rgba(16, 12, 28, 0.78);
+  --ui-chip-bg: rgba(34, 25, 52, 0.74);
+  --ui-track-bg: rgba(16, 12, 28, 0.92);
+  --panel-bg: rgba(20, 15, 32, 0.86);
+  --modal-bg: #120d1f;
+  --surface-dark: #181129;
+
+  --accent-primary: #f59e0b;
+  --accent-bright: #fbbf24;
+  --accent-soft: #fde68a;
+  --accent-warm: #fdba74;
+  --accent-coral: #fb7185;
+  --accent-mint: #4ade80;
+  --accent-ink: #1a1004;
+
+  --text-primary: #fffcf7;
+  --text-secondary: #e5dce8;
+  --text-muted: #b4a7be;
+
+  --border-subtle: rgba(255, 245, 230, 0.14);
+  --border-accent: rgba(251, 191, 36, 0.42);
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -37,7 +48,7 @@ body,
   overflow: hidden;
   overscroll-behavior: none;
   background-color: var(--bg-void);
-  color: #f1f5f9;
+  color: var(--text-primary);
   font-family: var(--font-sans);
   touch-action: none;
   user-select: none;
@@ -89,7 +100,7 @@ button {
 }
 
 button:focus-visible {
-  outline: 2px solid var(--neon-cyan-bright);
+  outline: 2px solid var(--accent-bright);
   outline-offset: 2px;
 }
 

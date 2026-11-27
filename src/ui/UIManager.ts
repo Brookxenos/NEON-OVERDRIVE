@@ -122,6 +122,7 @@ export class UIManager {
       onUnlockCar: (carId) => this.game.unlockCar(carId),
       onResetGarage: () => this.game.resetGarageProgress(),
       onSetCameraView: (mode) => this.game.setGarageCameraView(mode),
+      onOrbitCamera: (deltaRadians) => this.game.rotateGarageCamera(deltaRadians),
       getCameraView: () => this.game.getGarageCameraView(),
       onClose: () => {
         this.game.playUiSound(false);
