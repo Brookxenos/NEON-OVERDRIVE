@@ -40,19 +40,15 @@ export class ScoreManager {
   public updateRun(
     dt: number,
     worldSpeed: number,
-    isBoosting: boolean,
-    zoneScoreMultiplier = 1,
-    isFeverActive = false,
+    _isBoosting = false,
+    _zoneScoreMultiplier = 1,
+    _isFeverActive = false,
   ): void {
     const safeDt = Number.isFinite(dt) ? Math.max(0, dt) : 0;
     const safeSpeed = Number.isFinite(worldSpeed) ? Math.max(0, worldSpeed) : 0;
     const deltaMeters = safeSpeed * safeDt;
     this.distance += deltaMeters;
-    const zoneBonus =
-      Math.max(1, Number.isFinite(zoneScoreMultiplier) ? zoneScoreMultiplier : 1) *
-      (isFeverActive ? 2 : 1);
-    const deltaScore =
-      deltaMeters * SCORE_PER_METER * this.multiplier * (isBoosting ? 1.25 : 1) * zoneBonus;
+    const deltaScore = deltaMeters * SCORE_PER_METER;
     if (Number.isFinite(deltaScore) && deltaScore > 0) {
       this.score += deltaScore;
     }

@@ -28,7 +28,7 @@ export const BOOST_PASSIVE_REGEN_PER_SEC = 4.5;
 export const BOOST_MIN_ACTIVATION = 15;
 export const PAD_BOOST_DURATION = 1.35;
 
-export const SCORE_PER_METER = 0.15;
+export const SCORE_PER_METER = 0.12;
 export const ENERGY_ORB_SCORE = 10;
 export const SCORE_CRYSTAL_VALUE = 25;
 export const BOOST_CELL_SCORE = 15;
