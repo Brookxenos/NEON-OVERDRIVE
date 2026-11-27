@@ -67,7 +67,7 @@ export class MainMenu {
         <div class="controls-legend">
           <span><strong>A / D</strong> or <strong>← / →</strong> Switch Lanes</span>
           <span style="color:#475569" aria-hidden="true">·</span>
-          <span><strong>W / S</strong> Throttle / Brake</span>
+          <span><strong>W / ↑</strong> Throttle</span>
           <span style="color:#475569" aria-hidden="true">·</span>
           <span><strong>Space</strong> Overdrive Boost</span>
           <span style="color:#475569" aria-hidden="true">·</span>

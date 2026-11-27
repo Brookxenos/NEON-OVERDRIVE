@@ -12,7 +12,6 @@ export class CarController {
 
   private currentSpec: CarSpec = CAR_CATALOG[0];
   private throttling = false;
-  private braking = false;
 
   constructor(textures: TextureBundle) {
     this.model = new PlayerCar(textures, this.currentSpec);
@@ -31,16 +30,8 @@ export class CarController {
     this.throttling = active;
   }
 
-  public setBrake(active: boolean): void {
-    this.braking = active;
-  }
-
   public isThrottling(): boolean {
     return this.throttling;
-  }
-
-  public isBraking(): boolean {
-    return this.braking;
   }
 
   public shiftLane(direction: -1 | 1): boolean {
@@ -60,14 +51,12 @@ export class CarController {
 
   public reset(): void {
     this.throttling = false;
-    this.braking = false;
     this.physics.reset();
     this.effects.reset();
     const pose = this.physics.step(
       0,
       0,
       this.currentSpec.wheelRadius,
-      false,
       false,
       false,
       false,
@@ -80,7 +69,6 @@ export class CarController {
       pose.yaw,
       pose.steerAngle,
       pose.wheelAngle,
-      false,
       false,
       false,
       false,
@@ -101,7 +89,6 @@ export class CarController {
       this.currentSpec.wheelRadius,
       isBoosting,
       this.throttling,
-      this.braking,
       isAttractMode,
     );
 
@@ -115,7 +102,6 @@ export class CarController {
       pose.wheelAngle,
       isBoosting,
       this.throttling,
-      this.braking,
       pose.isCrashed,
       pose.phase,
     );

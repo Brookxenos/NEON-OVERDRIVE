@@ -1126,7 +1126,6 @@ export class PlayerCar {
     wheelAngle: number,
     isBoosting: boolean,
     isThrottling: boolean,
-    isBraking: boolean,
     isCrashed: boolean,
     phase: number,
   ): void {
@@ -1154,7 +1153,7 @@ export class PlayerCar {
       return;
     }
 
-    this.tailBarMat.emissiveIntensity = isBraking ? 0.75 : 0.24;
+    this.tailBarMat.emissiveIntensity = 0.24;
 
     if (showBoostFlames) {
       const flamePulse = 0.88 + Math.sin(phase * 4.5) * 0.14;

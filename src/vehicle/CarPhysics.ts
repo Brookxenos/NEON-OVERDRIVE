@@ -70,7 +70,6 @@ export class CarPhysics {
     wheelRadius: number,
     isBoosting: boolean,
     isThrottling: boolean,
-    isBraking: boolean,
     isAttractMode: boolean,
   ): CarKinematics {
     if (this.crashed) {
@@ -114,7 +113,7 @@ export class CarPhysics {
       this.phase = (this.phase + dt * (isBoosting ? 9.5 : 5.5)) % (Math.PI * 200);
     }
 
-    const targetPitch = isBoosting ? 0.036 : isThrottling ? 0.02 : isBraking ? -0.04 : 0;
+    const targetPitch = isBoosting ? 0.036 : isThrottling ? 0.02 : 0;
     this.pitch = damp(this.pitch, targetPitch, 10, dt);
     this.yaw = -this.roll * 0.45;
     this.steerAngle = damp(

@@ -28,7 +28,6 @@ A 3D coastal highway arcade racing game built with TypeScript, Three.js, Vite, a
 | `A` / `←` | Shift one lane left |
 | `D` / `→` | Shift one lane right |
 | `W` / `↑` | Hold throttle for extra speed |
-| `S` / `↓` | Hold brake to slow down |
 | `Space` | Hold Overdrive Boost (requires at least 15% charge) |
 | `Esc` | Pause / resume race, or close open Settings / Garage modal |
 | `P` | Pause / resume race |
@@ -141,7 +140,7 @@ Before releasing changes:
 2. Run `npm run build` and verify `dist/index.html`, `dist/favicon.svg`, `dist/assets/billboards/`, and `dist/assets/` are generated cleanly.
 3. Run `npm run preview` and manually verify in desktop and mobile browsers:
    - Main Menu → Garage (preview, camera angles, unlock/equip, filter tabs, reset) → Settings (volume, quality, touch mode)
-   - Gameplay controls (`A`/`D` or `←`/`→`, `W`/`S`, `Space`, `Esc`, `P`, mobile swipe/touch pads)
+   - Gameplay controls (`A`/`D` or `←`/`→`, `W`/`↑`, `Space`, `Esc`, `P`, mobile swipe/touch pads)
    - Collisions, near misses, pause dock visibility, tab-switch auto-pause, game over, and restart
    - Persistence across page reloads and private/incognito sessions
 

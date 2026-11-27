@@ -2,7 +2,6 @@ export interface InputEvents {
   onLaneShift: (direction: -1 | 1) => void;
   onBoostChange: (active: boolean) => void;
   onThrottleChange: (active: boolean) => void;
-  onBrakeChange: (active: boolean) => void;
   onPauseToggle: () => void;
   onEscape: () => void;
   onInteraction: () => void;
@@ -51,10 +50,6 @@ export class KeyboardController {
       case 'KeyW':
         this.events.onThrottleChange(true);
         break;
-      case 'ArrowDown':
-      case 'KeyS':
-        this.events.onBrakeChange(true);
-        break;
       case 'Space':
         event.preventDefault();
         if (!this.boostHeld) {
@@ -77,10 +72,6 @@ export class KeyboardController {
       case 'KeyW':
         this.events.onThrottleChange(false);
         break;
-      case 'ArrowDown':
-      case 'KeyS':
-        this.events.onBrakeChange(false);
-        break;
       case 'Space':
         event.preventDefault();
         this.boostHeld = false;
@@ -93,7 +84,6 @@ export class KeyboardController {
     this.boostHeld = false;
     this.events.onBoostChange(false);
     this.events.onThrottleChange(false);
-    this.events.onBrakeChange(false);
   }
 
   public dispose(): void {

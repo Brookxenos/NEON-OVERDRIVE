@@ -18,7 +18,6 @@ import {
   BASE_MAX_SPEED,
   BASE_START_SPEED,
   BOOST_SPEED_BONUS,
-  BRAKE_PENALTY,
   PAD_BOOST_BONUS,
   SPAWN_Z,
   SPEED_TO_KMH,
@@ -166,7 +165,6 @@ export class Game {
         }
       },
       onThrottleChange: (active: boolean) => this.carController.setThrottle(active),
-      onBrakeChange: (active: boolean) => this.carController.setBrake(active),
       onPauseToggle: () => {
         if (this.uiModalBridge?.hasOpenModal()) return;
         const status = this.state.getStatus();
@@ -653,7 +651,6 @@ export class Game {
       this.difficultyManager.getBaseSpeed(exactDistance, this.runElapsedSeconds) +
       this.carController.getCarSpec().speedBonus;
     if (this.carController.isThrottling()) targetSpeed += THROTTLE_BONUS;
-    if (this.carController.isBraking() && !isAnyBoost) targetSpeed -= BRAKE_PENALTY;
     if (isManualBoost) targetSpeed += BOOST_SPEED_BONUS;
     if (isPadBoost) targetSpeed += PAD_BOOST_BONUS;
     targetSpeed = Math.max(20, targetSpeed);
