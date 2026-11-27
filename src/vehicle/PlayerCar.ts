@@ -183,6 +183,9 @@ export class PlayerCar {
       this.thrusterInnerMat,
     );
 
+    const fasciaMaskGeo = createBeveledPlateGeometry(1.62, 0.145, 0.14, 0.032, 0.014);
+    this.geometries.push(fasciaMaskGeo);
+
     const uniqueFamilies = Array.from(new Set(Object.values(STYLE_TO_SHELL)));
     for (const family of uniqueFamilies) {
       const shell = createCarShellGeometries(family);
@@ -201,6 +204,12 @@ export class PlayerCar {
       const roofMesh = new THREE.Mesh(shell.roofShell, this.paintMat);
       roofMesh.castShadow = true;
       shellGroup.add(roofMesh);
+
+      if (family !== 'lmp_proto') {
+        const fasciaMask = new THREE.Mesh(fasciaMaskGeo, this.tireMat);
+        fasciaMask.position.set(0, 0.36, -2.225);
+        shellGroup.add(fasciaMask);
+      }
 
       this.closedBodyGroup.add(shellGroup);
       this.shellGroups.set(family, shellGroup);
@@ -253,15 +262,15 @@ export class PlayerCar {
     }
 
     const grilleFrame = new THREE.Mesh(grilleFrameGeo, this.chromeMat);
-    grilleFrame.position.set(0, 0.26, -2.21);
+    grilleFrame.position.set(0, 0.26, -2.27);
     this.closedBodyGroup.add(grilleFrame);
 
     const frontGrille = new THREE.Mesh(frontGrilleGeo, this.tireMat);
-    frontGrille.position.set(0, 0.26, -2.23);
+    frontGrille.position.set(0, 0.26, -2.285);
     this.closedBodyGroup.add(frontGrille);
 
     const frontChin = new THREE.Mesh(frontChinGeo, this.secondaryMat);
-    frontChin.position.set(0, 0.075, -2.2);
+    frontChin.position.set(0, 0.075, -2.24);
     this.closedBodyGroup.add(frontChin);
 
     const mirrorHousingGeo = createAeroMirrorGeometry();
@@ -280,41 +289,68 @@ export class PlayerCar {
       this.closedBodyGroup.add(mirror);
     }
 
-    const headHousingGeo = createBeveledPlateGeometry(0.36, 0.11, 0.11, 0.03, 0.015);
-    const projectorGeo = new THREE.CylinderGeometry(0.042, 0.042, 0.08, 16);
+    const headHousingGeo = createBeveledPlateGeometry(0.38, 0.13, 0.15, 0.03, 0.015);
+    const projectorGeo = new THREE.CylinderGeometry(0.036, 0.036, 0.11, 16);
     projectorGeo.rotateX(Math.PI / 2);
-    const drlGeo = createBeveledPlateGeometry(0.32, 0.022, 0.05, 0.008, 0.004);
-    const cornerTurnGeo = createBeveledPlateGeometry(0.065, 0.055, 0.09, 0.015, 0.008);
-    this.geometries.push(headHousingGeo, projectorGeo, drlGeo, cornerTurnGeo);
+    const haloRingGeo = new THREE.TorusGeometry(0.052, 0.009, 10, 24);
+    const drlGeo = createBeveledPlateGeometry(0.32, 0.022, 0.075, 0.008, 0.004);
+    const cornerTurnGeo = createBeveledPlateGeometry(0.065, 0.055, 0.1, 0.015, 0.008);
+    const fogBezelGeo = createBeveledPlateGeometry(0.15, 0.085, 0.09, 0.025, 0.01);
+    const fogLampGeo = new THREE.CylinderGeometry(0.034, 0.034, 0.055, 16);
+    fogLampGeo.rotateX(Math.PI / 2);
+    this.geometries.push(
+      headHousingGeo,
+      projectorGeo,
+      haloRingGeo,
+      drlGeo,
+      cornerTurnGeo,
+      fogBezelGeo,
+      fogLampGeo,
+    );
 
     for (const side of [-1, 1]) {
       const housing = new THREE.Mesh(headHousingGeo, this.tireMat);
-      housing.position.set(side * 0.64, 0.36, -2.14);
-      housing.rotation.y = side * -0.24;
+      housing.position.set(side * 0.64, 0.36, -2.22);
+      housing.rotation.y = side * -0.18;
       this.closedBodyGroup.add(housing);
 
       for (const offset of [-0.07, 0.07]) {
+        const lx = side * 0.64 + offset;
         const lens = new THREE.Mesh(projectorGeo, this.headLampMat);
-        lens.position.set(side * 0.64 + offset, 0.36, -2.17);
+        lens.position.set(lx, 0.36, -2.262);
         this.closedBodyGroup.add(lens);
+
+        const halo = new THREE.Mesh(haloRingGeo, this.headLampMat);
+        halo.position.set(lx, 0.36, -2.306);
+        this.closedBodyGroup.add(halo);
       }
 
       const drl = new THREE.Mesh(drlGeo, this.headLampMat);
-      drl.position.set(side * 0.64, 0.408, -2.155);
-      drl.rotation.y = side * -0.24;
+      drl.position.set(side * 0.64, 0.415, -2.27);
+      drl.rotation.y = side * -0.18;
       this.closedBodyGroup.add(drl);
 
       const turn = new THREE.Mesh(cornerTurnGeo, this.amberLampMat);
-      turn.position.set(side * 0.81, 0.35, -2.07);
+      turn.position.set(side * 0.81, 0.35, -2.185);
       this.closedBodyGroup.add(turn);
+
+      const fogBezel = new THREE.Mesh(fogBezelGeo, this.tireMat);
+      fogBezel.position.set(side * 0.68, 0.175, -2.26);
+      fogBezel.rotation.y = side * -0.18;
+      this.closedBodyGroup.add(fogBezel);
+
+      const fogLamp = new THREE.Mesh(fogLampGeo, this.amberLampMat);
+      fogLamp.position.set(side * 0.68, 0.175, -2.292);
+      fogLamp.rotation.y = side * -0.18;
+      this.closedBodyGroup.add(fogLamp);
     }
 
-    const tailHousingGeo = createBeveledPlateGeometry(1.54, 0.145, 0.075, 0.035, 0.014);
-    const tailLedGeo = createBeveledPlateGeometry(0.46, 0.038, 0.045, 0.012, 0.006);
-    const centerLightBarGeo = createBeveledPlateGeometry(1.36, 0.024, 0.04, 0.008, 0.004);
-    const reverseStripGeo = createBeveledPlateGeometry(0.16, 0.028, 0.045, 0.008, 0.005);
-    const platePocketGeo = createBeveledPlateGeometry(0.46, 0.16, 0.055, 0.025, 0.01);
-    const plateFaceGeo = createBeveledPlateGeometry(0.4, 0.12, 0.036, 0.015, 0.006);
+    const tailHousingGeo = createBeveledPlateGeometry(1.54, 0.145, 0.095, 0.035, 0.014);
+    const tailLedGeo = createBeveledPlateGeometry(0.46, 0.038, 0.055, 0.012, 0.006);
+    const centerLightBarGeo = createBeveledPlateGeometry(1.36, 0.024, 0.05, 0.008, 0.004);
+    const reverseStripGeo = createBeveledPlateGeometry(0.16, 0.028, 0.055, 0.008, 0.005);
+    const platePocketGeo = createBeveledPlateGeometry(0.46, 0.16, 0.075, 0.025, 0.01);
+    const plateFaceGeo = createBeveledPlateGeometry(0.4, 0.12, 0.045, 0.015, 0.006);
     const diffuserBaseGeo = createAeroSplitterGeometry(1.48, 0.22);
     const strakeGeo = createSweptStrutGeometry(0.12, 0.2, 0.16, 0.034);
     this.geometries.push(
@@ -329,33 +365,33 @@ export class PlayerCar {
     );
 
     const tailHousing = new THREE.Mesh(tailHousingGeo, this.tireMat);
-    tailHousing.position.set(0, 0.41, 2.18);
+    tailHousing.position.set(0, 0.41, 2.225);
     this.closedBodyGroup.add(tailHousing);
 
     const centerLightBar = new THREE.Mesh(centerLightBarGeo, this.tailBarMat);
-    centerLightBar.position.set(0, 0.41, 2.21);
+    centerLightBar.position.set(0, 0.41, 2.255);
     this.closedBodyGroup.add(centerLightBar);
 
     for (const side of [-1, 1]) {
       const upperLed = new THREE.Mesh(tailLedGeo, this.tailBarMat);
-      upperLed.position.set(side * 0.49, 0.44, 2.215);
+      upperLed.position.set(side * 0.49, 0.44, 2.26);
       this.closedBodyGroup.add(upperLed);
 
       const lowerLed = new THREE.Mesh(tailLedGeo, this.tailBarMat);
-      lowerLed.position.set(side * 0.49, 0.375, 2.215);
+      lowerLed.position.set(side * 0.49, 0.375, 2.26);
       this.closedBodyGroup.add(lowerLed);
 
       const reverseStrip = new THREE.Mesh(reverseStripGeo, this.amberLampMat);
-      reverseStrip.position.set(side * 0.64, 0.408, 2.22);
+      reverseStrip.position.set(side * 0.64, 0.408, 2.265);
       this.closedBodyGroup.add(reverseStrip);
     }
 
     const platePocket = new THREE.Mesh(platePocketGeo, this.secondaryMat);
-    platePocket.position.set(0, 0.24, 2.19);
+    platePocket.position.set(0, 0.24, 2.235);
     this.closedBodyGroup.add(platePocket);
 
     const plateFace = new THREE.Mesh(plateFaceGeo, this.chromeMat);
-    plateFace.position.set(0, 0.24, 2.21);
+    plateFace.position.set(0, 0.24, 2.26);
     this.closedBodyGroup.add(plateFace);
 
     const diffuserBase = new THREE.Mesh(diffuserBaseGeo, this.secondaryMat);

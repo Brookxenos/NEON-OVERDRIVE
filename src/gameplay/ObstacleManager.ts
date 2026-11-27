@@ -339,8 +339,14 @@ export class ObstacleManager {
     const rivalCanopyGeo = trafficShell.cabinGlass;
     const rivalRoofGeo = trafficShell.roofShell;
     const rivalGrilleGeo = createBeveledPlateGeometry(1.0, 0.16, 0.075, 0.03, 0.012);
+    const rivalFasciaMaskGeo = createBeveledPlateGeometry(1.44, 0.13, 0.09, 0.028, 0.012);
     const rivalSplitterGeo = createAeroSplitterGeometry(1.64, 0.22);
-    const rivalHeadlampGeo = createBeveledPlateGeometry(0.28, 0.085, 0.075, 0.024, 0.01);
+    const rivalHeadlampGeo = new THREE.CylinderGeometry(0.026, 0.026, 0.045, 14);
+    rivalHeadlampGeo.rotateX(Math.PI / 2);
+    const rivalHaloGeo = new THREE.TorusGeometry(0.044, 0.008, 8, 20);
+    const rivalFogBezelGeo = createBeveledPlateGeometry(0.13, 0.075, 0.075, 0.022, 0.009);
+    const rivalFogLampGeo = new THREE.CylinderGeometry(0.028, 0.028, 0.045, 12);
+    rivalFogLampGeo.rotateX(Math.PI / 2);
     const rivalMirrorGeo = createAeroMirrorGeometry();
     const rivalSpoilerBladeGeo = createAirfoilWingGeometry(1.66, 0.22, 0.044);
     const rivalTailHousingGeo = createBeveledPlateGeometry(1.54, 0.16, 0.07, 0.03, 0.012);
@@ -412,8 +418,12 @@ export class ObstacleManager {
       rivalCanopyGeo,
       rivalRoofGeo,
       rivalGrilleGeo,
+      rivalFasciaMaskGeo,
       rivalSplitterGeo,
       rivalHeadlampGeo,
+      rivalHaloGeo,
+      rivalFogBezelGeo,
+      rivalFogLampGeo,
       rivalMirrorGeo,
       rivalSpoilerBladeGeo,
       rivalTailHousingGeo,
@@ -546,22 +556,42 @@ export class ObstacleManager {
         carBody.add(roof);
 
         const grille = new THREE.Mesh(rivalGrilleGeo, trafficTrimMat);
-        grille.position.set(0, 0.25, -2.01);
+        grille.position.set(0, 0.24, -2.075);
         carBody.add(grille);
 
+        const fasciaMask = new THREE.Mesh(rivalFasciaMaskGeo, trafficTrimMat);
+        fasciaMask.position.set(0, 0.34, -2.05);
+        carBody.add(fasciaMask);
+
         const splitter = new THREE.Mesh(rivalSplitterGeo, trafficTrimMat);
-        splitter.position.set(0, 0.085, -1.96);
+        splitter.position.set(0, 0.085, -2.01);
         carBody.add(splitter);
 
-        for (const sx of [-0.63, 0.63]) {
-          const headlamp = new THREE.Mesh(rivalHeadlampGeo, trafficHeadlampMat);
-          headlamp.position.set(sx, 0.34, -1.95);
-          headlamp.rotation.y = (sx > 0 ? -1 : 1) * 0.2;
-          carBody.add(headlamp);
+        for (const side of [-1, 1]) {
+          for (const offset of [-0.06, 0.06]) {
+            const lx = side * 0.58 + offset;
+            const headlamp = new THREE.Mesh(rivalHeadlampGeo, trafficHeadlampMat);
+            headlamp.position.set(lx, 0.34, -2.085);
+            carBody.add(headlamp);
+
+            const halo = new THREE.Mesh(rivalHaloGeo, trafficHeadlampMat);
+            halo.position.set(lx, 0.34, -2.1);
+            carBody.add(halo);
+          }
+
+          const fogBezel = new THREE.Mesh(rivalFogBezelGeo, trafficTrimMat);
+          fogBezel.position.set(side * 0.62, 0.17, -2.06);
+          fogBezel.rotation.y = side * -0.16;
+          carBody.add(fogBezel);
+
+          const fogLamp = new THREE.Mesh(rivalFogLampGeo, this.warningAmberMat);
+          fogLamp.position.set(side * 0.62, 0.17, -2.085);
+          fogLamp.rotation.y = side * -0.16;
+          carBody.add(fogLamp);
 
           const mirror = new THREE.Mesh(rivalMirrorGeo, carMat);
-          mirror.position.set(sx > 0 ? 0.91 : -0.91, 0.65, -0.48);
-          mirror.rotation.y = (sx > 0 ? -1 : 1) * 0.16;
+          mirror.position.set(side * 0.91, 0.65, -0.48);
+          mirror.rotation.y = side * -0.16;
           carBody.add(mirror);
         }
 
@@ -571,27 +601,27 @@ export class ObstacleManager {
         carBody.add(spoiler);
 
         const tailHousing = new THREE.Mesh(rivalTailHousingGeo, trafficTrimMat);
-        tailHousing.position.set(0, 0.39, 2.0);
+        tailHousing.position.set(0, 0.39, 2.035);
         carBody.add(tailHousing);
 
         const tailBar = new THREE.Mesh(rivalTailClusterGeo, this.dangerRedMat);
-        tailBar.position.set(0, 0.39, 2.035);
+        tailBar.position.set(0, 0.39, 2.065);
         carBody.add(tailBar);
 
         const leftSignal = new THREE.Mesh(rivalSignalGeo, this.warningAmberMat);
-        leftSignal.position.set(-0.76, 0.44, 2.045);
+        leftSignal.position.set(-0.74, 0.44, 2.072);
         leftSignal.visible = false;
         carBody.add(leftSignal);
         signalLeft = leftSignal;
 
         const rightSignal = new THREE.Mesh(rivalSignalGeo, this.warningAmberMat);
-        rightSignal.position.set(0.76, 0.44, 2.045);
+        rightSignal.position.set(0.74, 0.44, 2.072);
         rightSignal.visible = false;
         carBody.add(rightSignal);
         signalRight = rightSignal;
 
         const plate = new THREE.Mesh(rivalPlateGeo, trafficPlateMat);
-        plate.position.set(0, 0.24, 2.025);
+        plate.position.set(0, 0.24, 2.06);
         carBody.add(plate);
 
         const diffuser = new THREE.Mesh(rivalDiffuserGeo, trafficTrimMat);
