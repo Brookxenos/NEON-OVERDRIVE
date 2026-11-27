@@ -63,7 +63,6 @@ export class PlayerCar {
   private readonly tailBarMat: THREE.MeshStandardMaterial;
   private readonly thrusterOuterMat: THREE.MeshBasicMaterial;
   private readonly thrusterInnerMat: THREE.MeshBasicMaterial;
-  private readonly headlightBeamMat: THREE.MeshBasicMaterial;
   private readonly headlightGlow: THREE.PointLight;
   private readonly underGlowLight: THREE.PointLight;
   private readonly contactShadow: THREE.Mesh;
@@ -168,15 +167,6 @@ export class PlayerCar {
       depthWrite: false,
     });
 
-    this.headlightBeamMat = new THREE.MeshBasicMaterial({
-      map: textures.headlightBeam,
-      transparent: true,
-      opacity: 0.18,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    });
-
     this.materials.push(
       this.paintMat,
       this.secondaryMat,
@@ -191,7 +181,6 @@ export class PlayerCar {
       this.tailBarMat,
       this.thrusterOuterMat,
       this.thrusterInnerMat,
-      this.headlightBeamMat,
     );
 
     const uniqueFamilies = Array.from(new Set(Object.values(STYLE_TO_SHELL)));
@@ -296,10 +285,7 @@ export class PlayerCar {
     projectorGeo.rotateX(Math.PI / 2);
     const drlGeo = createBeveledPlateGeometry(0.32, 0.022, 0.05, 0.008, 0.004);
     const cornerTurnGeo = createBeveledPlateGeometry(0.065, 0.055, 0.09, 0.015, 0.008);
-    const beamPlaneGeo = new THREE.PlaneGeometry(1.5, 11.5);
-    beamPlaneGeo.rotateX(-Math.PI / 2);
-    beamPlaneGeo.translate(0, 0, -5.75);
-    this.geometries.push(headHousingGeo, projectorGeo, drlGeo, cornerTurnGeo, beamPlaneGeo);
+    this.geometries.push(headHousingGeo, projectorGeo, drlGeo, cornerTurnGeo);
 
     for (const side of [-1, 1]) {
       const housing = new THREE.Mesh(headHousingGeo, this.tireMat);
@@ -321,11 +307,6 @@ export class PlayerCar {
       const turn = new THREE.Mesh(cornerTurnGeo, this.amberLampMat);
       turn.position.set(side * 0.81, 0.35, -2.07);
       this.closedBodyGroup.add(turn);
-
-      const beam = new THREE.Mesh(beamPlaneGeo, this.headlightBeamMat);
-      beam.position.set(side * 0.64, -0.2, -2.2);
-      beam.rotation.y = side * -0.05;
-      this.closedBodyGroup.add(beam);
     }
 
     const tailHousingGeo = createBeveledPlateGeometry(1.54, 0.145, 0.075, 0.035, 0.014);
@@ -1098,9 +1079,8 @@ export class PlayerCar {
       this.thrusterInnerMat.opacity = 0.72;
     }
 
-    this.headlightGlow.intensity = isBoosting ? 2.3 : 1.65;
+    this.headlightGlow.intensity = isBoosting ? 2.3 : isThrottling ? 1.85 : 1.55;
     this.underGlowLight.intensity = isBoosting ? 0.45 : 0;
-    this.headlightBeamMat.opacity = isBoosting ? 0.28 : isThrottling ? 0.2 : 0.15;
   }
 
   public dispose(): void {
