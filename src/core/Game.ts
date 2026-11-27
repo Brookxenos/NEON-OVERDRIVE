@@ -79,7 +79,6 @@ export class Game {
   private passed8000m = false;
   private lastScoreMilestone = 0;
   private scoreFeverTimer = 0;
-  private hudSyncTimer = 0;
   private saveFlushTimer = 0;
   private saveDirty = false;
   private announcedGoalId: CarId | null = null;
@@ -217,6 +216,10 @@ export class Game {
     this.audioManager.playUiClick(false);
     this.keyboardController.reset();
     this.touchController.reset();
+    const exactDistance = this.scoreManager.getExactDistance();
+    const difficultyLevel = this.difficultyManager.getLevel(exactDistance, this.runElapsedSeconds);
+    const zoneLabel = this.getZoneLabel(exactDistance);
+    this.syncHudState(difficultyLevel, this.boostSystem.isAnyBoostActive(), zoneLabel);
     this.state.setStatus('paused');
   }
 
@@ -390,7 +393,6 @@ export class Game {
     this.lastScoreMilestone = 0;
     this.scoreFeverTimer = 0;
     this.waveDirector.reset();
-    this.hudSyncTimer = 0;
     this.saveFlushTimer = 0;
     const nextGoal = getNextLockedCar(this.saveData.unlockedCars);
     this.announcedGoalId =
@@ -551,14 +553,7 @@ export class Game {
     const exactDistance = this.scoreManager.getExactDistance();
     const zoneScoreMultiplier =
       exactDistance >= 8000 ? 2.5 : exactDistance >= 5000 ? 2.0 : exactDistance >= 2500 ? 1.5 : 1.0;
-    const zoneLabel =
-      exactDistance >= 8000
-        ? 'APEX 2.5X'
-        : exactDistance >= 5000
-          ? 'OVERCLOCK 2X'
-          : exactDistance >= 2500
-            ? 'EXPRESS 1.5X'
-            : '';
+    const zoneLabel = this.getZoneLabel(exactDistance);
     const difficultyLevel = this.difficultyManager.getLevel(
       exactDistance,
       this.runElapsedSeconds,
@@ -763,11 +758,7 @@ export class Game {
       );
       this.audioManager.update(dt, 'playing', speedNorm, isAnyBoost);
 
-      this.hudSyncTimer += dt;
-      if (this.hudSyncTimer >= 0.042) {
-        this.hudSyncTimer = 0;
-        this.syncHudState(difficultyLevel, isAnyBoost, zoneLabel);
-      }
+      this.syncHudState(difficultyLevel, isAnyBoost, zoneLabel);
 
       if (this.saveDirty) {
         this.saveFlushTimer += dt;
@@ -782,7 +773,7 @@ export class Game {
 
   private checkScoreMilestone(): void {
     const score = this.scoreManager.getScore();
-    const milestoneStep = Math.floor(score / 10000);
+    const milestoneStep = Math.floor(score / 5000);
     if (milestoneStep <= this.lastScoreMilestone) return;
 
     const stepsCrossed = milestoneStep - this.lastScoreMilestone;
@@ -796,7 +787,7 @@ export class Game {
     this.scoreFeverTimer = 8.0;
 
     this.state.pushBanner(
-      `${(milestoneStep * 10).toLocaleString()}K · 2X SCORE +${bonusCoins} COINS`,
+      `${(milestoneStep * 5).toLocaleString()}K · 2X SCORE +${bonusCoins} COINS`,
       'amber',
     );
     this.audioManager.playMilestoneFanfare();
@@ -917,6 +908,16 @@ export class Game {
     this.saveFlushTimer = 0;
     this.saveManager.writeSaveData(this.saveData);
   };
+
+  private getZoneLabel(exactDistance: number): string {
+    return exactDistance >= 8000
+      ? 'APEX 2.5X'
+      : exactDistance >= 5000
+        ? 'OVERCLOCK 2X'
+        : exactDistance >= 2500
+          ? 'EXPRESS 1.5X'
+          : '';
+  }
 
   private syncHudState(
     difficultyLevel: number,

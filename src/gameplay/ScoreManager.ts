@@ -51,8 +51,11 @@ export class ScoreManager {
     const zoneBonus =
       Math.max(1, Number.isFinite(zoneScoreMultiplier) ? zoneScoreMultiplier : 1) *
       (isFeverActive ? 2 : 1);
-    this.score +=
-      deltaMeters * SCORE_PER_METER * this.multiplier * (isBoosting ? 1.5 : 1) * zoneBonus;
+    const deltaScore =
+      deltaMeters * SCORE_PER_METER * this.multiplier * (isBoosting ? 1.25 : 1) * zoneBonus;
+    if (Number.isFinite(deltaScore) && deltaScore > 0) {
+      this.score += deltaScore;
+    }
 
     const kmh = Math.round(safeSpeed * SPEED_TO_KMH);
     if (kmh > this.peakSpeedKmh) {
@@ -62,7 +65,8 @@ export class ScoreManager {
     if (this.comboTimer > 0) {
       this.comboTimer -= safeDt;
       if (this.comboTimer <= 0) {
-        this.multiplier = 1;
+        this.multiplier = Math.max(1, this.multiplier - 1);
+        this.comboTimer = this.multiplier > 1 ? COMBO_DURATION : 0;
       }
     }
   }
@@ -105,13 +109,14 @@ export class ScoreManager {
   }
 
   public registerBoostPad(): number {
-    const points = 180 * this.multiplier;
+    const points = 60 * this.multiplier;
     this.score += points;
     return points;
   }
 
   public registerNearMiss(count: number): number {
-    const points = NEAR_MISS_SCORE * count * this.multiplier;
+    const safeCount = Number.isFinite(count) && count > 0 ? Math.floor(count) : 0;
+    const points = NEAR_MISS_SCORE * safeCount * this.multiplier;
     this.score += points;
     return points;
   }
