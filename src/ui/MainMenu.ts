@@ -66,7 +66,7 @@ export class MainMenu {
         <div class="menu-logo-frame">
           <img
             class="menu-logo-img"
-            src="/assets/aistudio/image_d6756ab8.png"
+            src="/assets/aistudio/asphalt_rush_title.png"
             alt="Asphalt Rush"
             decoding="async"
           />
