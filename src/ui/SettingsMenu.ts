@@ -35,9 +35,9 @@ export class SettingsMenu {
         <div class="settings-group">
           <div class="settings-label-row">
             <span>Master Volume</span>
-            <span class="font-mono-num settings-val-accent" data-role="vol-label">75%</span>
+            <span class="font-mono-num settings-val-accent" data-role="vol-label">20%</span>
           </div>
-          <input type="range" min="0" max="100" value="75" class="volume-slider" data-role="vol-slider" />
+          <input type="range" min="0" max="100" value="20" class="volume-slider" data-role="vol-slider" />
         </div>
 
         <div class="toggle-grid">

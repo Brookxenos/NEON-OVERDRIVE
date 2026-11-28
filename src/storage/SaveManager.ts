@@ -27,6 +27,8 @@ const DEFAULT_SAVE_DATA: SaveData = {
   progressionVersion: CURRENT_PROGRESSION_VERSION,
 };
 
+const CURRENT_SETTINGS_VERSION = 2;
+
 export class SaveManager {
   public loadSaveData(): SaveData {
     try {
@@ -116,16 +118,24 @@ export class SaveManager {
     try {
       const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
       if (!raw) return { ...DEFAULT_GAME_SETTINGS };
-      const parsed = JSON.parse(raw) as Partial<GameSettingsData> | null;
+      const parsed = JSON.parse(raw) as (Partial<GameSettingsData> & { settingsVersion?: number }) | null;
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
         return { ...DEFAULT_GAME_SETTINGS };
       }
-      return {
+
+      const isCurrentVersion = parsed.settingsVersion === CURRENT_SETTINGS_VERSION;
+      const rawVol =
+        typeof parsed.masterVolume === 'number' && Number.isFinite(parsed.masterVolume)
+          ? Math.max(0, Math.min(1, parsed.masterVolume))
+          : DEFAULT_GAME_SETTINGS.masterVolume;
+      const masterVolume =
+        !isCurrentVersion && Math.abs(rawVol - 0.75) < 0.001
+          ? DEFAULT_GAME_SETTINGS.masterVolume
+          : rawVol;
+
+      const settings: GameSettingsData = {
         graphicsQuality: parsed.graphicsQuality === 'balanced' ? 'balanced' : 'high',
-        masterVolume:
-          typeof parsed.masterVolume === 'number' && Number.isFinite(parsed.masterVolume)
-            ? Math.max(0, Math.min(1, parsed.masterVolume))
-            : DEFAULT_GAME_SETTINGS.masterVolume,
+        masterVolume,
         musicEnabled:
           typeof parsed.musicEnabled === 'boolean'
             ? parsed.musicEnabled
@@ -140,6 +150,12 @@ export class SaveManager {
             ? parsed.showTouchControls
             : 'auto',
       };
+
+      if (!isCurrentVersion) {
+        this.writeSettings(settings);
+      }
+
+      return settings;
     } catch {
       return { ...DEFAULT_GAME_SETTINGS };
     }
@@ -147,7 +163,10 @@ export class SaveManager {
 
   public writeSettings(settings: GameSettingsData): void {
     try {
-      window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+      window.localStorage.setItem(
+        SETTINGS_STORAGE_KEY,
+        JSON.stringify({ ...settings, settingsVersion: CURRENT_SETTINGS_VERSION }),
+      );
     } catch {
       // Ignore storage restrictions
     }

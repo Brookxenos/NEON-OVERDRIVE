@@ -56,7 +56,7 @@ export class AudioManager {
     this.settings = { ...initialSettings };
     this.soundtrack.preload();
     this.soundtrack.syncMix(
-      safeFinite(this.settings.masterVolume, 0.75, 0, 1),
+      safeFinite(this.settings.masterVolume, 0.2, 0, 1),
       this.settings.musicEnabled,
       this.settings.muted,
     );
@@ -234,7 +234,7 @@ export class AudioManager {
   }
 
   private applyVolumes(): void {
-    const rawMaster = safeFinite(this.settings.masterVolume, 0.75, 0, 1);
+    const rawMaster = safeFinite(this.settings.masterVolume, 0.2, 0, 1);
     this.soundtrack.syncMix(rawMaster, this.settings.musicEnabled, this.settings.muted);
 
     if (!this.ctx || !this.masterGain || !this.musicGain || !this.sfxGain) return;

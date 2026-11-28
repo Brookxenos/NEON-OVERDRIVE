@@ -11,15 +11,15 @@ export class CarEffects {
     dt: number,
     worldSpeed: number,
     carX: number,
-    isBoosting: boolean,
+    flameIntensity: number,
     isCrashed: boolean,
     flameInnerColor: number,
     flameOuterColor: number,
     particles: ParticleSystem,
   ): void {
-    if (isCrashed || !isBoosting) return;
+    if (isCrashed || flameIntensity <= 0.35) return;
 
-    const emissionRate = 0.042;
+    const emissionRate = 0.068;
     this.exhaustAccumulator += dt;
 
     while (this.exhaustAccumulator >= emissionRate) {
@@ -28,16 +28,16 @@ export class CarEffects {
       const pipeOffset = Math.random() > 0.5 ? -0.085 : 0.085;
       const color = Math.random() > 0.45 ? flameOuterColor : flameInnerColor;
       particles.spawn(
-        carX + side + pipeOffset + (Math.random() - 0.5) * 0.12,
+        carX + side + pipeOffset + (Math.random() - 0.5) * 0.14,
         0.34 + (Math.random() - 0.5) * 0.06,
-        2.56 + Math.random() * 0.16,
-        (Math.random() - 0.5) * 2.8,
-        0.35 + Math.random() * 1.15,
-        worldSpeed * 0.12 + 4.5 + Math.random() * 3.0,
-        0.07 + Math.random() * 0.05,
-        0.13 + Math.random() * 0.12,
+        2.44 + Math.random() * 0.12,
+        (Math.random() - 0.5) * 2.4,
+        0.4 + Math.random() * 1.1,
+        worldSpeed * 0.08 + 3.2 + Math.random() * 2.2,
+        0.06 + Math.random() * 0.045,
+        0.065 + Math.random() * 0.05,
         color,
-        -2.2,
+        -2.4,
         1.0,
       );
     }

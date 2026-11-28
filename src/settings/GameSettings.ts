@@ -12,7 +12,7 @@ export interface GameSettingsData {
 
 export const DEFAULT_GAME_SETTINGS: GameSettingsData = {
   graphicsQuality: 'high',
-  masterVolume: 0.75,
+  masterVolume: 0.2,
   musicEnabled: true,
   sfxEnabled: true,
   muted: false,

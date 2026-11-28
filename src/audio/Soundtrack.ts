@@ -159,7 +159,7 @@ export class Soundtrack {
   private shouldPlay = false;
   private musicEnabled = true;
   private muted = false;
-  private masterVolume = 0.75;
+  private masterVolume = 0.2;
 
   private currentTrackIndex = 0;
   private loadedTrackIndex: number | null = null;
@@ -226,7 +226,7 @@ export class Soundtrack {
   public syncMix(masterVolume01: number, musicEnabled: boolean, muted: boolean): void {
     this.masterVolume = Number.isFinite(masterVolume01)
       ? Math.max(0, Math.min(1, masterVolume01))
-      : 0.75;
+      : 0.2;
     this.musicEnabled = musicEnabled;
     this.muted = muted;
     this.applyPlayerMix();
