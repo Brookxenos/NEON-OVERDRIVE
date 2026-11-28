@@ -20,9 +20,9 @@ export class CarEffects {
     if (this.sparkCooldown > 0) {
       this.sparkCooldown = Math.max(0, this.sparkCooldown - dt);
     }
-    if (isCrashed || flameIntensity <= 0.68 || this.sparkCooldown > 0) return;
+    if (isCrashed || flameIntensity <= 0.5 || this.sparkCooldown > 0) return;
 
-    this.sparkCooldown = 0.055;
+    this.sparkCooldown = 0.05;
     const side = Math.random() > 0.5 ? -0.54 : 0.54;
     const pipeOffset = Math.random() > 0.5 ? -0.085 : 0.085;
     const color = Math.random() > 0.45 ? flameOuterColor : flameInnerColor;

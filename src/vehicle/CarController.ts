@@ -16,9 +16,11 @@ export class CarController {
   private wasThrottling = false;
   private lastGearBand = 0;
   private upshiftCooldown = 0;
+  private throttleCrackleTimer = 0;
+  private throttleEnvelope = 0;
   private boostEnvelope = 0;
   private readonly pipePopTimers = [0, 0, 0, 0];
-  private readonly pipePopDurations = [0.14, 0.14, 0.14, 0.14];
+  private readonly pipePopDurations = [0.16, 0.16, 0.16, 0.16];
   private readonly pipePopStrengths = [0, 0, 0, 0];
   private readonly pipePopDelays = [0, 0, 0, 0];
   private readonly pipeFlameLevels = [0, 0, 0, 0];
@@ -47,16 +49,16 @@ export class CarController {
   }
 
   public triggerBackfire(
-    strength = 0.95,
-    duration = 0.15,
+    strength = 1.05,
+    duration = 0.19,
     staggered = true,
   ): void {
     if (this.physics.isCrashed()) return;
     const bankOrder = Math.random() > 0.5 ? [0, 1, 2, 3] : [2, 3, 0, 1];
     for (let k = 0; k < 4; k++) {
       const idx = bankOrder[k];
-      const delay = staggered ? Math.floor(k / 2) * 0.032 + (k % 2) * 0.012 : 0;
-      const pipeScale = staggered ? 0.86 + Math.random() * 0.24 : 1;
+      const delay = staggered ? Math.floor(k / 2) * 0.028 + (k % 2) * 0.01 : 0;
+      const pipeScale = staggered ? 0.88 + Math.random() * 0.24 : 1;
       this.pipePopDelays[idx] = delay;
       this.pipePopDurations[idx] = duration * (0.9 + Math.random() * 0.2);
       this.pipePopTimers[idx] = this.pipePopDurations[idx];
@@ -68,7 +70,7 @@ export class CarController {
   public shiftLane(direction: -1 | 1): boolean {
     const shifted = this.physics.shiftLane(direction);
     if (shifted && this.throttling) {
-      this.triggerBackfire(0.76, 0.12, true);
+      this.triggerBackfire(0.88, 0.15, true);
     }
     return shifted;
   }
@@ -80,6 +82,8 @@ export class CarController {
   public triggerCrash(crashX?: number): void {
     this.physics.triggerCrash(crashX);
     this.boostEnvelope = 0;
+    this.throttleEnvelope = 0;
+    this.throttleCrackleTimer = 0;
     for (let i = 0; i < 4; i++) {
       this.pipePopTimers[i] = 0;
       this.pipePopDelays[i] = 0;
@@ -97,6 +101,8 @@ export class CarController {
     this.wasThrottling = false;
     this.lastGearBand = 0;
     this.upshiftCooldown = 0;
+    this.throttleCrackleTimer = 0;
+    this.throttleEnvelope = 0;
     this.boostEnvelope = 0;
     for (let i = 0; i < 4; i++) {
       this.pipePopTimers[i] = 0;
@@ -153,29 +159,46 @@ export class CarController {
     const gearBand = Math.max(0, Math.floor((worldSpeed - 24) / 14));
     if (!pose.isCrashed && !isAttractMode) {
       if (isBoosting && !this.wasBoosting) {
-        this.triggerBackfire(1.15, 0.2, false);
+        this.triggerBackfire(1.25, 0.24, false);
       } else if (this.throttling && !this.wasThrottling) {
-        this.triggerBackfire(0.95, 0.15, true);
-      } else if (!this.throttling && this.wasThrottling && worldSpeed > 44) {
-        this.triggerBackfire(0.84, 0.13, true);
+        this.throttleCrackleTimer = 0.34;
+        this.triggerBackfire(1.12, 0.2, true);
+      } else if (!this.throttling && this.wasThrottling && worldSpeed > 40) {
+        this.triggerBackfire(0.95, 0.16, true);
       } else if (this.throttling && gearBand > this.lastGearBand && this.upshiftCooldown <= 0) {
-        this.upshiftCooldown = 0.42;
-        this.triggerBackfire(0.9, 0.14, true);
+        this.upshiftCooldown = 0.35;
+        this.throttleCrackleTimer = 0.36;
+        this.triggerBackfire(1.06, 0.18, true);
+      } else if (this.throttling && !isBoosting) {
+        this.throttleCrackleTimer -= dt;
+        if (this.throttleCrackleTimer <= 0) {
+          this.throttleCrackleTimer = 0.32 + Math.random() * 0.2;
+          this.triggerBackfire(0.94, 0.16, true);
+        }
       }
     }
     this.lastGearBand = gearBand;
     this.wasBoosting = isBoosting;
     this.wasThrottling = this.throttling;
 
-    const targetBoost = isBoosting && !pose.isCrashed ? 0.74 : 0;
-    const boostRate = targetBoost > this.boostEnvelope ? 20 : 12;
+    const targetBoost = isBoosting && !pose.isCrashed ? 0.94 : 0;
+    const boostRate = targetBoost > this.boostEnvelope ? 22 : 12;
     const boostStep = 1 - Math.exp(-boostRate * dt);
     this.boostEnvelope += (targetBoost - this.boostEnvelope) * boostStep;
     if (this.boostEnvelope < 0.005 && targetBoost === 0) {
       this.boostEnvelope = 0;
     }
 
-    let maxFlame = pose.isCrashed ? 0 : this.boostEnvelope;
+    const targetThrottle = this.throttling && !pose.isCrashed && !isAttractMode ? 0.58 : 0;
+    const throttleRate = targetThrottle > this.throttleEnvelope ? 16 : 11;
+    const throttleStep = 1 - Math.exp(-throttleRate * dt);
+    this.throttleEnvelope += (targetThrottle - this.throttleEnvelope) * throttleStep;
+    if (this.throttleEnvelope < 0.005 && targetThrottle === 0) {
+      this.throttleEnvelope = 0;
+    }
+
+    const sustainedFlame = Math.max(this.boostEnvelope, this.throttleEnvelope);
+    let maxFlame = pose.isCrashed ? 0 : sustainedFlame;
     for (let i = 0; i < 4; i++) {
       let pop = 0;
       if (!pose.isCrashed && this.pipePopTimers[i] > 0) {
@@ -186,14 +209,14 @@ export class CarController {
           const dur = Math.max(0.01, this.pipePopDurations[i]);
           const progress = 1 - this.pipePopTimers[i] / dur;
           const attack = Math.min(1, progress / 0.16);
-          const decay = Math.pow(Math.max(0, 1 - progress), 1.5);
+          const decay = Math.pow(Math.max(0, 1 - progress), 1.45);
           pop = attack * decay * this.pipePopStrengths[i];
           if (this.pipePopTimers[i] === 0) {
             this.pipePopStrengths[i] = 0;
           }
         }
       }
-      const level = pose.isCrashed ? 0 : Math.max(this.boostEnvelope, pop);
+      const level = pose.isCrashed ? 0 : Math.max(sustainedFlame, pop);
       this.pipeFlameLevels[i] = level;
       if (level > maxFlame) maxFlame = level;
     }

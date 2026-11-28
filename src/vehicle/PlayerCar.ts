@@ -412,11 +412,11 @@ export class PlayerCar {
       return geo;
     };
 
-    const outerFlameLength = 0.36;
-    const innerFlameLength = 0.22;
-    const outerDartGeo = createBackfireDartGeometry(0.045, outerFlameLength);
-    const innerDartGeo = createBackfireDartGeometry(0.027, innerFlameLength);
-    const boreGlowGeo = new THREE.CircleGeometry(0.044, 18);
+    const outerFlameLength = 0.78;
+    const innerFlameLength = 0.48;
+    const outerDartGeo = createBackfireDartGeometry(0.062, outerFlameLength);
+    const innerDartGeo = createBackfireDartGeometry(0.038, innerFlameLength);
+    const boreGlowGeo = new THREE.CircleGeometry(0.052, 18);
     this.geometries.push(pipeOuterGeo, pipeInnerGeo, outerDartGeo, innerDartGeo, boreGlowGeo);
 
     const createBackfireMaterial = (
@@ -448,10 +448,10 @@ export class PlayerCar {
             vAxial = t;
 
             vec3 pos = position;
-            float turbulence = t * t * clamp(uIntensity, 0.0, 1.25);
-            float flutterX = sin(uTime * 38.0 + t * 9.5 + uSeed) * 0.007 * turbulence;
-            float flutterY = cos(uTime * 34.0 + t * 8.2 + uSeed * 1.41) * 0.006 * turbulence;
-            float pulse = 1.0 + 0.09 * sin(uTime * 48.0 - t * 14.0 + uSeed * 0.8);
+            float turbulence = t * t * clamp(uIntensity, 0.0, 1.3);
+            float flutterX = sin(uTime * 36.0 + t * 8.5 + uSeed) * 0.016 * turbulence;
+            float flutterY = cos(uTime * 32.0 + t * 7.6 + uSeed * 1.41) * 0.014 * turbulence;
+            float pulse = 1.0 + 0.12 * sin(uTime * 46.0 - t * 13.0 + uSeed * 0.8);
             pos.xy = pos.xy * pulse + vec2(flutterX, flutterY);
 
             vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
@@ -476,20 +476,20 @@ export class PlayerCar {
 
             vec3 N = normalize(vViewNormal);
             vec3 V = normalize(vViewPos);
-            float ndotv = clamp(dot(N, V), 0.0, 1.0);
+            float ndotv = abs(dot(N, V));
 
-            float silhouetteSoft = smoothstep(0.04, mix(0.54, 0.36, uCoreBias), ndotv) * pow(ndotv, 1.12);
-            float rootFade = smoothstep(0.0, 0.14, vAxial);
-            float tipFade = pow(max(0.0, 1.0 - vAxial), mix(1.9, 1.45, uCoreBias));
-            float machNodes = 0.72 + 0.28 * cos(vAxial * 19.0 - uTime * 56.0 + uSeed);
+            float silhouetteSoft = smoothstep(0.0, mix(0.28, 0.2, uCoreBias), ndotv);
+            float rootFade = smoothstep(0.0, 0.07, vAxial);
+            float tipFade = pow(max(0.0, 1.0 - vAxial), mix(1.45, 1.2, uCoreBias));
+            float machNodes = 0.78 + 0.22 * cos(vAxial * 18.0 - uTime * 54.0 + uSeed);
 
-            vec3 nozzleHot = mix(vec3(0.76, 0.91, 1.0), vec3(1.0, 0.98, 0.88), clamp(uCoreBias * 0.7 + 0.3, 0.0, 1.0));
-            vec3 midCol = mix(uInnerColor, uOuterColor, smoothstep(0.18, 0.76, vAxial));
-            vec3 flameCol = mix(nozzleHot, midCol, smoothstep(0.04, 0.38, vAxial));
-            flameCol = mix(flameCol, vec3(1.0, 0.99, 0.94), pow(ndotv, 2.2) * tipFade * (0.28 + 0.44 * uCoreBias));
+            vec3 nozzleHot = mix(vec3(0.85, 0.94, 1.0), vec3(1.0, 0.99, 0.9), clamp(uCoreBias * 0.65 + 0.35, 0.0, 1.0));
+            vec3 midCol = mix(uInnerColor, uOuterColor, smoothstep(0.16, 0.74, vAxial));
+            vec3 flameCol = mix(nozzleHot, midCol, smoothstep(0.04, 0.34, vAxial));
+            flameCol = mix(flameCol, vec3(1.0, 1.0, 0.96), pow(ndotv, 1.6) * tipFade * (0.35 + 0.45 * uCoreBias));
 
-            float alpha = silhouetteSoft * rootFade * tipFade * machNodes * mix(0.76, 0.94, uCoreBias) * clamp(uIntensity, 0.0, 1.15);
-            gl_FragColor = vec4(flameCol, alpha);
+            float alpha = silhouetteSoft * rootFade * tipFade * machNodes * mix(0.92, 1.0, uCoreBias) * clamp(uIntensity, 0.0, 1.2);
+            gl_FragColor = vec4(flameCol, min(1.0, alpha));
           }
         `,
         transparent: true,
@@ -523,7 +523,7 @@ export class PlayerCar {
         });
         this.materials.push(boreGlowMat);
         const boreGlow = new THREE.Mesh(boreGlowGeo, boreGlowMat);
-        boreGlow.position.set(px, 0.1, 2.274);
+        boreGlow.position.set(px, 0.1, 2.292);
         boreGlow.visible = false;
         this.closedBodyGroup.add(boreGlow);
         this.boreGlowMeshes.push(boreGlow);
@@ -532,7 +532,7 @@ export class PlayerCar {
         const seed = pipeIdx * 1.73 + 0.35;
         const outerMat = createBackfireMaterial(outerFlameLength, seed, 0.0);
         const outerDart = new THREE.Mesh(outerDartGeo, outerMat);
-        outerDart.position.set(px, 0.1, 2.24);
+        outerDart.position.set(px, 0.1, 2.28);
         outerDart.visible = false;
         this.closedBodyGroup.add(outerDart);
         this.backfireOuterMeshes.push(outerDart);
@@ -540,7 +540,7 @@ export class PlayerCar {
 
         const innerMat = createBackfireMaterial(innerFlameLength, seed + 2.1, 1.0);
         const innerDart = new THREE.Mesh(innerDartGeo, innerMat);
-        innerDart.position.set(px, 0.1, 2.245);
+        innerDart.position.set(px, 0.1, 2.29);
         innerDart.visible = false;
         this.closedBodyGroup.add(innerDart);
         this.backfireInnerMeshes.push(innerDart);
@@ -1185,12 +1185,12 @@ export class PlayerCar {
       return;
     }
 
-    const boostFloor = isBoosting ? 0.72 : 0;
+    const boostFloor = isBoosting ? 0.92 : 0;
     for (let i = 0; i < this.backfireOuterMeshes.length; i++) {
       const pipeInput = Array.isArray(flameIntensity)
         ? (flameIntensity[i] ?? 0)
         : (flameIntensity as number);
-      const intensity = Math.max(boostFloor, Math.min(1.25, pipeInput));
+      const intensity = Math.max(boostFloor, Math.min(1.3, pipeInput));
       const visible = intensity > 0.02;
 
       const outerMesh = this.backfireOuterMeshes[i];
@@ -1202,23 +1202,23 @@ export class PlayerCar {
 
       if (visible) {
         const flicker =
-          Math.sin(phase * 14.0 + i * 1.9) * 0.55 + Math.cos(phase * 22.0 + i * 2.7) * 0.45;
-        const lenScale = (0.38 + intensity * 0.68) * (0.94 + flicker * 0.12);
-        const radScale = (0.62 + intensity * 0.34) * (0.95 + flicker * 0.07);
+          Math.sin(phase * 16.0 + i * 1.9) * 0.55 + Math.cos(phase * 25.0 + i * 2.7) * 0.45;
+        const lenScale = (0.48 + intensity * 0.72) * (0.94 + flicker * 0.12);
+        const radScale = (0.72 + intensity * 0.32) * (0.95 + flicker * 0.08);
 
         outerMesh.scale.set(radScale, radScale, lenScale);
         this.backfireOuterMats[i].uniforms.uTime.value = phase;
-        this.backfireOuterMats[i].uniforms.uIntensity.value = intensity * (0.9 + flicker * 0.1);
+        this.backfireOuterMats[i].uniforms.uIntensity.value = intensity * (0.92 + flicker * 0.1);
 
         if (innerMesh) {
-          innerMesh.scale.set(radScale * 0.94, radScale * 0.94, lenScale * 0.96);
+          innerMesh.scale.set(radScale * 0.94, radScale * 0.94, lenScale * 0.98);
           this.backfireInnerMats[i].uniforms.uTime.value = phase;
-          this.backfireInnerMats[i].uniforms.uIntensity.value = intensity * (0.96 + flicker * 0.08);
+          this.backfireInnerMats[i].uniforms.uIntensity.value = intensity * (0.98 + flicker * 0.08);
         }
 
         const boreMat = this.boreGlowMats[i];
         if (boreMat) {
-          boreMat.opacity = Math.min(0.75, intensity * (0.48 + flicker * 0.14));
+          boreMat.opacity = Math.min(0.88, intensity * (0.58 + flicker * 0.14));
         }
       }
     }
