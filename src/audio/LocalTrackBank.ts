@@ -94,6 +94,7 @@ export class LocalTrackBank {
   private trackIndex = 0;
   private stepIndex = 0;
   private nextNoteTime = 0;
+  private handoffTime = 0;
   private elapsedTrackSeconds = 0;
   private schedulerTimer: number | null = null;
   private onTrackComplete: (() => void) | null = null;
@@ -124,18 +125,36 @@ export class LocalTrackBank {
     return this.active;
   }
 
+  public getCurrentTrackIndex(): number {
+    return this.trackIndex;
+  }
+
   public start(trackIndex: number, resetPosition = false): void {
     if (!this.ctx || !this.busGain) return;
     const clamped = ((trackIndex % TRACK_PRESETS.length) + TRACK_PRESETS.length) % TRACK_PRESETS.length;
+    const now = this.ctx.currentTime;
+    const isSeamlessHandoff =
+      this.active && resetPosition && this.handoffTime > now;
+
     if (resetPosition || clamped !== this.trackIndex) {
       this.trackIndex = clamped;
       this.stepIndex = 0;
       this.elapsedTrackSeconds = 0;
     }
 
-    const now = this.ctx.currentTime;
+    if (isSeamlessHandoff) {
+      const startAt = Math.max(now + 0.05, this.handoffTime);
+      this.handoffTime = 0;
+      this.nextNoteTime = startAt;
+      const rampStart = Math.max(now, startAt - 0.04);
+      this.busGain.gain.cancelScheduledValues(rampStart);
+      this.busGain.gain.setTargetAtTime(0.76, rampStart, 0.09);
+      return;
+    }
+
+    this.handoffTime = 0;
     this.busGain.gain.cancelScheduledValues(now);
-    this.busGain.gain.setTargetAtTime(0.76, now, 0.05);
+    this.busGain.gain.setTargetAtTime(0.76, now, 0.06);
 
     if (this.active) return;
     this.active = true;
@@ -149,6 +168,7 @@ export class LocalTrackBank {
 
   public stop(): void {
     this.active = false;
+    this.handoffTime = 0;
     if (this.schedulerTimer !== null) {
       window.clearInterval(this.schedulerTimer);
       this.schedulerTimer = null;
@@ -172,18 +192,21 @@ export class LocalTrackBank {
     }
 
     while (this.nextNoteTime < this.ctx.currentTime + lookahead) {
+      if (this.elapsedTrackSeconds >= preset.durationSec && this.stepIndex % 16 === 0) {
+        this.handoffTime = this.nextNoteTime + 0.28;
+        const fadeAt = Math.max(this.ctx.currentTime, this.nextNoteTime - 0.14);
+        this.busGain.gain.cancelScheduledValues(fadeAt);
+        this.busGain.gain.setTargetAtTime(0.02, fadeAt, 0.08);
+        this.elapsedTrackSeconds = 0;
+        this.stepIndex = 0;
+        this.onTrackComplete?.();
+        return;
+      }
+
       this.scheduleStep(preset, this.stepIndex, this.nextNoteTime, stepDuration);
       this.nextNoteTime += stepDuration;
       this.stepIndex += 1;
       this.elapsedTrackSeconds += stepDuration;
-
-      if (this.elapsedTrackSeconds >= preset.durationSec) {
-        this.elapsedTrackSeconds = 0;
-        this.stepIndex = 0;
-        this.stop();
-        this.onTrackComplete?.();
-        return;
-      }
     }
   }
 

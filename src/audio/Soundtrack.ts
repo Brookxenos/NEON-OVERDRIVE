@@ -172,10 +172,14 @@ export class Soundtrack {
   private watchdogTimer: number | null = null;
   private waitingForYtSinceMs = 0;
   private loadGraceUntilMs = 0;
+  private ignoreEndedUntilMs = 0;
+  private awaitingNewTrackPlay = false;
   private lastYtTime = 0;
   private lastYtProgressMs = 0;
   private resumeRetryCount = 0;
   private consecutiveYtErrors = 0;
+  private ytFadeInScale = 1;
+  private ytFadeTimer: number | null = null;
 
   public attachAudioEngine(
     ctx: AudioContext,
@@ -284,6 +288,7 @@ export class Soundtrack {
     this.shouldPlay = false;
     this.lastAppliedPlayIntent = false;
     this.waitingForYtSinceMs = 0;
+    this.clearYtFade();
     this.stopWatchdog();
     this.localBank.stop();
     this.pauseYouTubePlayer();
@@ -426,6 +431,11 @@ export class Soundtrack {
       this.consecutiveYtErrors = 0;
       this.resumeRetryCount = 0;
       this.hasStartedFirstTrack = true;
+      if (this.awaitingNewTrackPlay) {
+        this.awaitingNewTrackPlay = false;
+        this.ignoreEndedUntilMs = Date.now() + 300;
+        this.startYtFadeIn();
+      }
       this.lastYtProgressMs = Date.now();
       try {
         this.lastYtTime = this.player.getCurrentTime() || 0;
@@ -442,6 +452,9 @@ export class Soundtrack {
     }
 
     if (state === YT_STATE.ENDED) {
+      if (this.awaitingNewTrackPlay && Date.now() < this.ignoreEndedUntilMs) {
+        return;
+      }
       this.handleTrackEnded();
     }
   }
@@ -457,7 +470,7 @@ export class Soundtrack {
     this.currentTrackIndex = nextIdx;
     this.hasStartedFirstTrack = true;
     if (this.unlocked && this.shouldPlay && this.musicEnabled && !this.muted) {
-      this.playTrackAt(nextIdx);
+      this.playTrackAt(nextIdx, true);
     }
   }
 
@@ -562,7 +575,7 @@ export class Soundtrack {
     }
   }
 
-  private playTrackAt(index: number): void {
+  private playTrackAt(index: number, smoothTransition = false): void {
     if (this.disposed) return;
     this.hasStartedFirstTrack = true;
     this.currentTrackIndex = index;
@@ -573,15 +586,26 @@ export class Soundtrack {
     }
 
     if (!this.player || !this.playerReady) return;
-    this.applyPlayerMix();
     const videoId = PLAYLIST_TRACK_IDS[index];
     if (!videoId) return;
 
     this.loadedTrackIndex = index;
     this.resumeRetryCount = 0;
     this.lastYtTime = 0;
-    this.lastYtProgressMs = Date.now();
-    this.loadGraceUntilMs = Date.now() + 2400;
+    this.awaitingNewTrackPlay = true;
+    const now = Date.now();
+    this.lastYtProgressMs = now;
+    this.loadGraceUntilMs = now + 2600;
+    this.ignoreEndedUntilMs = now + 2000;
+
+    if (smoothTransition) {
+      this.clearYtFade();
+      this.ytFadeInScale = 0.22;
+    } else {
+      this.clearYtFade();
+      this.ytFadeInScale = 1;
+    }
+    this.applyPlayerMix();
 
     try {
       this.player.loadVideoById({ videoId, startSeconds: 0 });
@@ -648,6 +672,11 @@ export class Soundtrack {
           this.lastYtProgressMs = now;
           this.consecutiveYtErrors = 0;
           this.resumeRetryCount = 0;
+          if (this.awaitingNewTrackPlay) {
+            this.awaitingNewTrackPlay = false;
+            this.ignoreEndedUntilMs = now + 250;
+            this.startYtFadeIn();
+          }
         } else if (this.lastYtProgressMs > 0 && now - this.lastYtProgressMs > 5500) {
           this.handleTrackError();
         }
@@ -662,7 +691,9 @@ export class Soundtrack {
       }
 
       if (state === YT_STATE.ENDED) {
-        this.handleTrackEnded();
+        if (!this.awaitingNewTrackPlay && now >= this.loadGraceUntilMs && now >= this.ignoreEndedUntilMs) {
+          this.handleTrackEnded();
+        }
         return;
       }
 
@@ -674,6 +705,8 @@ export class Soundtrack {
           this.player.playVideo();
         } else if (this.resumeRetryCount <= 4) {
           this.loadGraceUntilMs = now + 2000;
+          this.awaitingNewTrackPlay = true;
+          this.ignoreEndedUntilMs = now + 1800;
           this.player.loadVideoById({
             videoId: PLAYLIST_TRACK_IDS[this.currentTrackIndex],
             startSeconds: Math.max(0, Math.floor(this.lastYtTime)),
@@ -687,6 +720,38 @@ export class Soundtrack {
     }
   }
 
+  private startYtFadeIn(): void {
+    if (this.disposed || this.ytFadeInScale >= 0.99 || this.ytFadeTimer !== null) return;
+    if (typeof window === 'undefined') {
+      this.ytFadeInScale = 1;
+      this.applyPlayerMix();
+      return;
+    }
+    const startMs = Date.now();
+    const durationMs = 450;
+    const baseScale = this.ytFadeInScale;
+    this.ytFadeTimer = window.setInterval(() => {
+      if (this.disposed) {
+        this.clearYtFade();
+        return;
+      }
+      const t = Math.min(1, (Date.now() - startMs) / durationMs);
+      this.ytFadeInScale = baseScale + (1 - baseScale) * t;
+      this.applyPlayerMix();
+      if (t >= 1) {
+        this.clearYtFade();
+      }
+    }, 45);
+  }
+
+  private clearYtFade(): void {
+    if (this.ytFadeTimer !== null && typeof window !== 'undefined') {
+      window.clearInterval(this.ytFadeTimer);
+    }
+    this.ytFadeTimer = null;
+    this.ytFadeInScale = 1;
+  }
+
   private applyPlayerMix(): void {
     if (!this.player || !this.playerReady || this.disposed) return;
     try {
@@ -695,7 +760,7 @@ export class Soundtrack {
       } else {
         this.player.unMute();
       }
-      const vol = Math.round(this.masterVolume * 78);
+      const vol = Math.round(this.masterVolume * 78 * this.ytFadeInScale);
       this.player.setVolume(Math.max(0, Math.min(100, vol)));
     } catch {
       // Ignore transient mix errors
@@ -703,7 +768,9 @@ export class Soundtrack {
   }
 
   private findNextUnplayedIndex(startFrom: number): number | null {
-    for (let idx = Math.max(0, startFrom); idx < MAX_PLAYLIST_TRACKS; idx++) {
+    const clampedStart = ((startFrom % MAX_PLAYLIST_TRACKS) + MAX_PLAYLIST_TRACKS) % MAX_PLAYLIST_TRACKS;
+    for (let offset = 0; offset < MAX_PLAYLIST_TRACKS; offset++) {
+      const idx = (clampedStart + offset) % MAX_PLAYLIST_TRACKS;
       if (!this.playedIndices.has(idx)) {
         return idx;
       }
@@ -714,6 +781,7 @@ export class Soundtrack {
   private finishPlaylist(): void {
     this.playlistFinished = true;
     this.lastAppliedPlayIntent = false;
+    this.clearYtFade();
     this.stopWatchdog();
     this.localBank.stop();
     try {
@@ -725,6 +793,7 @@ export class Soundtrack {
 
   public dispose(): void {
     this.disposed = true;
+    this.clearYtFade();
     this.stopWatchdog();
     this.localBank.dispose();
     try {

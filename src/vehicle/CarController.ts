@@ -12,12 +12,6 @@ export class CarController {
 
   private currentSpec: CarSpec = CAR_CATALOG[0];
   private throttling = false;
-  private wasBoosting = false;
-  private wasThrottling = false;
-  private boostEnvelope = 0;
-  private backfireTimer = 0;
-  private backfireDuration = 0.18;
-  private backfireStrength = 0;
 
   constructor(textures: TextureBundle) {
     this.model = new PlayerCar(textures, this.currentSpec);
@@ -40,19 +34,8 @@ export class CarController {
     return this.throttling;
   }
 
-  public triggerBackfire(strength = 0.95, duration = 0.17): void {
-    if (this.physics.isCrashed()) return;
-    this.backfireStrength = Math.max(this.backfireStrength, strength);
-    this.backfireDuration = duration;
-    this.backfireTimer = duration;
-  }
-
   public shiftLane(direction: -1 | 1): boolean {
-    const shifted = this.physics.shiftLane(direction);
-    if (shifted && this.throttling) {
-      this.triggerBackfire(0.85, 0.14);
-    }
-    return shifted;
+    return this.physics.shiftLane(direction);
   }
 
   public getX(): number {
@@ -61,9 +44,6 @@ export class CarController {
 
   public triggerCrash(crashX?: number): void {
     this.physics.triggerCrash(crashX);
-    this.boostEnvelope = 0;
-    this.backfireTimer = 0;
-    this.backfireStrength = 0;
     if (crashX !== undefined) {
       this.model.group.position.x = crashX;
     }
@@ -71,11 +51,6 @@ export class CarController {
 
   public reset(): void {
     this.throttling = false;
-    this.wasBoosting = false;
-    this.wasThrottling = false;
-    this.boostEnvelope = 0;
-    this.backfireTimer = 0;
-    this.backfireStrength = 0;
     this.physics.reset();
     this.effects.reset();
     const pose = this.physics.step(
@@ -118,40 +93,6 @@ export class CarController {
       isAttractMode,
     );
 
-    if (!pose.isCrashed && !isAttractMode) {
-      if (isBoosting && !this.wasBoosting) {
-        this.triggerBackfire(1.18, 0.2);
-      } else if (this.throttling && !this.wasThrottling) {
-        this.triggerBackfire(0.92, 0.16);
-      }
-    }
-    this.wasBoosting = isBoosting;
-    this.wasThrottling = this.throttling;
-
-    const targetBoost = isBoosting && !pose.isCrashed ? 1 : 0;
-    const boostRate = targetBoost > this.boostEnvelope ? 18 : 11;
-    const boostStep = 1 - Math.exp(-boostRate * dt);
-    this.boostEnvelope += (targetBoost - this.boostEnvelope) * boostStep;
-    if (this.boostEnvelope < 0.005 && targetBoost === 0) {
-      this.boostEnvelope = 0;
-    }
-
-    let backfirePop = 0;
-    if (this.backfireTimer > 0 && !pose.isCrashed) {
-      this.backfireTimer = Math.max(0, this.backfireTimer - dt);
-      const progress = 1 - this.backfireTimer / Math.max(0.01, this.backfireDuration);
-      const rise = Math.min(1, progress / 0.18);
-      const decay = Math.pow(Math.max(0, 1 - progress), 1.45);
-      backfirePop = rise * decay * this.backfireStrength;
-      if (this.backfireTimer === 0) {
-        this.backfireStrength = 0;
-      }
-    }
-
-    const flameIntensity = pose.isCrashed
-      ? 0
-      : Math.max(this.boostEnvelope, backfirePop);
-
     this.model.applyPose(
       pose.x,
       pose.suspensionOffset,
@@ -164,14 +105,14 @@ export class CarController {
       this.throttling,
       pose.isCrashed,
       pose.phase,
-      flameIntensity,
+      0,
     );
 
     this.effects.update(
       dt,
       worldSpeed,
       pose.x,
-      flameIntensity,
+      0,
       pose.isCrashed,
       this.currentSpec.flameInnerColor,
       this.currentSpec.flameOuterColor,

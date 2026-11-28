@@ -47,11 +47,6 @@ export class PlayerCar {
   private readonly wheels: WheelAssembly[] = [];
   private readonly styleGroups: Record<CarBodyStyle, THREE.Group>;
   private readonly shellGroups = new Map<CarShellFamily, THREE.Group>();
-  private readonly thrusterOuterMeshes: THREE.Mesh[] = [];
-  private readonly thrusterInnerMeshes: THREE.Mesh[] = [];
-  private readonly thrusterOuterMats: THREE.ShaderMaterial[] = [];
-  private readonly thrusterInnerMats: THREE.ShaderMaterial[] = [];
-  private readonly exhaustGlowDisks: THREE.Mesh[] = [];
 
   private readonly paintMat: THREE.MeshPhysicalMaterial;
   private readonly secondaryMat: THREE.MeshStandardMaterial;
@@ -64,11 +59,7 @@ export class PlayerCar {
   private readonly headLampMat: THREE.MeshBasicMaterial;
   private readonly amberLampMat: THREE.MeshBasicMaterial;
   private readonly tailBarMat: THREE.MeshStandardMaterial;
-  private readonly thrusterGlowMat: THREE.MeshBasicMaterial;
-  private readonly flameOuterColor = new THREE.Color(0xea580c);
-  private readonly flameInnerColor = new THREE.Color(0xfde047);
   private readonly headlightGlow: THREE.PointLight;
-  private readonly underGlowLight: THREE.PointLight;
   private readonly contactShadow: THREE.Mesh;
 
   private readonly geometries: THREE.BufferGeometry[] = [];
@@ -155,15 +146,6 @@ export class PlayerCar {
       metalness: 0.12,
     });
 
-    this.thrusterGlowMat = new THREE.MeshBasicMaterial({
-      color: initialSpec.flameInnerColor,
-      map: textures.flameCoreGlow,
-      transparent: true,
-      opacity: 0.72,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    });
-
     this.materials.push(
       this.paintMat,
       this.secondaryMat,
@@ -176,7 +158,6 @@ export class PlayerCar {
       this.headLampMat,
       this.amberLampMat,
       this.tailBarMat,
-      this.thrusterGlowMat,
     );
 
     const fasciaMaskGeo = createBeveledPlateGeometry(1.62, 0.145, 0.14, 0.032, 0.014);
@@ -404,129 +385,8 @@ export class PlayerCar {
     pipeOuterGeo.rotateX(Math.PI / 2);
     const pipeInnerGeo = new THREE.CylinderGeometry(0.056, 0.056, 0.06, 18);
     pipeInnerGeo.rotateX(Math.PI / 2);
+    this.geometries.push(pipeOuterGeo, pipeInnerGeo);
 
-    const createExhaustTeardropGeometry = (
-      maxRadius: number,
-      length: number,
-    ): THREE.LatheGeometry => {
-      const points: THREE.Vector2[] = [];
-      const steps = 16;
-      for (let i = 0; i <= steps; i++) {
-        const t = i / steps;
-        const swell = Math.sin(Math.min(1, t / 0.24) * (Math.PI * 0.5));
-        const taper = Math.pow(Math.max(0, 1 - Math.max(0, t - 0.14) / 0.86), 1.35);
-        const r = (i === steps ? 0 : Math.max(0.002, swell * taper)) * maxRadius;
-        points.push(new THREE.Vector2(r, t * length));
-      }
-      const geo = new THREE.LatheGeometry(points, 28);
-      geo.rotateX(Math.PI / 2);
-      return geo;
-    };
-
-    const outerFlameLength = 0.48;
-    const innerFlameLength = 0.28;
-    const outerPlumeGeo = createExhaustTeardropGeometry(0.068, outerFlameLength);
-    const innerPlumeGeo = createExhaustTeardropGeometry(0.042, innerFlameLength);
-    const nozzleGlowGeo = new THREE.CircleGeometry(0.056, 20);
-    this.geometries.push(
-      pipeOuterGeo,
-      pipeInnerGeo,
-      outerPlumeGeo,
-      innerPlumeGeo,
-      nozzleGlowGeo,
-    );
-
-    const createExhaustFlameMaterial = (
-      length: number,
-      seed: number,
-      coreBias: number,
-    ): THREE.ShaderMaterial => {
-      const mat = new THREE.ShaderMaterial({
-        uniforms: {
-          uTime: { value: 0 },
-          uIntensity: { value: 0 },
-          uSeed: { value: seed },
-          uLength: { value: length },
-          uInnerColor: { value: this.flameInnerColor.clone() },
-          uOuterColor: { value: this.flameOuterColor.clone() },
-          uCoreBias: { value: coreBias },
-        },
-        vertexShader: `
-          varying vec3 vViewNormal;
-          varying vec3 vViewPos;
-          varying float vAxial;
-          uniform float uTime;
-          uniform float uSeed;
-          uniform float uLength;
-          uniform float uIntensity;
-
-          void main() {
-            float t = clamp(position.z / max(0.001, uLength), 0.0, 1.0);
-            vAxial = t;
-
-            vec3 pos = position;
-            float flex = t * t * (0.45 + 0.55 * clamp(uIntensity, 0.0, 1.2));
-            float swayX = sin(uTime * 27.0 + t * 8.5 + uSeed) * 0.015 * flex;
-            float swayY = cos(uTime * 23.0 + t * 7.2 + uSeed * 1.37) * 0.013 * flex;
-            float breath = 1.0 + 0.085 * sin(uTime * 35.0 - t * 11.0 + uSeed * 0.7);
-            pos.xy = pos.xy * breath + vec2(swayX, swayY);
-
-            vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-            vViewPos = -mvPosition.xyz;
-            vViewNormal = normalize(normalMatrix * normal);
-            gl_Position = projectionMatrix * mvPosition;
-          }
-        `,
-        fragmentShader: `
-          varying vec3 vViewNormal;
-          varying vec3 vViewPos;
-          varying float vAxial;
-          uniform float uTime;
-          uniform float uIntensity;
-          uniform float uSeed;
-          uniform vec3 uInnerColor;
-          uniform vec3 uOuterColor;
-          uniform float uCoreBias;
-
-          void main() {
-            if (uIntensity <= 0.002) discard;
-
-            vec3 N = normalize(vViewNormal);
-            vec3 V = normalize(vViewPos);
-            float ndotv = clamp(dot(N, V), 0.0, 1.0);
-
-            float edgeFade = smoothstep(0.0, mix(0.60, 0.42, uCoreBias), ndotv);
-            float coreGlow = pow(ndotv, 1.85);
-            float rootFade = smoothstep(0.0, 0.09, vAxial);
-            float tipFade = pow(max(0.0, 1.0 - vAxial), mix(1.65, 1.32, uCoreBias));
-            float shimmer = 0.86 + 0.14 * sin(vAxial * 14.0 - uTime * 42.0 + uSeed);
-
-            vec3 flameCol = mix(
-              uInnerColor,
-              uOuterColor,
-              smoothstep(0.06, 0.72, vAxial) * (1.0 - 0.58 * uCoreBias)
-            );
-            flameCol = mix(
-              flameCol,
-              vec3(1.0, 0.98, 0.94),
-              coreGlow * tipFade * (0.25 + 0.42 * uCoreBias)
-            );
-
-            float baseAlpha = mix(0.58, 0.84, uCoreBias);
-            float alpha = edgeFade * rootFade * tipFade * shimmer * baseAlpha * clamp(uIntensity, 0.0, 1.15);
-            gl_FragColor = vec4(flameCol, alpha);
-          }
-        `,
-        transparent: true,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-        side: THREE.FrontSide,
-      });
-      this.materials.push(mat);
-      return mat;
-    };
-
-    let pipeIdx = 0;
     for (const side of [-1, 1]) {
       for (const subOffset of [-0.085, 0.085]) {
         const px = side * 0.54 + subOffset;
@@ -537,30 +397,6 @@ export class PlayerCar {
         const innerBore = new THREE.Mesh(pipeInnerGeo, this.tireMat);
         innerBore.position.set(px, 0.1, 2.295);
         this.closedBodyGroup.add(innerBore);
-
-        const nozzleGlow = new THREE.Mesh(nozzleGlowGeo, this.thrusterGlowMat);
-        nozzleGlow.position.set(px, 0.1, 2.306);
-        this.closedBodyGroup.add(nozzleGlow);
-        this.exhaustGlowDisks.push(nozzleGlow);
-
-        const seed = pipeIdx * 1.91 + 0.4;
-        const outerMat = createExhaustFlameMaterial(outerFlameLength, seed, 0.0);
-        const outerPlume = new THREE.Mesh(outerPlumeGeo, outerMat);
-        outerPlume.position.set(px, 0.1, 2.275);
-        outerPlume.visible = false;
-        this.closedBodyGroup.add(outerPlume);
-        this.thrusterOuterMeshes.push(outerPlume);
-        this.thrusterOuterMats.push(outerMat);
-
-        const innerMat = createExhaustFlameMaterial(innerFlameLength, seed + 2.3, 1.0);
-        const innerPlume = new THREE.Mesh(innerPlumeGeo, innerMat);
-        innerPlume.position.set(px, 0.1, 2.285);
-        innerPlume.visible = false;
-        this.closedBodyGroup.add(innerPlume);
-        this.thrusterInnerMeshes.push(innerPlume);
-        this.thrusterInnerMats.push(innerMat);
-
-        pipeIdx += 1;
       }
     }
 
@@ -599,10 +435,6 @@ export class PlayerCar {
     this.headlightGlow = new THREE.PointLight(initialSpec.headlightColor, 1.65, 16, 1.6);
     this.headlightGlow.position.set(0, 0.6, -3.1);
     this.bodyGroup.add(this.headlightGlow);
-
-    this.underGlowLight = new THREE.PointLight(initialSpec.flameOuterColor, 0, 4.5, 2.0);
-    this.underGlowLight.position.set(0, 0.15, 2.4);
-    this.bodyGroup.add(this.underGlowLight);
 
     this.group.position.set(0, 0, PLAYER_Z);
     this.bodyGroup.position.y = CAR_CHASSIS_CLEARANCE;
@@ -1135,19 +967,7 @@ export class PlayerCar {
     this.rimMat.color.setHex(spec.rimColor);
     this.glassMat.color.setHex(spec.glassColor);
     this.headLampMat.color.setHex(spec.headlightColor);
-    this.flameOuterColor.setHex(spec.flameOuterColor);
-    this.flameInnerColor.setHex(spec.flameInnerColor);
-    for (const mat of this.thrusterOuterMats) {
-      (mat.uniforms.uOuterColor.value as THREE.Color).copy(this.flameOuterColor);
-      (mat.uniforms.uInnerColor.value as THREE.Color).copy(this.flameInnerColor);
-    }
-    for (const mat of this.thrusterInnerMats) {
-      (mat.uniforms.uOuterColor.value as THREE.Color).copy(this.flameOuterColor);
-      (mat.uniforms.uInnerColor.value as THREE.Color).copy(this.flameInnerColor);
-    }
-    this.thrusterGlowMat.color.setHex(spec.flameInnerColor);
     this.headlightGlow.color.setHex(spec.headlightColor);
-    this.underGlowLight.color.setHex(spec.flameOuterColor);
 
     const targetShell = STYLE_TO_SHELL[spec.bodyStyle];
     for (const [family, shellGroup] of this.shellGroups.entries()) {
@@ -1179,8 +999,8 @@ export class PlayerCar {
     isBoosting: boolean,
     isThrottling: boolean,
     isCrashed: boolean,
-    phase: number,
-    flameIntensity = 0,
+    _phase = 0,
+    _flameIntensity = 0,
   ): void {
     this.group.position.x = x;
     this.bodyGroup.position.y =
@@ -1195,64 +1015,12 @@ export class PlayerCar {
       wheel.steerPivot.position.y = this.activeWheelRadius;
     }
 
-    const effectiveFlame = isCrashed
-      ? 0
-      : Math.max(isBoosting ? 1 : 0, Math.min(1.25, flameIntensity));
-    const showFlames = effectiveFlame > 0.02;
-
-    for (const mesh of this.thrusterOuterMeshes) {
-      mesh.visible = showFlames;
-    }
-    for (const mesh of this.thrusterInnerMeshes) {
-      mesh.visible = showFlames;
-    }
-    for (const disk of this.exhaustGlowDisks) {
-      disk.visible = showFlames;
-    }
-
     if (isCrashed) {
-      this.underGlowLight.intensity = 0;
       return;
     }
 
     this.tailBarMat.emissiveIntensity = 0.55;
-
-    if (showFlames) {
-      const lengthFactor = 0.42 + effectiveFlame * 0.62;
-      const radialFactor = 0.72 + effectiveFlame * 0.28;
-
-      for (let i = 0; i < this.thrusterOuterMeshes.length; i++) {
-        const pulse =
-          Math.sin(phase * 6.8 + i * 1.7) * 0.55 + Math.cos(phase * 11.4 + i * 2.3) * 0.45;
-        const lenScale = lengthFactor * (0.94 + pulse * 0.14);
-        const radScale = radialFactor * (0.95 + Math.sin(phase * 8.4 + i * 1.3) * 0.08);
-
-        const outerFlame = this.thrusterOuterMeshes[i];
-        outerFlame.scale.set(radScale, radScale, lenScale);
-        const outerMat = this.thrusterOuterMats[i];
-        outerMat.uniforms.uTime.value = phase;
-        outerMat.uniforms.uIntensity.value = effectiveFlame * (0.88 + pulse * 0.12);
-
-        const innerFlame = this.thrusterInnerMeshes[i];
-        if (innerFlame) {
-          innerFlame.scale.set(
-            radScale * (0.94 + pulse * 0.06),
-            radScale * (0.94 + pulse * 0.06),
-            lenScale * (0.96 + pulse * 0.1),
-          );
-          const innerMat = this.thrusterInnerMats[i];
-          innerMat.uniforms.uTime.value = phase;
-          innerMat.uniforms.uIntensity.value = effectiveFlame * (0.94 + pulse * 0.1);
-        }
-      }
-      const globalFlicker = 0.5 + 0.5 * Math.sin(phase * 10.5);
-      this.thrusterGlowMat.opacity = Math.min(1, effectiveFlame * (0.62 + globalFlicker * 0.22));
-    }
-
     this.headlightGlow.intensity = isBoosting ? 2.3 : isThrottling ? 1.85 : 1.55;
-    this.underGlowLight.intensity = showFlames
-      ? effectiveFlame * (0.48 + Math.sin(phase * 8.5) * 0.08)
-      : 0;
   }
 
   public dispose(): void {
