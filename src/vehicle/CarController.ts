@@ -113,6 +113,7 @@ export class CarController {
       isBoosting,
       pose.isCrashed,
       this.currentSpec.flameInnerColor,
+      this.currentSpec.flameOuterColor,
       particles,
     );
   }

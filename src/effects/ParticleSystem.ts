@@ -13,6 +13,8 @@ interface ParticleSlot {
   life: number;
   maxLife: number;
   scale: number;
+  gravity: number;
+  stretchZ: number;
   color: THREE.Color;
 }
 
@@ -22,17 +24,19 @@ export class ParticleSystem {
   public readonly mesh: THREE.InstancedMesh;
 
   private readonly particles: ParticleSlot[] = [];
-  private readonly geometry: THREE.BoxGeometry;
+  private readonly geometry: THREE.IcosahedronGeometry;
   private readonly material: THREE.MeshBasicMaterial;
   private readonly instanceTransform = new THREE.Object3D();
   private readonly scratchColor = new THREE.Color();
 
   constructor() {
-    this.geometry = new THREE.BoxGeometry(0.14, 0.14, 0.14);
+    this.geometry = new THREE.IcosahedronGeometry(0.068, 1);
     this.material = new THREE.MeshBasicMaterial({
       color: 0xffffff,
       transparent: true,
-      opacity: 0.78,
+      opacity: 0.88,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
     });
     this.mesh = new THREE.InstancedMesh(this.geometry, this.material, MAX_PARTICLES);
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -51,6 +55,8 @@ export class ParticleSystem {
         life: 0,
         maxLife: 1,
         scale: 0,
+        gravity: 9.5,
+        stretchZ: 1,
         color: new THREE.Color(COLORS.neonCyan),
       });
       this.instanceTransform.position.set(0, -50, 0);
@@ -71,6 +77,8 @@ export class ParticleSystem {
     maxLife: number,
     scale: number,
     hex: number,
+    gravity = 9.5,
+    stretchZ = 1,
   ): void {
     const slot = this.particles.find((p) => !p.active);
     if (!slot) return;
@@ -85,6 +93,8 @@ export class ParticleSystem {
     slot.life = 0;
     slot.maxLife = maxLife;
     slot.scale = scale;
+    slot.gravity = gravity;
+    slot.stretchZ = stretchZ;
     slot.color.setHex(hex);
   }
 
@@ -146,13 +156,13 @@ export class ParticleSystem {
       p.x += p.vx * dt;
       p.y += p.vy * dt;
       p.z += p.vz * dt;
-      p.vy -= 9.5 * dt;
+      p.vy -= p.gravity * dt;
 
       const lifeRatio = 1 - p.life / p.maxLife;
-      const s = p.scale * lifeRatio;
+      const s = p.scale * lifeRatio * lifeRatio;
       this.instanceTransform.position.set(p.x, p.y, p.z);
-      this.instanceTransform.rotation.set(p.life * 6, p.life * 4, 0);
-      this.instanceTransform.scale.set(s, s, s);
+      this.instanceTransform.rotation.set(0, 0, 0);
+      this.instanceTransform.scale.set(s, s, s * p.stretchZ);
       this.instanceTransform.updateMatrix();
       this.mesh.setMatrixAt(i, this.instanceTransform.matrix);
       this.mesh.setColorAt(i, p.color);

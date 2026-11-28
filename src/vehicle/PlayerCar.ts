@@ -49,6 +49,7 @@ export class PlayerCar {
   private readonly shellGroups = new Map<CarShellFamily, THREE.Group>();
   private readonly thrusterOuterCones: THREE.Mesh[] = [];
   private readonly thrusterInnerCones: THREE.Mesh[] = [];
+  private readonly exhaustGlowDisks: THREE.Mesh[] = [];
 
   private readonly paintMat: THREE.MeshPhysicalMaterial;
   private readonly secondaryMat: THREE.MeshStandardMaterial;
@@ -153,18 +154,22 @@ export class PlayerCar {
 
     this.thrusterOuterMat = new THREE.MeshBasicMaterial({
       color: initialSpec.flameOuterColor,
+      map: textures.exhaustFlame,
       transparent: true,
-      opacity: 0.42,
+      opacity: 0.62,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
+      side: THREE.DoubleSide,
     });
 
     this.thrusterInnerMat = new THREE.MeshBasicMaterial({
       color: initialSpec.flameInnerColor,
+      map: textures.exhaustFlame,
       transparent: true,
-      opacity: 0.65,
+      opacity: 0.88,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
+      side: THREE.DoubleSide,
     });
 
     this.materials.push(
@@ -408,13 +413,26 @@ export class PlayerCar {
     pipeOuterGeo.rotateX(Math.PI / 2);
     const pipeInnerGeo = new THREE.CylinderGeometry(0.056, 0.056, 0.06, 18);
     pipeInnerGeo.rotateX(Math.PI / 2);
-    const outerConeGeo = new THREE.ConeGeometry(0.13, 1.25, 16);
-    outerConeGeo.rotateX(Math.PI / 2);
-    outerConeGeo.translate(0, 0, 0.62);
-    const innerConeGeo = new THREE.ConeGeometry(0.07, 0.82, 14);
-    innerConeGeo.rotateX(Math.PI / 2);
-    innerConeGeo.translate(0, 0, 0.41);
-    this.geometries.push(pipeOuterGeo, pipeInnerGeo, outerConeGeo, innerConeGeo);
+
+    const createFlamePlumeGeometry = (maxRadius: number, length: number): THREE.LatheGeometry => {
+      const profile = [
+        new THREE.Vector2(maxRadius * 0.54, 0),
+        new THREE.Vector2(maxRadius * 0.96, length * 0.08),
+        new THREE.Vector2(maxRadius * 1.0, length * 0.2),
+        new THREE.Vector2(maxRadius * 0.76, length * 0.44),
+        new THREE.Vector2(maxRadius * 0.44, length * 0.68),
+        new THREE.Vector2(maxRadius * 0.16, length * 0.88),
+        new THREE.Vector2(0.003, length),
+      ];
+      const geo = new THREE.LatheGeometry(profile, 18);
+      geo.rotateX(Math.PI / 2);
+      return geo;
+    };
+
+    const outerFlameGeo = createFlamePlumeGeometry(0.066, 0.68);
+    const innerFlameGeo = createFlamePlumeGeometry(0.042, 0.44);
+    const nozzleGlowGeo = new THREE.CircleGeometry(0.052, 16);
+    this.geometries.push(pipeOuterGeo, pipeInnerGeo, outerFlameGeo, innerFlameGeo, nozzleGlowGeo);
 
     for (const side of [-1, 1]) {
       for (const subOffset of [-0.085, 0.085]) {
@@ -426,17 +444,22 @@ export class PlayerCar {
         const innerBore = new THREE.Mesh(pipeInnerGeo, this.tireMat);
         innerBore.position.set(px, 0.1, 2.295);
         this.closedBodyGroup.add(innerBore);
+
+        const nozzleGlow = new THREE.Mesh(nozzleGlowGeo, this.thrusterInnerMat);
+        nozzleGlow.position.set(px, 0.1, 2.312);
+        this.closedBodyGroup.add(nozzleGlow);
+        this.exhaustGlowDisks.push(nozzleGlow);
+
+        const outerFlame = new THREE.Mesh(outerFlameGeo, this.thrusterOuterMat);
+        outerFlame.position.set(px, 0.1, 2.275);
+        this.closedBodyGroup.add(outerFlame);
+        this.thrusterOuterCones.push(outerFlame);
+
+        const innerFlame = new THREE.Mesh(innerFlameGeo, this.thrusterInnerMat);
+        innerFlame.position.set(px, 0.1, 2.282);
+        this.closedBodyGroup.add(innerFlame);
+        this.thrusterInnerCones.push(innerFlame);
       }
-
-      const outerCone = new THREE.Mesh(outerConeGeo, this.thrusterOuterMat);
-      outerCone.position.set(side * 0.54, 0.1, 2.31);
-      this.closedBodyGroup.add(outerCone);
-      this.thrusterOuterCones.push(outerCone);
-
-      const innerCone = new THREE.Mesh(innerConeGeo, this.thrusterInnerMat);
-      innerCone.position.set(side * 0.54, 0.1, 2.31);
-      this.closedBodyGroup.add(innerCone);
-      this.thrusterInnerCones.push(innerCone);
     }
 
     this.styleGroups = {
@@ -1067,6 +1090,9 @@ export class PlayerCar {
     for (const cone of this.thrusterInnerCones) {
       cone.visible = showBoostFlames;
     }
+    for (const disk of this.exhaustGlowDisks) {
+      disk.visible = showBoostFlames;
+    }
 
     if (isCrashed) {
       this.underGlowLight.intensity = 0;
@@ -1076,20 +1102,34 @@ export class PlayerCar {
     this.tailBarMat.emissiveIntensity = 0.55;
 
     if (showBoostFlames) {
-      const flamePulse = 0.88 + Math.sin(phase * 4.5) * 0.14;
-      const lengthScale = 1.6 * flamePulse;
-      for (const cone of this.thrusterOuterCones) {
-        cone.scale.set(1.05, 1.05, lengthScale);
+      for (let i = 0; i < this.thrusterOuterCones.length; i++) {
+        const harmonic =
+          Math.sin(phase * 6.8 + i * 1.7) * 0.55 + Math.cos(phase * 11.4 + i * 2.3) * 0.45;
+        const lengthPulse = 0.96 + harmonic * 0.22;
+        const radialPulse = 0.94 + Math.sin(phase * 9.2 + i * 1.1) * 0.1;
+        const spin = phase * (i % 2 === 0 ? 4.8 : -4.8) + i * 0.8;
+
+        const outerFlame = this.thrusterOuterCones[i];
+        outerFlame.scale.set(radialPulse, radialPulse, lengthPulse);
+        outerFlame.rotation.z = spin;
+
+        const innerFlame = this.thrusterInnerCones[i];
+        if (innerFlame) {
+          innerFlame.scale.set(
+            0.92 + harmonic * 0.08,
+            0.92 + harmonic * 0.08,
+            0.94 + harmonic * 0.18,
+          );
+          innerFlame.rotation.z = -spin * 1.25;
+        }
       }
-      for (const cone of this.thrusterInnerCones) {
-        cone.scale.set(0.9, 0.9, lengthScale * 0.85);
-      }
-      this.thrusterOuterMat.opacity = 0.5;
-      this.thrusterInnerMat.opacity = 0.72;
+      const globalFlicker = 0.5 + 0.5 * Math.sin(phase * 8.5);
+      this.thrusterOuterMat.opacity = 0.54 + globalFlicker * 0.16;
+      this.thrusterInnerMat.opacity = 0.82 + globalFlicker * 0.14;
     }
 
     this.headlightGlow.intensity = isBoosting ? 2.3 : isThrottling ? 1.85 : 1.55;
-    this.underGlowLight.intensity = isBoosting ? 0.45 : 0;
+    this.underGlowLight.intensity = isBoosting ? 0.52 + Math.sin(phase * 8.5) * 0.08 : 0;
   }
 
   public dispose(): void {

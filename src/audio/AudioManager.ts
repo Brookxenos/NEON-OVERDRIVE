@@ -198,6 +198,7 @@ export class AudioManager {
     this.engineAirSource.start();
 
     this.sfx.attach(this.ctx, this.sfxGain, this.delaySend, this.noiseBuffer);
+    this.soundtrack.attachAudioEngine(this.ctx, this.musicGain, this.noiseBuffer);
 
     this.isUnlocked = true;
     this.applyVolumes();

@@ -10,6 +10,7 @@ export interface TextureBundle {
   buildingWindowsCyan: THREE.CanvasTexture;
   buildingWindowsMagenta: THREE.CanvasTexture;
   headlightBeam: THREE.CanvasTexture;
+  exhaustFlame: THREE.CanvasTexture;
   contactShadow: THREE.CanvasTexture;
   skyBackdrop: THREE.CanvasTexture;
   gantrySigns: readonly THREE.CanvasTexture[];
@@ -334,6 +335,56 @@ function createHeadlightBeamTexture(): THREE.CanvasTexture {
   return tex;
 }
 
+function createExhaustFlameTexture(): THREE.CanvasTexture {
+  const width = 128;
+  const height = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d')!;
+
+  // LatheGeometry v=0 (nozzle root) maps to bottom (y=height), v=1 (tip) maps to top (y=0)
+  const mainGrad = ctx.createLinearGradient(0, height, 0, 0);
+  mainGrad.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)');
+  mainGrad.addColorStop(0.16, 'rgba(255, 250, 235, 0.96)');
+  mainGrad.addColorStop(0.42, 'rgba(255, 236, 200, 0.72)');
+  mainGrad.addColorStop(0.72, 'rgba(255, 210, 160, 0.28)');
+  mainGrad.addColorStop(0.92, 'rgba(255, 180, 120, 0.05)');
+  mainGrad.addColorStop(1.0, 'rgba(255, 180, 120, 0.0)');
+  ctx.fillStyle = mainGrad;
+  ctx.fillRect(0, 0, width, height);
+
+  // Subtle plasma shock diamonds / streaks along the jet for rich motion
+  for (let s = 0; s < 10; s++) {
+    const sx = (s / 10) * width;
+    const sw = width * 0.14;
+    const streakGrad = ctx.createLinearGradient(0, height, 0, height * 0.15);
+    streakGrad.addColorStop(0.0, 'rgba(255, 255, 255, 0.35)');
+    streakGrad.addColorStop(0.45, 'rgba(255, 255, 255, 0.16)');
+    streakGrad.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');
+    ctx.fillStyle = streakGrad;
+    ctx.fillRect(sx, height * 0.15, sw * 0.55, height * 0.85);
+  }
+
+  // Soft longitudinal shock-diamond brightenings near the root
+  const shockPositions = [0.88, 0.68, 0.48];
+  for (let i = 0; i < shockPositions.length; i++) {
+    const sy = height * shockPositions[i];
+    const shock = ctx.createRadialGradient(width * 0.5, sy, 2, width * 0.5, sy, 34 - i * 6);
+    shock.addColorStop(0, `rgba(255, 255, 255, ${0.42 - i * 0.1})`);
+    shock.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = shock;
+    ctx.fillRect(0, sy - 40, width, 80);
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
+
 function createRadialTexture(innerColor: string, outerColor: string): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
   canvas.width = 128;
@@ -604,6 +655,7 @@ export class TextureFactory {
       false,
     );
     const headlightBeam = createHeadlightBeamTexture();
+    const exhaustFlame = createExhaustFlameTexture();
     const contactShadow = createRadialTexture('rgba(0, 0, 0, 0.9)', 'rgba(24, 24, 48, 0.22)');
     const skyBackdrop = createSkyBackdropTexture();
     const gantrySigns = GANTRY_SIGN_LABELS.map((label) =>
@@ -623,6 +675,7 @@ export class TextureFactory {
       buildingWindowsCyan,
       buildingWindowsMagenta,
       headlightBeam,
+      exhaustFlame,
       contactShadow,
       skyBackdrop,
       gantrySigns,
@@ -637,6 +690,7 @@ export class TextureFactory {
         buildingWindowsCyan.dispose();
         buildingWindowsMagenta.dispose();
         headlightBeam.dispose();
+        exhaustFlame.dispose();
         contactShadow.dispose();
         skyBackdrop.dispose();
         gantrySigns.forEach((tex) => tex.dispose());

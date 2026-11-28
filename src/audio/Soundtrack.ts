@@ -1,6 +1,42 @@
-const YOUTUBE_PLAYLIST_ID = 'PLgnM8w6PHYgdqsfLvJGA7dAL_2qaPnNyp';
-const MAX_PLAYLIST_TRACKS = 30;
+import { LocalTrackBank } from './LocalTrackBank';
+
 const YOUTUBE_IFRAME_API_SRC = 'https://www.youtube.com/iframe_api';
+
+// Verified first 30 tracks from playlist PLgnM8w6PHYgdqsfLvJGA7dAL_2qaPnNyp in exact order
+const PLAYLIST_TRACK_IDS: readonly string[] = [
+  'p4lcBHED9hE',
+  'd5oa-mtm_1k',
+  'JK-Py4BHOcY',
+  'Pb5r8V99v_w',
+  'HVvhlGHbdQ0',
+  'YXcaWHXER6g',
+  'IJfn74ga1tY',
+  'dVkzh90KYZU',
+  'KahgvZj7Bgo',
+  'RbqtCfMwfUI',
+  '1Eg2B0ygQBk',
+  '4kVG0RpkmMI',
+  '-oT_IDWN7XE',
+  'qqSsGFmnTwA',
+  '00rDpaqS8o8',
+  'neLvrcko4Mg',
+  'IvN-6DtAZPU',
+  'EOZP66tn1Ik',
+  'KgerPxDwoQg',
+  '_1wRWT8YTNY',
+  'uz2BT3FgRU8',
+  '2h-xpV5yB6I',
+  'in_kC8vRmNk',
+  'VUaV2G6125k',
+  'NrAyqeh28YA',
+  'MCv97GMHUz0',
+  'BNg3zP5-hUY',
+  'BE-9DQb6TMY',
+  '9rgmLe9CI3Q',
+  'u_tyMa5Wn-A',
+];
+
+const MAX_PLAYLIST_TRACKS = PLAYLIST_TRACK_IDS.length;
 
 const YT_STATE = {
   UNSTARTED: -1,
@@ -12,18 +48,17 @@ const YT_STATE = {
 } as const;
 
 interface YTPlayerInstance {
+  loadVideoById(videoIdOrOptions: string | { videoId: string; startSeconds?: number }): void;
+  cueVideoById(videoIdOrOptions: string | { videoId: string; startSeconds?: number }): void;
   playVideo(): void;
   pauseVideo(): void;
   stopVideo(): void;
-  playVideoAt(index: number): void;
   mute(): void;
   unMute(): void;
   setVolume(volume: number): void;
-  setLoop(loopPlaylists: boolean): void;
-  setShuffle(shufflePlaylist: boolean): void;
-  getPlaylist(): string[] | null;
-  getPlaylistIndex(): number;
   getPlayerState(): number;
+  getCurrentTime(): number;
+  getIframe(): HTMLIFrameElement;
   destroy(): void;
 }
 
@@ -33,6 +68,7 @@ interface YTNamespace {
     options: {
       width?: number | string;
       height?: number | string;
+      videoId?: string;
       playerVars?: Record<string, string | number>;
       events?: {
         onReady?: () => void;
@@ -50,26 +86,33 @@ declare global {
   }
 }
 
-let apiLoadPromise: Promise<void> | null = null;
+let apiLoadPromise: Promise<boolean> | null = null;
 
-function ensureYouTubeApiLoaded(): Promise<void> {
+function ensureYouTubeApiLoaded(): Promise<boolean> {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
-    return Promise.resolve();
+    return Promise.resolve(false);
   }
   if (window.YT && typeof window.YT.Player === 'function') {
-    return Promise.resolve();
+    return Promise.resolve(true);
   }
   if (apiLoadPromise) {
     return apiLoadPromise;
   }
 
-  apiLoadPromise = new Promise<void>((resolve) => {
+  apiLoadPromise = new Promise<boolean>((resolve) => {
+    let settled = false;
+    const finish = (ok: boolean): void => {
+      if (settled) return;
+      settled = true;
+      resolve(ok);
+    };
+
     const previousCallback = window.onYouTubeIframeAPIReady;
     window.onYouTubeIframeAPIReady = () => {
       if (typeof previousCallback === 'function') {
         previousCallback();
       }
-      resolve();
+      finish(Boolean(window.YT && typeof window.YT.Player === 'function'));
     };
 
     const existingScript = document.querySelector<HTMLScriptElement>(
@@ -81,10 +124,21 @@ function ensureYouTubeApiLoaded(): Promise<void> {
       script.async = true;
       script.onerror = () => {
         apiLoadPromise = null;
-        resolve();
+        finish(false);
       };
       document.head.appendChild(script);
     }
+
+    window.setTimeout(() => {
+      if (!settled) {
+        if (window.YT && typeof window.YT.Player === 'function') {
+          finish(true);
+        } else {
+          apiLoadPromise = null;
+          finish(false);
+        }
+      }
+    }, 6000);
   });
 
   return apiLoadPromise;
@@ -95,7 +149,11 @@ export class Soundtrack {
   private player: YTPlayerInstance | null = null;
   private playerReady = false;
   private initializing = false;
+  private ytApiFailed = false;
+  private usingLocalFallback = false;
   private disposed = false;
+
+  private readonly localBank = new LocalTrackBank();
 
   private unlocked = false;
   private shouldPlay = false;
@@ -104,22 +162,45 @@ export class Soundtrack {
   private masterVolume = 0.75;
 
   private currentTrackIndex = 0;
-  private trackLimit = MAX_PLAYLIST_TRACKS;
+  private loadedTrackIndex: number | null = null;
   private readonly playedIndices = new Set<number>();
   private playlistFinished = false;
   private hasStartedFirstTrack = false;
   private advanceOnNextStart = false;
-  private advanceTimer: number | null = null;
   private lastAppliedPlayIntent: boolean | null = null;
+
+  private watchdogTimer: number | null = null;
+  private waitingForYtSinceMs = 0;
+  private loadGraceUntilMs = 0;
+  private lastYtTime = 0;
+  private lastYtProgressMs = 0;
+  private resumeRetryCount = 0;
+  private consecutiveYtErrors = 0;
+
+  public attachAudioEngine(
+    ctx: AudioContext,
+    musicGain: GainNode,
+    noiseBuffer: AudioBuffer | null,
+  ): void {
+    this.localBank.attach(ctx, musicGain, noiseBuffer, () => this.handleLocalTrackEnded());
+    if (this.usingLocalFallback && this.shouldPlay && this.unlocked && !this.playlistFinished) {
+      this.startFallbackPlayback();
+    }
+  }
 
   public preload(): void {
     if (this.disposed || this.player || this.initializing) return;
     if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
     this.initializing = true;
-    void ensureYouTubeApiLoaded().then(() => {
+    void ensureYouTubeApiLoaded().then((loaded) => {
       this.initializing = false;
       if (this.disposed || this.player) return;
+      if (!loaded) {
+        this.ytApiFailed = true;
+        this.activateLocalFallbackIfNeeded();
+        return;
+      }
       this.createPlayer();
     });
   }
@@ -129,16 +210,16 @@ export class Soundtrack {
     this.unlocked = true;
     this.preload();
 
-    if (
-      this.playerReady &&
-      this.player &&
-      this.musicEnabled &&
-      !this.muted &&
-      this.shouldPlay &&
-      !this.playlistFinished
-    ) {
-      this.lastAppliedPlayIntent = true;
-      this.startOrResumePlayback();
+    if (this.shouldPlay && this.musicEnabled && !this.muted && !this.playlistFinished) {
+      this.ensureWatchdogRunning();
+      if (this.usingLocalFallback) {
+        this.startFallbackPlayback();
+      } else if (this.playerReady && this.player) {
+        this.lastAppliedPlayIntent = true;
+        this.startOrResumePlayback();
+      } else if (this.ytApiFailed) {
+        this.activateLocalFallbackIfNeeded();
+      }
     }
   }
 
@@ -149,31 +230,48 @@ export class Soundtrack {
     this.musicEnabled = musicEnabled;
     this.muted = muted;
     this.applyPlayerMix();
+
+    if ((!musicEnabled || muted) && this.localBank.isPlaying()) {
+      this.localBank.stop();
+    }
   }
 
   public setPlaybackActive(active: boolean): void {
     if (this.disposed) return;
+    const prevShouldPlay = this.shouldPlay;
     this.shouldPlay = active;
 
-    if (!this.playerReady || !this.player) return;
-
     if (!active || this.playlistFinished) {
+      this.stopWatchdog();
+      this.localBank.stop();
       if (this.lastAppliedPlayIntent !== false) {
         this.lastAppliedPlayIntent = false;
-        this.clearAdvanceTimer();
-        try {
-          const state = this.player.getPlayerState();
-          if (state === YT_STATE.PLAYING || state === YT_STATE.BUFFERING) {
-            this.player.pauseVideo();
-          }
-        } catch {
-          // Ignore transient player state errors
-        }
+        this.pauseYouTubePlayer();
       }
       return;
     }
 
     if (!this.unlocked) return;
+
+    if (!prevShouldPlay) {
+      this.waitingForYtSinceMs = Date.now();
+    }
+    this.ensureWatchdogRunning();
+
+    if (this.usingLocalFallback) {
+      if (this.lastAppliedPlayIntent !== true || !this.localBank.isPlaying()) {
+        this.lastAppliedPlayIntent = true;
+        this.startFallbackPlayback();
+      }
+      return;
+    }
+
+    if (!this.playerReady || !this.player) {
+      if (this.ytApiFailed) {
+        this.activateLocalFallbackIfNeeded();
+      }
+      return;
+    }
 
     if (this.lastAppliedPlayIntent !== true) {
       this.lastAppliedPlayIntent = true;
@@ -185,16 +283,10 @@ export class Soundtrack {
     if (this.disposed) return;
     this.shouldPlay = false;
     this.lastAppliedPlayIntent = false;
-    this.clearAdvanceTimer();
-    if (!this.playerReady || !this.player) return;
-    try {
-      const state = this.player.getPlayerState();
-      if (state === YT_STATE.PLAYING || state === YT_STATE.BUFFERING) {
-        this.player.pauseVideo();
-      }
-    } catch {
-      // Ignore transient player state errors
-    }
+    this.waitingForYtSinceMs = 0;
+    this.stopWatchdog();
+    this.localBank.stop();
+    this.pauseYouTubePlayer();
   }
 
   public stopForGameOver(): void {
@@ -217,17 +309,39 @@ export class Soundtrack {
     }
     this.currentTrackIndex = nextIdx;
     this.hasStartedFirstTrack = true;
-    if (this.playerReady && this.player && this.unlocked && this.shouldPlay) {
-      this.playTrackAt(nextIdx);
+    this.advanceOnNextStart = false;
+
+    if (this.unlocked && this.shouldPlay && this.musicEnabled && !this.muted) {
+      if (this.usingLocalFallback) {
+        this.localBank.start(nextIdx, true);
+      } else if (this.playerReady && this.player) {
+        this.playTrackAt(nextIdx);
+      }
     }
   }
 
   public resetClock(): void {
-    // No-op kept for audio lifecycle compatibility
+    if (this.usingLocalFallback && this.shouldPlay && this.unlocked && !this.playlistFinished) {
+      if (!this.localBank.isPlaying()) {
+        this.localBank.start(this.currentTrackIndex, false);
+      }
+    }
   }
 
   public sweepStaleVoices(): void {
     // No-op kept for audio lifecycle compatibility
+  }
+
+  private pauseYouTubePlayer(): void {
+    if (!this.playerReady || !this.player) return;
+    try {
+      const state = this.player.getPlayerState();
+      if (state === YT_STATE.PLAYING || state === YT_STATE.BUFFERING) {
+        this.player.pauseVideo();
+      }
+    } catch {
+      // Ignore transient player state errors
+    }
   }
 
   private createPlayer(): void {
@@ -236,14 +350,14 @@ export class Soundtrack {
     const host = document.createElement('div');
     host.setAttribute('aria-hidden', 'true');
     host.style.position = 'fixed';
-    host.style.right = '2px';
-    host.style.bottom = '2px';
-    host.style.width = '2px';
-    host.style.height = '2px';
-    host.style.opacity = '0.001';
+    host.style.right = '4px';
+    host.style.bottom = '4px';
+    host.style.width = '200px';
+    host.style.height = '112px';
+    host.style.opacity = '0.008';
     host.style.pointerEvents = 'none';
     host.style.overflow = 'hidden';
-    host.style.zIndex = '-1';
+    host.style.zIndex = '0';
 
     const mount = document.createElement('div');
     mount.id = `yt-bgm-${Math.random().toString(36).slice(2, 9)}`;
@@ -252,13 +366,11 @@ export class Soundtrack {
     this.container = host;
 
     this.player = new window.YT.Player(mount, {
-      width: 2,
-      height: 2,
+      width: 200,
+      height: 112,
+      videoId: PLAYLIST_TRACK_IDS[this.currentTrackIndex],
       playerVars: {
-        listType: 'playlist',
-        list: YOUTUBE_PLAYLIST_ID,
-        index: this.currentTrackIndex,
-        autoplay: this.unlocked && this.shouldPlay && !this.playlistFinished ? 1 : 0,
+        autoplay: 0,
         loop: 0,
         controls: 0,
         disablekb: 1,
@@ -267,7 +379,6 @@ export class Soundtrack {
         modestbranding: 1,
         playsinline: 1,
         rel: 0,
-        origin: window.location.origin,
       },
       events: {
         onReady: () => this.handleReady(),
@@ -280,19 +391,28 @@ export class Soundtrack {
   private handleReady(): void {
     if (this.disposed || !this.player) return;
     this.playerReady = true;
+    this.loadedTrackIndex = this.currentTrackIndex;
 
     try {
-      this.player.setLoop(false);
-      this.player.setShuffle(false);
+      const iframe = this.player.getIframe();
+      if (iframe) {
+        iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
+        iframe.tabIndex = -1;
+      }
     } catch {
-      // Ignore if playlist metadata is still settling
+      // Ignore iframe attribute issues
     }
 
-    this.syncTrackLimit();
     this.applyPlayerMix();
 
-    if (this.unlocked && this.shouldPlay && !this.playlistFinished) {
+    if (this.unlocked && this.shouldPlay && this.musicEnabled && !this.muted && !this.playlistFinished) {
+      if (this.usingLocalFallback) {
+        // Leave fallback running only if YouTube explicitly failed; otherwise let YouTube play
+        this.usingLocalFallback = false;
+        this.localBank.stop();
+      }
       this.lastAppliedPlayIntent = true;
+      this.ensureWatchdogRunning();
       this.startOrResumePlayback();
     }
   }
@@ -300,87 +420,111 @@ export class Soundtrack {
   private handleStateChange(state: number): void {
     if (this.disposed || !this.player) return;
 
-    if (state === YT_STATE.PLAYING || state === YT_STATE.BUFFERING) {
-      this.clearAdvanceTimer();
-      this.syncTrackLimit();
-
-      let ytIndex = -1;
+    if (state === YT_STATE.PLAYING) {
+      this.usingLocalFallback = false;
+      this.localBank.stop();
+      this.consecutiveYtErrors = 0;
+      this.resumeRetryCount = 0;
+      this.hasStartedFirstTrack = true;
+      this.lastYtProgressMs = Date.now();
       try {
-        ytIndex = this.player.getPlaylistIndex();
+        this.lastYtTime = this.player.getCurrentTime() || 0;
       } catch {
-        ytIndex = -1;
-      }
-
-      if (ytIndex >= this.trackLimit) {
-        this.finishPlaylist();
-        return;
-      }
-
-      if (ytIndex >= 0) {
-        if (this.playedIndices.has(ytIndex)) {
-          const nextIdx = this.findNextUnplayedIndex(ytIndex + 1);
-          if (nextIdx === null) {
-            this.finishPlaylist();
-          } else {
-            this.currentTrackIndex = nextIdx;
-            this.playTrackAt(nextIdx);
-          }
-          return;
-        }
-        this.currentTrackIndex = ytIndex;
-        this.hasStartedFirstTrack = true;
+        this.lastYtTime = 0;
       }
       return;
     }
 
+    if (state === YT_STATE.BUFFERING) {
+      this.hasStartedFirstTrack = true;
+      this.lastYtProgressMs = Date.now();
+      return;
+    }
+
     if (state === YT_STATE.ENDED) {
-      this.clearAdvanceTimer();
-      this.syncTrackLimit();
-      this.playedIndices.add(this.currentTrackIndex);
-
-      const nextIdx = this.findNextUnplayedIndex(this.currentTrackIndex + 1);
-      if (nextIdx === null) {
-        this.finishPlaylist();
-        return;
-      }
-
-      this.currentTrackIndex = nextIdx;
-      this.advanceTimer = window.setTimeout(() => {
-        this.advanceTimer = null;
-        if (this.disposed || !this.player || !this.shouldPlay || this.playlistFinished) return;
-        try {
-          const playerState = this.player.getPlayerState();
-          const activeIndex = this.player.getPlaylistIndex();
-          if (
-            (playerState === YT_STATE.PLAYING || playerState === YT_STATE.BUFFERING) &&
-            activeIndex === nextIdx
-          ) {
-            return;
-          }
-        } catch {
-          // Proceed with explicit advance
-        }
-        this.playTrackAt(nextIdx);
-      }, 320);
+      this.handleTrackEnded();
     }
   }
 
-  private handleTrackError(): void {
-    if (this.disposed || !this.player || this.playlistFinished) return;
-    this.clearAdvanceTimer();
-    this.syncTrackLimit();
+  private handleTrackEnded(): void {
+    if (this.disposed || this.playlistFinished) return;
     this.playedIndices.add(this.currentTrackIndex);
-
     const nextIdx = this.findNextUnplayedIndex(this.currentTrackIndex + 1);
     if (nextIdx === null) {
       this.finishPlaylist();
       return;
     }
-
     this.currentTrackIndex = nextIdx;
-    if (this.unlocked && this.shouldPlay) {
+    this.hasStartedFirstTrack = true;
+    if (this.unlocked && this.shouldPlay && this.musicEnabled && !this.muted) {
       this.playTrackAt(nextIdx);
     }
+  }
+
+  private handleLocalTrackEnded(): void {
+    if (this.disposed || this.playlistFinished || !this.usingLocalFallback) return;
+    this.handleTrackEnded();
+  }
+
+  private handleTrackError(): void {
+    if (this.disposed || this.playlistFinished) return;
+    this.consecutiveYtErrors += 1;
+    this.playedIndices.add(this.currentTrackIndex);
+
+    const nextIdx = this.findNextUnplayedIndex(this.currentTrackIndex + 1);
+    if (nextIdx === null) {
+      if (this.consecutiveYtErrors >= 3) {
+        this.playedIndices.clear();
+        this.currentTrackIndex = 0;
+        this.activateLocalFallbackIfNeeded(true);
+      } else {
+        this.finishPlaylist();
+      }
+      return;
+    }
+
+    this.currentTrackIndex = nextIdx;
+
+    if (this.consecutiveYtErrors >= 3) {
+      this.activateLocalFallbackIfNeeded(true);
+      return;
+    }
+
+    if (this.unlocked && this.shouldPlay && this.musicEnabled && !this.muted && this.playerReady) {
+      this.playTrackAt(nextIdx);
+    }
+  }
+
+  private activateLocalFallbackIfNeeded(force = false): void {
+    if (this.disposed || this.playlistFinished) return;
+    if (!force && !this.ytApiFailed && this.playerReady) return;
+    this.usingLocalFallback = true;
+    this.pauseYouTubePlayer();
+    if (this.unlocked && this.shouldPlay && this.musicEnabled && !this.muted) {
+      this.startFallbackPlayback();
+    }
+  }
+
+  private startFallbackPlayback(): void {
+    if (this.disposed || this.playlistFinished || !this.localBank.isAttached()) return;
+    let resetPos = false;
+    if (this.advanceOnNextStart) {
+      this.advanceOnNextStart = false;
+      this.currentTrackIndex = this.pickNextIndexForNewRun();
+      resetPos = true;
+    }
+    this.hasStartedFirstTrack = true;
+    this.localBank.start(this.currentTrackIndex, resetPos);
+  }
+
+  private pickNextIndexForNewRun(): number {
+    let nextIdx = this.findNextUnplayedIndex(this.currentTrackIndex + 1);
+    if (nextIdx === null) {
+      const previousIdx = this.currentTrackIndex;
+      this.playedIndices.clear();
+      nextIdx = MAX_PLAYLIST_TRACKS > 1 && previousIdx === 0 ? 1 : 0;
+    }
+    return nextIdx;
   }
 
   private startOrResumePlayback(): void {
@@ -390,16 +534,9 @@ export class Soundtrack {
     try {
       if (this.advanceOnNextStart) {
         this.advanceOnNextStart = false;
-        this.syncTrackLimit();
-        let nextIdx = this.findNextUnplayedIndex(this.currentTrackIndex + 1);
-        if (nextIdx === null) {
-          const previousIdx = this.currentTrackIndex;
-          this.playedIndices.clear();
-          nextIdx = this.trackLimit > 1 && previousIdx === 0 ? 1 : 0;
-        }
+        const nextIdx = this.pickNextIndexForNewRun();
         this.currentTrackIndex = nextIdx;
-        this.hasStartedFirstTrack = true;
-        this.player.playVideoAt(nextIdx);
+        this.playTrackAt(nextIdx);
         return;
       }
 
@@ -407,32 +544,146 @@ export class Soundtrack {
       if (state === YT_STATE.PLAYING || state === YT_STATE.BUFFERING) {
         return;
       }
-      if (!this.hasStartedFirstTrack) {
-        this.hasStartedFirstTrack = true;
-        this.currentTrackIndex = 0;
-        if (state === YT_STATE.CUED) {
-          this.player.playVideo();
-        } else {
-          this.player.playVideoAt(0);
-        }
-      } else if (state === YT_STATE.PAUSED || state === YT_STATE.CUED) {
+
+      if (!this.hasStartedFirstTrack || this.loadedTrackIndex !== this.currentTrackIndex) {
+        this.playTrackAt(this.currentTrackIndex);
+        return;
+      }
+
+      if (state === YT_STATE.PAUSED || state === YT_STATE.CUED) {
+        this.loadGraceUntilMs = Date.now() + 1400;
+        this.lastYtProgressMs = Date.now();
         this.player.playVideo();
       } else {
-        this.player.playVideoAt(this.currentTrackIndex);
+        this.playTrackAt(this.currentTrackIndex);
       }
     } catch {
-      // Ignore transient API readiness errors
+      this.activateLocalFallbackIfNeeded(true);
     }
   }
 
   private playTrackAt(index: number): void {
-    if (!this.player || !this.playerReady || this.disposed) return;
+    if (this.disposed) return;
     this.hasStartedFirstTrack = true;
+    this.currentTrackIndex = index;
+
+    if (this.usingLocalFallback) {
+      this.localBank.start(index, true);
+      return;
+    }
+
+    if (!this.player || !this.playerReady) return;
     this.applyPlayerMix();
+    const videoId = PLAYLIST_TRACK_IDS[index];
+    if (!videoId) return;
+
+    this.loadedTrackIndex = index;
+    this.resumeRetryCount = 0;
+    this.lastYtTime = 0;
+    this.lastYtProgressMs = Date.now();
+    this.loadGraceUntilMs = Date.now() + 2400;
+
     try {
-      this.player.playVideoAt(index);
+      this.player.loadVideoById({ videoId, startSeconds: 0 });
     } catch {
-      // Ignore transient playback errors
+      this.handleTrackError();
+    }
+  }
+
+  private ensureWatchdogRunning(): void {
+    if (this.watchdogTimer !== null || this.disposed) return;
+    this.watchdogTimer = window.setInterval(() => this.runWatchdog(), 750);
+  }
+
+  private stopWatchdog(): void {
+    if (this.watchdogTimer !== null) {
+      window.clearInterval(this.watchdogTimer);
+      this.watchdogTimer = null;
+    }
+  }
+
+  private runWatchdog(): void {
+    if (
+      this.disposed ||
+      !this.shouldPlay ||
+      !this.unlocked ||
+      !this.musicEnabled ||
+      this.muted ||
+      this.playlistFinished
+    ) {
+      return;
+    }
+
+    const now = Date.now();
+
+    // If YouTube hasn't become ready within 3.2s of starting race, kick in local 30-track bank ASAP
+    if (!this.playerReady && !this.usingLocalFallback) {
+      if (this.ytApiFailed || (this.waitingForYtSinceMs > 0 && now - this.waitingForYtSinceMs > 3200)) {
+        this.activateLocalFallbackIfNeeded(true);
+      }
+      return;
+    }
+
+    if (this.usingLocalFallback) {
+      if (!this.localBank.isPlaying()) {
+        this.startFallbackPlayback();
+      }
+      return;
+    }
+
+    if (!this.player || !this.playerReady) return;
+
+    if (this.advanceOnNextStart) {
+      this.startOrResumePlayback();
+      return;
+    }
+
+    try {
+      const state = this.player.getPlayerState();
+      const currentTime = this.player.getCurrentTime() || 0;
+
+      if (state === YT_STATE.PLAYING) {
+        if (currentTime > this.lastYtTime + 0.05) {
+          this.lastYtTime = currentTime;
+          this.lastYtProgressMs = now;
+          this.consecutiveYtErrors = 0;
+          this.resumeRetryCount = 0;
+        } else if (this.lastYtProgressMs > 0 && now - this.lastYtProgressMs > 5500) {
+          this.handleTrackError();
+        }
+        return;
+      }
+
+      if (state === YT_STATE.BUFFERING) {
+        if (this.lastYtProgressMs > 0 && now - this.lastYtProgressMs > 6500) {
+          this.handleTrackError();
+        }
+        return;
+      }
+
+      if (state === YT_STATE.ENDED) {
+        this.handleTrackEnded();
+        return;
+      }
+
+      // Unexpected PAUSED / CUED / UNSTARTED mid-game -> aggressively recover!
+      if (now >= this.loadGraceUntilMs) {
+        this.resumeRetryCount += 1;
+        if (this.resumeRetryCount <= 2 && (state === YT_STATE.PAUSED || state === YT_STATE.CUED)) {
+          this.loadGraceUntilMs = now + 1300;
+          this.player.playVideo();
+        } else if (this.resumeRetryCount <= 4) {
+          this.loadGraceUntilMs = now + 2000;
+          this.player.loadVideoById({
+            videoId: PLAYLIST_TRACK_IDS[this.currentTrackIndex],
+            startSeconds: Math.max(0, Math.floor(this.lastYtTime)),
+          });
+        } else {
+          this.handleTrackError();
+        }
+      }
+    } catch {
+      this.handleTrackError();
     }
   }
 
@@ -451,20 +702,8 @@ export class Soundtrack {
     }
   }
 
-  private syncTrackLimit(): void {
-    if (!this.player) return;
-    try {
-      const playlist = this.player.getPlaylist();
-      if (Array.isArray(playlist) && playlist.length > 0) {
-        this.trackLimit = Math.min(MAX_PLAYLIST_TRACKS, playlist.length);
-      }
-    } catch {
-      // Keep default limit
-    }
-  }
-
   private findNextUnplayedIndex(startFrom: number): number | null {
-    for (let idx = Math.max(0, startFrom); idx < this.trackLimit; idx++) {
+    for (let idx = Math.max(0, startFrom); idx < MAX_PLAYLIST_TRACKS; idx++) {
       if (!this.playedIndices.has(idx)) {
         return idx;
       }
@@ -475,7 +714,8 @@ export class Soundtrack {
   private finishPlaylist(): void {
     this.playlistFinished = true;
     this.lastAppliedPlayIntent = false;
-    this.clearAdvanceTimer();
+    this.stopWatchdog();
+    this.localBank.stop();
     try {
       this.player?.stopVideo();
     } catch {
@@ -483,16 +723,10 @@ export class Soundtrack {
     }
   }
 
-  private clearAdvanceTimer(): void {
-    if (this.advanceTimer !== null) {
-      window.clearTimeout(this.advanceTimer);
-      this.advanceTimer = null;
-    }
-  }
-
   public dispose(): void {
     this.disposed = true;
-    this.clearAdvanceTimer();
+    this.stopWatchdog();
+    this.localBank.dispose();
     try {
       this.player?.destroy();
     } catch {
