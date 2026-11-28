@@ -85,6 +85,7 @@ export class Game {
   private garagePreviewOpen = false;
   private previewedCarId: CarId;
   private uiModalBridge: UiModalBridge | null = null;
+  private resizeObserver: ResizeObserver | null = null;
 
   private readonly collisionReport: CollisionReport = {
     crashed: false,
@@ -191,6 +192,10 @@ export class Game {
     window.addEventListener('resize', this.handleResize);
     window.addEventListener('beforeunload', this.flushPendingSave);
     document.addEventListener('visibilitychange', this.handleVisibilityChange);
+    if (typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(() => this.handleResize());
+      this.resizeObserver.observe(container);
+    }
 
     this.loop = new GameLoop(
       this.renderer.isSoftwareGl,
@@ -958,6 +963,8 @@ export class Game {
     window.removeEventListener('resize', this.handleResize);
     window.removeEventListener('beforeunload', this.flushPendingSave);
     document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
     this.keyboardController.dispose();
     this.touchController.dispose();
     this.audioManager.dispose();

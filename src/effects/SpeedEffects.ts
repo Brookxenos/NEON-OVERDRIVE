@@ -16,11 +16,12 @@ export class SpeedEffects {
   private readonly instanceTransform = new THREE.Object3D();
 
   constructor() {
-    this.speedLineGeo = new THREE.BoxGeometry(0.022, 0.022, 1);
+    this.speedLineGeo = new THREE.BoxGeometry(0.014, 0.014, 1);
     this.speedLineMat = new THREE.MeshBasicMaterial({
       color: 0xfde68a,
       transparent: true,
       opacity: 0,
+      depthWrite: false,
     });
     this.speedLinesMesh = new THREE.InstancedMesh(
       this.speedLineGeo,
@@ -33,10 +34,10 @@ export class SpeedEffects {
     for (let i = 0; i < SPEED_LINE_COUNT; i++) {
       const side = i % 2 === 0 ? -1 : 1;
       this.speedLinePositions.push({
-        x: side * (8.6 + Math.random() * 5.6),
+        x: side * (9.2 + Math.random() * 5.8),
         y: 0.9 + Math.random() * 4.4,
         z: -Math.random() * 140,
-        len: 2.0 + Math.random() * 3.0,
+        len: 1.6 + Math.random() * 2.2,
       });
     }
     this.group.add(this.speedLinesMesh);
@@ -44,7 +45,7 @@ export class SpeedEffects {
 
   public update(dt: number, worldSpeed: number, isBoosting: boolean): void {
     const speedRatio = Math.max(0, Math.min(1, (worldSpeed - 62) / 62));
-    const targetOpacity = isBoosting ? 0.18 : speedRatio * 0.11;
+    const targetOpacity = isBoosting ? 0.12 : speedRatio * 0.08;
     const targetStretch = isBoosting ? 1.85 : 1.0 + speedRatio * 0.45;
     this.currentOpacity = damp(this.currentOpacity, targetOpacity, 7.5, dt);
     this.currentStretch = damp(this.currentStretch, targetStretch, 7.5, dt);

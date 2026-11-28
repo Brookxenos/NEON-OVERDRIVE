@@ -47,8 +47,8 @@ export class PlayerCar {
   private readonly wheels: WheelAssembly[] = [];
   private readonly styleGroups: Record<CarBodyStyle, THREE.Group>;
   private readonly shellGroups = new Map<CarShellFamily, THREE.Group>();
-  private readonly thrusterOuterCones: THREE.Mesh[] = [];
-  private readonly thrusterInnerCones: THREE.Mesh[] = [];
+  private readonly thrusterOuterCones: THREE.Object3D[] = [];
+  private readonly thrusterInnerCones: THREE.Object3D[] = [];
   private readonly exhaustGlowDisks: THREE.Mesh[] = [];
 
   private readonly paintMat: THREE.MeshPhysicalMaterial;
@@ -64,6 +64,7 @@ export class PlayerCar {
   private readonly tailBarMat: THREE.MeshStandardMaterial;
   private readonly thrusterOuterMat: THREE.MeshBasicMaterial;
   private readonly thrusterInnerMat: THREE.MeshBasicMaterial;
+  private readonly thrusterGlowMat: THREE.MeshBasicMaterial;
   private readonly headlightGlow: THREE.PointLight;
   private readonly underGlowLight: THREE.PointLight;
   private readonly contactShadow: THREE.Mesh;
@@ -156,7 +157,7 @@ export class PlayerCar {
       color: initialSpec.flameOuterColor,
       map: textures.exhaustFlame,
       transparent: true,
-      opacity: 0.62,
+      opacity: 0.44,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
       side: THREE.DoubleSide,
@@ -166,10 +167,19 @@ export class PlayerCar {
       color: initialSpec.flameInnerColor,
       map: textures.exhaustFlame,
       transparent: true,
-      opacity: 0.88,
+      opacity: 0.68,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
       side: THREE.DoubleSide,
+    });
+
+    this.thrusterGlowMat = new THREE.MeshBasicMaterial({
+      color: initialSpec.flameInnerColor,
+      map: textures.flameCoreGlow,
+      transparent: true,
+      opacity: 0.78,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
     });
 
     this.materials.push(
@@ -186,6 +196,7 @@ export class PlayerCar {
       this.tailBarMat,
       this.thrusterOuterMat,
       this.thrusterInnerMat,
+      this.thrusterGlowMat,
     );
 
     const fasciaMaskGeo = createBeveledPlateGeometry(1.62, 0.145, 0.14, 0.032, 0.014);
@@ -414,25 +425,19 @@ export class PlayerCar {
     const pipeInnerGeo = new THREE.CylinderGeometry(0.056, 0.056, 0.06, 18);
     pipeInnerGeo.rotateX(Math.PI / 2);
 
-    const createFlamePlumeGeometry = (maxRadius: number, length: number): THREE.LatheGeometry => {
-      const profile = [
-        new THREE.Vector2(maxRadius * 0.54, 0),
-        new THREE.Vector2(maxRadius * 0.96, length * 0.08),
-        new THREE.Vector2(maxRadius * 1.0, length * 0.2),
-        new THREE.Vector2(maxRadius * 0.76, length * 0.44),
-        new THREE.Vector2(maxRadius * 0.44, length * 0.68),
-        new THREE.Vector2(maxRadius * 0.16, length * 0.88),
-        new THREE.Vector2(0.003, length),
-      ];
-      const geo = new THREE.LatheGeometry(profile, 18);
+    const createFlameFinGeometry = (width: number, length: number): THREE.PlaneGeometry => {
+      const geo = new THREE.PlaneGeometry(width, length);
+      geo.translate(0, length * 0.5, 0);
       geo.rotateX(Math.PI / 2);
       return geo;
     };
 
-    const outerFlameGeo = createFlamePlumeGeometry(0.066, 0.68);
-    const innerFlameGeo = createFlamePlumeGeometry(0.042, 0.44);
-    const nozzleGlowGeo = new THREE.CircleGeometry(0.052, 16);
-    this.geometries.push(pipeOuterGeo, pipeInnerGeo, outerFlameGeo, innerFlameGeo, nozzleGlowGeo);
+    const outerFinGeo = createFlameFinGeometry(0.18, 0.62);
+    const innerFinGeo = createFlameFinGeometry(0.11, 0.38);
+    const nozzleGlowGeo = new THREE.PlaneGeometry(0.145, 0.145);
+    this.geometries.push(pipeOuterGeo, pipeInnerGeo, outerFinGeo, innerFinGeo, nozzleGlowGeo);
+
+    const finAngles = [0, Math.PI / 3, (Math.PI * 2) / 3];
 
     for (const side of [-1, 1]) {
       for (const subOffset of [-0.085, 0.085]) {
@@ -445,20 +450,30 @@ export class PlayerCar {
         innerBore.position.set(px, 0.1, 2.295);
         this.closedBodyGroup.add(innerBore);
 
-        const nozzleGlow = new THREE.Mesh(nozzleGlowGeo, this.thrusterInnerMat);
-        nozzleGlow.position.set(px, 0.1, 2.312);
+        const nozzleGlow = new THREE.Mesh(nozzleGlowGeo, this.thrusterGlowMat);
+        nozzleGlow.position.set(px, 0.1, 2.316);
         this.closedBodyGroup.add(nozzleGlow);
         this.exhaustGlowDisks.push(nozzleGlow);
 
-        const outerFlame = new THREE.Mesh(outerFlameGeo, this.thrusterOuterMat);
-        outerFlame.position.set(px, 0.1, 2.275);
-        this.closedBodyGroup.add(outerFlame);
-        this.thrusterOuterCones.push(outerFlame);
+        const outerPlume = new THREE.Group();
+        outerPlume.position.set(px, 0.1, 2.275);
+        for (const angle of finAngles) {
+          const fin = new THREE.Mesh(outerFinGeo, this.thrusterOuterMat);
+          fin.rotation.z = angle;
+          outerPlume.add(fin);
+        }
+        this.closedBodyGroup.add(outerPlume);
+        this.thrusterOuterCones.push(outerPlume);
 
-        const innerFlame = new THREE.Mesh(innerFlameGeo, this.thrusterInnerMat);
-        innerFlame.position.set(px, 0.1, 2.282);
-        this.closedBodyGroup.add(innerFlame);
-        this.thrusterInnerCones.push(innerFlame);
+        const innerPlume = new THREE.Group();
+        innerPlume.position.set(px, 0.1, 2.285);
+        for (const angle of finAngles) {
+          const fin = new THREE.Mesh(innerFinGeo, this.thrusterInnerMat);
+          fin.rotation.z = angle + 0.26;
+          innerPlume.add(fin);
+        }
+        this.closedBodyGroup.add(innerPlume);
+        this.thrusterInnerCones.push(innerPlume);
       }
     }
 
@@ -1035,6 +1050,7 @@ export class PlayerCar {
     this.headLampMat.color.setHex(spec.headlightColor);
     this.thrusterOuterMat.color.setHex(spec.flameOuterColor);
     this.thrusterInnerMat.color.setHex(spec.flameInnerColor);
+    this.thrusterGlowMat.color.setHex(spec.flameInnerColor);
     this.headlightGlow.color.setHex(spec.headlightColor);
     this.underGlowLight.color.setHex(spec.flameOuterColor);
 
@@ -1123,9 +1139,10 @@ export class PlayerCar {
           innerFlame.rotation.z = -spin * 1.25;
         }
       }
-      const globalFlicker = 0.5 + 0.5 * Math.sin(phase * 8.5);
-      this.thrusterOuterMat.opacity = 0.54 + globalFlicker * 0.16;
-      this.thrusterInnerMat.opacity = 0.82 + globalFlicker * 0.14;
+      const globalFlicker = 0.5 + 0.5 * Math.sin(phase * 10.5);
+      this.thrusterOuterMat.opacity = 0.36 + globalFlicker * 0.14;
+      this.thrusterInnerMat.opacity = 0.56 + globalFlicker * 0.18;
+      this.thrusterGlowMat.opacity = 0.72 + globalFlicker * 0.18;
     }
 
     this.headlightGlow.intensity = isBoosting ? 2.3 : isThrottling ? 1.85 : 1.55;

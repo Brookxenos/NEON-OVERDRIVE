@@ -1667,7 +1667,7 @@
       max(8px, var(--safe-right))
       max(8px, var(--safe-bottom))
       max(8px, var(--safe-left));
-    gap: 8px;
+    gap: 6px;
   }
 
   .garage-stage-controls {
@@ -1678,20 +1678,28 @@
     align-self: stretch;
     max-width: 100%;
     width: 100%;
-    padding: 8px 9px;
+    padding: 6px 8px;
   }
 
   .garage-stage-switcher {
-    gap: 8px;
+    gap: 7px;
   }
 
   .garage-step-btn {
-    width: 34px;
-    height: 40px;
+    width: 32px;
+    height: 36px;
   }
 
   .garage-stage-name {
-    font-size: 14px;
+    font-size: 13px;
+  }
+
+  .garage-stage-tagline {
+    display: none;
+  }
+
+  .garage-drag-hint {
+    display: none;
   }
 
   .garage-cam-stack {
@@ -1701,6 +1709,7 @@
   .garage-cam-bar {
     align-self: center;
     max-width: 100%;
+    padding: 4px;
     overflow-x: auto;
     scrollbar-width: none;
   }
@@ -1710,26 +1719,26 @@
   }
 
   .garage-cam-btn {
-    height: 30px;
-    padding: 0 11px;
-    font-size: 11px;
+    height: 28px;
+    padding: 0 10px;
+    font-size: 10.5px;
   }
 
   .modal-card-garage-dock {
-    padding: 10px 11px 10px;
+    padding: 8px 10px;
   }
 
   .garage-header-row {
-    margin-bottom: 7px;
+    margin-bottom: 5px;
   }
 
   .modal-title-garage {
-    font-size: 17px;
+    font-size: 16px;
   }
 
   .wallet-readout {
-    padding: 4px 8px;
-    font-size: 12px;
+    padding: 3px 8px;
+    font-size: 11px;
   }
 
   .garage-goal-banner {
@@ -1741,11 +1750,17 @@
     overflow-x: auto;
     scrollbar-width: none;
     padding-bottom: 2px;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
   }
 
   .garage-filter-bar::-webkit-scrollbar {
     display: none;
+  }
+
+  .garage-filter-btn {
+    height: 25px;
+    padding: 0 9px;
+    font-size: 10.5px;
   }
 
   .garage-car-action-wrap {
@@ -1754,30 +1769,30 @@
   }
 
   .garage-action-btn {
-    height: 30px;
-    padding: 0 10px;
-    font-size: 11px;
+    height: 28px;
+    padding: 0 9px;
+    font-size: 10.5px;
   }
 
   .garage-footer-row {
-    margin-top: 8px;
+    margin-top: 6px;
     gap: 8px;
   }
 
   .btn-garage-reset {
-    height: 38px;
+    height: 34px;
     padding: 0 10px;
     font-size: 11px;
   }
 
   .garage-done-btn {
-    height: 38px;
+    height: 34px;
   }
 }
 
 @media (max-width: 767px) and (min-height: 521px) {
   .modal-card-garage-dock {
-    max-height: none;
+    max-height: 43dvh;
   }
 
   .garage-car-list {
@@ -1786,8 +1801,9 @@
     overflow-y: hidden;
     touch-action: pan-x;
     scroll-snap-type: x mandatory;
-    gap: 9px;
-    padding: 2px 2px 6px;
+    align-items: stretch;
+    gap: 8px;
+    padding: 2px 2px 4px;
   }
 
   .garage-car-list::-webkit-scrollbar {
@@ -1795,14 +1811,14 @@
   }
 
   .garage-car-card {
-    flex: 0 0 236px;
+    flex: 0 0 220px;
     scroll-snap-align: center;
     display: grid;
     grid-template-columns: auto 1fr;
-    grid-template-rows: auto 1fr;
+    grid-template-rows: auto auto;
     align-items: center;
-    gap: 7px 10px;
-    padding: 9px 10px;
+    gap: 4px 8px;
+    padding: 6px 9px;
     border-left: 1px solid rgba(255, 245, 230, 0.08);
     border-top: 3px solid transparent;
   }
@@ -1818,13 +1834,13 @@
   }
 
   .garage-car-visual {
-    width: 78px;
-    height: 40px;
+    width: 64px;
+    height: 32px;
   }
 
   .garage-car-visual svg {
-    width: 74px;
-    height: 36px;
+    width: 60px;
+    height: 28px;
   }
 
   .garage-car-info {
@@ -1832,15 +1848,29 @@
     align-self: start;
   }
 
+  .garage-car-title-row {
+    gap: 4px;
+  }
+
   .garage-car-name {
-    font-size: 13px;
+    font-size: 12px;
+  }
+
+  .garage-meta-text,
+  .garage-speed-text {
+    font-size: 9.5px;
   }
 
   .garage-car-tagline {
+    display: none;
+  }
+
+  .garage-locked-meta {
+    margin-top: 2px;
+    gap: 4px;
     font-size: 10px;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
   }
 }
 
@@ -1848,7 +1878,7 @@
   .menu-top-bar {
     flex-direction: column;
     align-items: stretch;
-    gap: 8px;
+    gap: 7px;
   }
 
   .menu-telemetry-strip {
@@ -1885,12 +1915,13 @@
   }
 
   .menu-hero {
-    padding: 8px 4px 18px;
+    margin: 10px 0 auto;
+    padding: 4px 4px 8px;
   }
 
   .menu-kicker-pill {
-    padding: 5px 11px;
-    margin-bottom: 9px;
+    padding: 4px 10px;
+    margin-bottom: 7px;
   }
 
   .menu-kicker {
@@ -1899,15 +1930,15 @@
   }
 
   .menu-title {
-    font-size: clamp(2rem, 10.5vw, 3.1rem);
+    font-size: clamp(1.9rem, 9.8vw, 2.8rem);
   }
 
   .menu-footer {
-    gap: 10px;
+    gap: 8px;
   }
 
   .menu-goal-card {
-    padding: 9px 11px;
+    padding: 8px 11px;
   }
 
   .menu-goal-row {
@@ -1919,20 +1950,20 @@
   .btn-primary-cta {
     width: 100%;
     max-width: 340px;
-    height: 48px;
+    height: 46px;
     padding: 0 24px;
     font-size: 16px;
   }
 
   .controls-legend {
-    padding: 7px 10px;
+    padding: 6px 12px;
     gap: 4px 8px;
     font-size: 10px;
   }
 
-  .control-item kbd {
-    font-size: 9px;
-    padding: 1px 5px;
+  .controls-legend .control-item,
+  .controls-legend .control-sep {
+    display: none;
   }
 
   .modal-card {
@@ -2001,6 +2032,7 @@
   }
 
   .menu-hero {
+    margin: auto 0;
     padding: 4px 8px 6px;
   }
 
@@ -2061,8 +2093,8 @@
 
   .modal-card-garage-dock {
     max-height: 94dvh;
-    width: min(355px, 47vw);
-    padding: 11px;
+    width: min(305px, 44vw);
+    padding: 9px;
   }
 
   .garage-car-visual {

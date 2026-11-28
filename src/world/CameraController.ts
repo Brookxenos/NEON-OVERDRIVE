@@ -71,9 +71,10 @@ export class CameraController {
 
   public updateAttract(dt: number, playerX: number): void {
     this.attractAngle = (this.attractAngle + dt * 0.28) % (Math.PI * 2);
-    const camX = Math.sin(this.attractAngle) * 3.6;
-    const camY = 1.62 + Math.cos(this.attractAngle * 0.8) * 0.24;
-    const camZ = 5.4 + Math.cos(this.attractAngle) * 0.85;
+    const portraitPull = this.currentAspect < 1 ? (1 - this.currentAspect) * 2.2 : 0;
+    const camX = Math.sin(this.attractAngle) * (this.currentAspect < 1 ? 2.6 : 3.6);
+    const camY = 1.62 + Math.cos(this.attractAngle * 0.8) * 0.22;
+    const camZ = 5.4 + portraitPull + Math.cos(this.attractAngle) * 0.75;
 
     this.camera.position.x = damp(this.camera.position.x, camX, 4.5, dt);
     this.camera.position.y = damp(this.camera.position.y, camY, 4.5, dt);
@@ -85,7 +86,7 @@ export class CameraController {
       this.camera.updateProjectionMatrix();
     }
 
-    this.lookTarget.set(playerX * 0.45, 1.45, -32);
+    this.lookTarget.set(playerX * 0.45, this.currentAspect < 1 ? 1.25 : 1.45, -32);
     this.camera.lookAt(this.lookTarget);
   }
 
@@ -103,9 +104,20 @@ export class CameraController {
       this.showcaseAngle = (this.showcaseAngle + delta * stepFactor + Math.PI * 2) % (Math.PI * 2);
     }
 
-    const radius = isBottomDock ? 5.35 : 4.85;
+    const fovDeg = this.getResponsiveFov(47);
+    const nextFov = damp(this.camera.fov, fovDeg, 6.5, dt);
+    if (Math.abs(nextFov - this.camera.fov) > 0.005) {
+      this.camera.fov = nextFov;
+      this.camera.updateProjectionMatrix();
+    }
+
+    const tanHalfFov = Math.tan(THREE.MathUtils.degToRad(fovDeg * 0.5));
+    const horizFactor = Math.max(0.24, tanHalfFov * this.currentAspect);
+    const radius = isBottomDock
+      ? Math.min(7.5, Math.max(5.5, 2.7 / horizFactor))
+      : Math.min(6.0, Math.max(4.85, 2.55 / horizFactor));
     const camX = playerX + Math.sin(this.showcaseAngle) * radius;
-    const camY = isBottomDock ? 1.68 : 1.52;
+    const camY = isBottomDock ? 1.65 : 1.48;
     const camZ = Math.cos(this.showcaseAngle) * radius;
 
     const posLambda = this.showcaseMode === 'manual' ? 14 : 9;
@@ -113,17 +125,11 @@ export class CameraController {
     this.camera.position.y = damp(this.camera.position.y, camY, posLambda, dt);
     this.camera.position.z = damp(this.camera.position.z, camZ, posLambda, dt);
 
-    const nextFov = damp(this.camera.fov, this.getResponsiveFov(47), 6.5, dt);
-    if (Math.abs(nextFov - this.camera.fov) > 0.005) {
-      this.camera.fov = nextFov;
-      this.camera.updateProjectionMatrix();
-    }
-
-    const sideShift = isBottomDock ? 0 : 1.02;
+    const sideShift = isBottomDock ? 0 : this.currentAspect > 1.45 ? 1.18 : 0.92;
     const screenRightX = Math.cos(this.showcaseAngle);
     const screenRightZ = -Math.sin(this.showcaseAngle);
-    // Lower look target on mobile portrait raises the car comfortably into the upper showroom stage
-    const targetY = isBottomDock ? -0.35 : 0.56;
+    // Aim lower when docked at the bottom on mobile portrait so the 3D car sits clearly in the open upper stage
+    const targetY = isBottomDock ? -1.42 : 0.52;
 
     this.desiredLookTarget.set(
       playerX - screenRightX * sideShift,
@@ -137,9 +143,10 @@ export class CameraController {
   }
 
   public updateChase(dt: number, playerX: number, speedNorm: number, isBoosting: boolean): void {
+    const portraitPull = this.currentAspect < 0.85 ? (0.85 - this.currentAspect) * 2.1 : 0;
     const targetCamX = playerX * 0.66;
-    const targetCamY = isBoosting ? 2.58 : 2.88;
-    const targetCamZ = isBoosting ? 6.65 : 7.15 - speedNorm * 0.35;
+    const targetCamY = (isBoosting ? 2.58 : 2.88) + portraitPull * 0.25;
+    const targetCamZ = (isBoosting ? 6.65 : 7.15 - speedNorm * 0.35) + portraitPull;
     const targetFov = this.getResponsiveFov(62 + speedNorm * 8 + (isBoosting ? 7 : 0));
 
     this.camera.position.x = damp(this.camera.position.x, targetCamX, 10, dt);

@@ -11,6 +11,7 @@ export interface TextureBundle {
   buildingWindowsMagenta: THREE.CanvasTexture;
   headlightBeam: THREE.CanvasTexture;
   exhaustFlame: THREE.CanvasTexture;
+  flameCoreGlow: THREE.CanvasTexture;
   contactShadow: THREE.CanvasTexture;
   skyBackdrop: THREE.CanvasTexture;
   gantrySigns: readonly THREE.CanvasTexture[];
@@ -342,43 +343,64 @@ function createExhaustFlameTexture(): THREE.CanvasTexture {
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d')!;
+  const img = ctx.createImageData(width, height);
+  const data = img.data;
 
-  // LatheGeometry v=0 (nozzle root) maps to bottom (y=height), v=1 (tip) maps to top (y=0)
-  const mainGrad = ctx.createLinearGradient(0, height, 0, 0);
-  mainGrad.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)');
-  mainGrad.addColorStop(0.16, 'rgba(255, 250, 235, 0.96)');
-  mainGrad.addColorStop(0.42, 'rgba(255, 236, 200, 0.72)');
-  mainGrad.addColorStop(0.72, 'rgba(255, 210, 160, 0.28)');
-  mainGrad.addColorStop(0.92, 'rgba(255, 180, 120, 0.05)');
-  mainGrad.addColorStop(1.0, 'rgba(255, 180, 120, 0.0)');
-  ctx.fillStyle = mainGrad;
-  ctx.fillRect(0, 0, width, height);
+  // Lathe/Plane v=0 (nozzle root) maps to canvas bottom (py = height-1), v=1 (tip) maps to top (py = 0)
+  for (let py = 0; py < height; py++) {
+    const t = 1 - py / (height - 1); // 0 at root -> 1 at tip
+    const envelopeWidth =
+      t < 0.16
+        ? 0.45 + 0.5 * Math.sin((t / 0.16) * (Math.PI * 0.5))
+        : 0.95 * Math.pow(Math.max(0, 1 - (t - 0.16) / 0.82), 0.78);
+    const rootFade = Math.min(1, t / 0.045);
+    const tipFade = Math.pow(Math.max(0, 1 - t / 0.98), 1.55);
+    const shockWave = 0.84 + 0.16 * Math.cos(t * 20.0);
 
-  // Subtle plasma shock diamonds / streaks along the jet for rich motion
-  for (let s = 0; s < 10; s++) {
-    const sx = (s / 10) * width;
-    const sw = width * 0.14;
-    const streakGrad = ctx.createLinearGradient(0, height, 0, height * 0.15);
-    streakGrad.addColorStop(0.0, 'rgba(255, 255, 255, 0.35)');
-    streakGrad.addColorStop(0.45, 'rgba(255, 255, 255, 0.16)');
-    streakGrad.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');
-    ctx.fillStyle = streakGrad;
-    ctx.fillRect(sx, height * 0.15, sw * 0.55, height * 0.85);
+    for (let px = 0; px < width; px++) {
+      const uNorm = (px / (width - 1)) * 2 - 1;
+      const r = envelopeWidth > 0.002 ? Math.abs(uNorm) / envelopeWidth : 2;
+      let alpha = 0;
+      if (r < 1 && t > 0 && t < 0.98) {
+        const radial = Math.pow(1 - r * r, 2.1);
+        alpha = Math.max(0, Math.min(1, radial * rootFade * tipFade * shockWave));
+      }
+
+      const idx = (py * width + px) * 4;
+      const lum = Math.round(alpha * 255);
+      data[idx] = lum;
+      data[idx + 1] = lum;
+      data[idx + 2] = lum;
+      data[idx + 3] = lum;
+    }
   }
 
-  // Soft longitudinal shock-diamond brightenings near the root
-  const shockPositions = [0.88, 0.68, 0.48];
-  for (let i = 0; i < shockPositions.length; i++) {
-    const sy = height * shockPositions[i];
-    const shock = ctx.createRadialGradient(width * 0.5, sy, 2, width * 0.5, sy, 34 - i * 6);
-    shock.addColorStop(0, `rgba(255, 255, 255, ${0.42 - i * 0.1})`);
-    shock.addColorStop(1, 'rgba(255, 255, 255, 0)');
-    ctx.fillStyle = shock;
-    ctx.fillRect(0, sy - 40, width, 80);
-  }
+  ctx.putImageData(img, 0, 0);
 
   const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapS = THREE.ClampToEdgeWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+function createFlameCoreGlowTexture(): THREE.CanvasTexture {
+  const size = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  const grad = ctx.createRadialGradient(64, 64, 2, 64, 64, 60);
+  grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+  grad.addColorStop(0.28, 'rgba(255, 245, 225, 0.72)');
+  grad.addColorStop(0.65, 'rgba(255, 210, 160, 0.22)');
+  grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.ClampToEdgeWrapping;
   tex.wrapT = THREE.ClampToEdgeWrapping;
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.needsUpdate = true;
@@ -656,6 +678,7 @@ export class TextureFactory {
     );
     const headlightBeam = createHeadlightBeamTexture();
     const exhaustFlame = createExhaustFlameTexture();
+    const flameCoreGlow = createFlameCoreGlowTexture();
     const contactShadow = createRadialTexture('rgba(0, 0, 0, 0.9)', 'rgba(24, 24, 48, 0.22)');
     const skyBackdrop = createSkyBackdropTexture();
     const gantrySigns = GANTRY_SIGN_LABELS.map((label) =>
@@ -676,6 +699,7 @@ export class TextureFactory {
       buildingWindowsMagenta,
       headlightBeam,
       exhaustFlame,
+      flameCoreGlow,
       contactShadow,
       skyBackdrop,
       gantrySigns,
@@ -691,6 +715,7 @@ export class TextureFactory {
         buildingWindowsMagenta.dispose();
         headlightBeam.dispose();
         exhaustFlame.dispose();
+        flameCoreGlow.dispose();
         contactShadow.dispose();
         skyBackdrop.dispose();
         gantrySigns.forEach((tex) => tex.dispose());
