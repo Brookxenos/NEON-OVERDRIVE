@@ -222,22 +222,20 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: clamp(230px, 34vw, 390px);
-  padding: 8px 16px;
-  border-radius: 16px;
-  background: #18181b;
-  border: 1px solid rgba(251, 191, 36, 0.45);
-  box-shadow:
-    0 16px 36px rgba(10, 6, 18, 0.62),
-    0 0 28px rgba(251, 191, 36, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  width: clamp(250px, 36vw, 430px);
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 
 .menu-logo-img {
   display: block;
   width: 100%;
   height: auto;
-  border-radius: 8px;
+  filter:
+    drop-shadow(0 4px 14px rgba(10, 6, 18, 0.88))
+    drop-shadow(0 0 22px rgba(251, 191, 36, 0.42));
 }
 
 .menu-title {
@@ -1968,9 +1966,7 @@
   }
 
   .menu-logo-frame {
-    width: min(258px, 74vw);
-    padding: 6px 12px;
-    border-radius: 13px;
+    width: min(268px, 76vw);
   }
 
   .menu-footer {
@@ -2086,9 +2082,7 @@
   }
 
   .menu-logo-frame {
-    width: clamp(170px, 34vh, 245px);
-    padding: 5px 10px;
-    border-radius: 12px;
+    width: clamp(180px, 36vh, 260px);
   }
 
   .menu-goal-card {
