@@ -345,6 +345,10 @@ export class AudioManager {
     if (this.canPlaySfx()) this.sfx.playBoostActivate();
   }
 
+  public playBackfirePop(strength = 0.9): void {
+    if (this.canPlaySfx()) this.sfx.playBackfirePop(strength);
+  }
+
   public playCollectible(kind: CollectibleSoundType, multiplier: number): void {
     if (this.canPlaySfx()) this.sfx.playCollectible(kind, multiplier);
   }

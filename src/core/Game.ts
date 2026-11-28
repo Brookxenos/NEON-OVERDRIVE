@@ -127,7 +127,13 @@ export class Game {
       aspect,
     );
 
-    this.carController = new CarController(this.textures);
+    this.audioManager = new AudioManager(initialSettings);
+
+    this.carController = new CarController(this.textures, (strength) => {
+      if (this.state.getStatus() === 'playing') {
+        this.audioManager.playBackfirePop(strength);
+      }
+    });
     this.carController.setCarSpec(getCarSpec(this.saveData.selectedCarId));
     this.trackManager = new TrackManager(this.textures);
     this.obstacleManager = new ObstacleManager(this.textures);
@@ -143,8 +149,6 @@ export class Game {
       this.sceneManager.scene,
       this.sceneManager.cameraController.camera,
     );
-
-    this.audioManager = new AudioManager(initialSettings);
 
     const inputEvents = {
       onLaneShift: (dir: -1 | 1) => {

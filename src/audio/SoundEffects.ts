@@ -44,6 +44,7 @@ export class SoundEffects {
   private lastNearMissAt = -1;
   private lastUiClickAt = -1;
   private lastBoostAt = -1;
+  private lastBackfireAt = -1;
 
   public attach(
     ctx: AudioContext,
@@ -61,6 +62,7 @@ export class SoundEffects {
     this.lastNearMissAt = -1;
     this.lastUiClickAt = -1;
     this.lastBoostAt = -1;
+    this.lastBackfireAt = -1;
   }
 
   public getActiveVoiceCount(): number {
@@ -226,6 +228,53 @@ export class SoundEffects {
       });
       noise.start(now);
       noise.stop(nStop);
+    }
+  }
+
+  public playBackfirePop(strength = 0.9): void {
+    if (!this.canSchedule(2) || !this.ctx || !this.outputNode) return;
+    const now = this.ctx.currentTime;
+    if (this.lastBackfireAt >= 0 && now - this.lastBackfireAt < 0.14) return;
+    this.lastBackfireAt = now;
+
+    const clamped = Math.max(0.4, Math.min(1.25, strength));
+    const thump = this.ctx.createOscillator();
+    const thumpGain = this.ctx.createGain();
+    thump.type = 'triangle';
+    thump.frequency.setValueAtTime(118 * (0.9 + clamped * 0.12), now);
+    thump.frequency.exponentialRampToValueAtTime(38, now + 0.085);
+    const thumpStop = now + 0.1;
+    scheduleEnvelope(thumpGain.gain, now, 0.036 * clamped, 0.004, now + 0.08, thumpStop);
+    thump.connect(thumpGain);
+    thumpGain.connect(this.outputNode);
+    this.trackVoice(thump, thumpStop, () => {
+      thump.disconnect();
+      thumpGain.disconnect();
+    });
+    thump.start(now);
+    thump.stop(thumpStop);
+
+    if (this.noiseBuffer && this.trackedVoices.length < MAX_ACTIVE_SFX_VOICES) {
+      const crackle = this.ctx.createBufferSource();
+      crackle.buffer = this.noiseBuffer;
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.Q.value = 1.6;
+      filter.frequency.setValueAtTime(680, now);
+      filter.frequency.exponentialRampToValueAtTime(210, now + 0.095);
+      const cGain = this.ctx.createGain();
+      const cStop = now + 0.11;
+      scheduleEnvelope(cGain.gain, now, 0.042 * clamped, 0.003, now + 0.088, cStop);
+      crackle.connect(filter);
+      filter.connect(cGain);
+      cGain.connect(this.outputNode);
+      this.trackVoice(crackle, cStop, () => {
+        crackle.disconnect();
+        filter.disconnect();
+        cGain.disconnect();
+      });
+      crackle.start(now);
+      crackle.stop(cStop);
     }
   }
 
