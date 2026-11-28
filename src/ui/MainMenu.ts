@@ -62,7 +62,15 @@ export class MainMenu {
           <span class="menu-kicker-dot" aria-hidden="true"></span>
           <span class="menu-kicker">Coastal Highway Arcade</span>
         </div>
-        <h1 class="font-display menu-title">NEON <span class="menu-title-accent">OVERDRIVE</span></h1>
+        <h1 class="sr-only">Asphalt Rush</h1>
+        <div class="menu-logo-frame">
+          <img
+            class="menu-logo-img"
+            src="/assets/aistudio/image_d6756ab8.png"
+            alt="Asphalt Rush"
+            decoding="async"
+          />
+        </div>
       </div>
 
       <div class="menu-footer">

@@ -17,7 +17,7 @@ function bootstrap(): void {
 
   const canvasViewport = document.createElement('div');
   canvasViewport.className = 'viewport-canvas';
-  canvasViewport.setAttribute('aria-label', 'NEON OVERDRIVE 3D Racing Viewport');
+  canvasViewport.setAttribute('aria-label', 'Asphalt Rush 3D Racing Viewport');
 
   const uiLayer = document.createElement('div');
   uiLayer.className = 'ui-layer';

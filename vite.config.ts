@@ -10,8 +10,7 @@ export default defineConfig(() => {
       react(),
       tailwindcss(),
       // Copies src/assets into dist/ so root-relative URLs like
-      // "/src/assets/images/..." (e.g. generate_image output) still resolve
-      // in production builds. Do not remove.
+      // "/src/assets/images/..." still resolve in production builds.
       {
         name: 'copy-unbundled-src-assets',
         apply: 'build',
@@ -37,7 +36,7 @@ export default defineConfig(() => {
       // HMR can be disabled via DISABLE_HMR env var.
       // File watching is disabled when DISABLE_HMR is true to prevent flickering during edits.
       hmr: process.env.DISABLE_HMR !== 'true',
-      // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
+      // Disable file watching when DISABLE_HMR is true to reduce CPU usage.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
   };

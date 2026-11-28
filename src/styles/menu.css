@@ -206,6 +206,40 @@
   color: var(--text-primary);
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.menu-logo-frame {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(230px, 34vw, 390px);
+  padding: 8px 16px;
+  border-radius: 16px;
+  background: #18181b;
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  box-shadow:
+    0 16px 36px rgba(10, 6, 18, 0.62),
+    0 0 28px rgba(251, 191, 36, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.menu-logo-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
 .menu-title {
   margin: 0;
   font-size: clamp(2.4rem, 6.2vw, 4.85rem);
@@ -1933,6 +1967,12 @@
     font-size: clamp(1.9rem, 9.8vw, 2.8rem);
   }
 
+  .menu-logo-frame {
+    width: min(258px, 74vw);
+    padding: 6px 12px;
+    border-radius: 13px;
+  }
+
   .menu-footer {
     gap: 8px;
   }
@@ -2043,6 +2083,12 @@
 
   .menu-title {
     font-size: clamp(1.75rem, 6.2vh, 2.5rem);
+  }
+
+  .menu-logo-frame {
+    width: clamp(170px, 34vh, 245px);
+    padding: 5px 10px;
+    border-radius: 12px;
   }
 
   .menu-goal-card {

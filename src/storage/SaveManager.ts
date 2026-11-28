@@ -12,8 +12,10 @@ export interface SaveData {
   progressionVersion: number;
 }
 
-const STATS_STORAGE_KEY = 'neon_overdrive_save_v1';
-const SETTINGS_STORAGE_KEY = 'neon_overdrive_settings_v1';
+const STATS_STORAGE_KEY = 'asphalt_rush_save_v1';
+const SETTINGS_STORAGE_KEY = 'asphalt_rush_settings_v1';
+const LEGACY_STATS_STORAGE_KEY = 'neon_overdrive_save_v1';
+const LEGACY_SETTINGS_STORAGE_KEY = 'neon_overdrive_settings_v1';
 const CURRENT_PROGRESSION_VERSION = 3;
 
 const DEFAULT_SAVE_DATA: SaveData = {
@@ -32,7 +34,12 @@ const CURRENT_SETTINGS_VERSION = 2;
 export class SaveManager {
   public loadSaveData(): SaveData {
     try {
-      const raw = window.localStorage.getItem(STATS_STORAGE_KEY);
+      let raw = window.localStorage.getItem(STATS_STORAGE_KEY);
+      let migratedFromLegacy = false;
+      if (!raw) {
+        raw = window.localStorage.getItem(LEGACY_STATS_STORAGE_KEY);
+        migratedFromLegacy = Boolean(raw);
+      }
       if (!raw) {
         return {
           ...DEFAULT_SAVE_DATA,
@@ -93,7 +100,7 @@ export class SaveManager {
         progressionVersion: CURRENT_PROGRESSION_VERSION,
       };
 
-      if (!isCurrentProgression) {
+      if (!isCurrentProgression || migratedFromLegacy) {
         this.writeSaveData(nextData);
       }
 
@@ -116,7 +123,12 @@ export class SaveManager {
 
   public loadSettings(): GameSettingsData {
     try {
-      const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
+      let raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
+      let migratedFromLegacy = false;
+      if (!raw) {
+        raw = window.localStorage.getItem(LEGACY_SETTINGS_STORAGE_KEY);
+        migratedFromLegacy = Boolean(raw);
+      }
       if (!raw) return { ...DEFAULT_GAME_SETTINGS };
       const parsed = JSON.parse(raw) as (Partial<GameSettingsData> & { settingsVersion?: number }) | null;
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
@@ -151,7 +163,7 @@ export class SaveManager {
             : 'auto',
       };
 
-      if (!isCurrentVersion) {
+      if (!isCurrentVersion || migratedFromLegacy) {
         this.writeSettings(settings);
       }
 
